@@ -1,6 +1,6 @@
 {
   "name": "@todos/app",
-  "exports": "./api/main.ts",
+  "exports": "./src/main.ts",
 
   // Import map for npm packages and external dependencies
   "imports": {
@@ -16,13 +16,13 @@
   // Available tasks: deno task <name>
   "tasks": {
     // Development: start postgres, apply schema, build frontend, run server with hot reload
-    "dev": "docker compose up -d && sleep 1 && deno task db:local && deno task build && export DATABASE_URL_TRANSACTION='postgres://todos:todos@localhost:5432/todos?search_path=todos&sslmode=disable' && DENO_ENV=development deno run --permission-set --watch api/main.ts",
-    // Build frontend (Vue → api/public/dist)
-    "build": "cd api/frontend && deno task build",
-    // Production start - serves pre-built frontend from api/public/dist
-    "start": "deno run --permission-set api/main.ts",
+    "dev": "docker compose up -d && sleep 1 && deno task db:local && deno task build && export DATABASE_URL_TRANSACTION='postgres://todos:todos@localhost:5432/todos?search_path=todos&sslmode=disable' && DENO_ENV=development deno run --permission-set --watch src/main.ts",
+    // Build frontend (Vue → src/public/dist)
+    "build": "cd src/frontend && deno task build",
+    // Production start - serves pre-built frontend from src/public/dist
+    "start": "deno run --permission-set src/main.ts",
     // Type-check API
-    "check": "deno check api/*.ts api/db/**/*.ts api/routes/**/*.ts api/services/**/*.ts",
+    "check": "deno check src/*.ts src/db/**/*.ts src/routes/**/*.ts src/services/**/*.ts",
     // Apply schema to local database
     "db:local": "export DATABASE_URL_SESSION='postgres://todos:todos@localhost:5432/todos?search_path=todos&sslmode=disable' && deno run --allow-run --allow-env scripts/db.ts apply",
     // Apply schema to remote database (fetches URL from Secret Manager)

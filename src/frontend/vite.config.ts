@@ -1,5 +1,5 @@
 // Vite configuration for Vue.js frontend
-// Run with: deno task build (from api/frontend/)
+// Run with: deno task build (from src/frontend/)
 
 import vue from "@vitejs/plugin-vue";
 import autoprefixer from "autoprefixer";
@@ -19,7 +19,7 @@ export default defineConfig({
     },
   },
 
-  // Build output configuration - output to api/public/dist for Hono to serve
+  // Build output configuration - output to src/public/dist for Hono to serve
   build: {
     outDir: "../public/dist",
     emptyOutDir: true,

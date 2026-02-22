@@ -42,10 +42,12 @@ async function getJwtKey(): Promise<CryptoKey> {
     throw new Error("SUPABASE_URL environment variable is required");
   }
 
-  const jwksUrl = `${supabaseUrl.replace(
-    /\/$/,
-    "",
-  )}/auth/v1/.well-known/jwks.json`;
+  const jwksUrl = `${
+    supabaseUrl.replace(
+      /\/$/,
+      "",
+    )
+  }/auth/v1/.well-known/jwks.json`;
   const response = await fetch(jwksUrl);
 
   if (!response.ok) {
@@ -221,8 +223,7 @@ export const rateLimitMiddleware: MiddlewareHandler<AppEnv> = async (
     return;
   }
 
-  const ip =
-    c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
+  const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
     c.req.header("x-real-ip") ||
     "unknown";
 

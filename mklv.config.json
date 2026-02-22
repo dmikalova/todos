@@ -1,0 +1,8 @@
+{
+  "name": "todos",
+  "entrypoint": "api/main.ts",
+  "runtime": {
+    "port": 8000,
+    "healthCheckPath": "/health"
+  }
+}

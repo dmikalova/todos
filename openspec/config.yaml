@@ -1,0 +1,45 @@
+schema: spec-driven-review
+
+# Project context
+context: |
+  # Tech Stack
+  - Runtime: Deno 2.0+ with TypeScript (native support, no build step)
+  - Web Framework: Hono (lightweight, portable across runtimes)
+  - Frontend: Vue.js + Tailwind CSS + Headless UI (Material Design-inspired styling)
+  - Build/Dev: Vite
+  - Testing: Vitest + Playwright for E2E
+  - Database: PostgreSQL (Supabase with Supavisor connection pooler)
+  - Authentication: Dashboard auth via centralized login portal at login.mklv.tech
+
+  # Conventions
+  - We use conventional commits
+  - Single-user system (personal use only, not multi-tenant/SaaS)
+
+  # Domain: Personal Todo Management
+  - Task management with recurrence (fixed schedules + completion-based)
+  - Context labels for context-aware task presentation (none, work, personal)
+  - Priority-based task ordering
+  - Projects and filters for organization
+  - "Next" page with smart task selection based on time/context/priority
+  - Web dashboard at todos.mklv.tech
+
+  # Deployment
+  - Google Cloud Run (serverless, scale-to-zero)
+  - CI/CD via GitHub Actions calling reusable workflows from github-meta
+  - Secure credential management via environment variables
+
+  # Database Migrations
+  - Migrations are additive-only: never drop tables or columns
+  - No down migrations - data preservation is paramount
+  - Schema changes should be backward-compatible
+
+# Per-artifact rules
+rules:
+  specs:
+    - Focus on single-user personal use case
+    - Consider smart task selection algorithm
+    - Design for quick daily interactions
+  tasks:
+    - Break tasks into chunks of max 2 hours
+    - Include test coverage for each feature
+    - Consider both happy path and error handling

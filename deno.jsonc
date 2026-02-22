@@ -1,6 +1,6 @@
 {
   "name": "@todos/app",
-  "exports": "./src/main.ts",
+  "exports": "./api/main.ts",
 
   // Import map for npm packages and external dependencies
   "imports": {
@@ -15,40 +15,34 @@
 
   // Available tasks: deno task <name>
   "tasks": {
-    // Development with hot reload (DENO_ENV=development enables auth bypass)
-    "dev": "DENO_ENV=development deno run --permission-set --watch src/main.ts",
-    // Production start
-    "start": "deno run --permission-set src/main.ts",
-    // Type-check without running
-    "check": "deno check src/**/*.ts",
-    // Build CSS with Tailwind (production, minified)
-    "css:build": "deno run --permission-set scripts/build-css.ts",
-    // Apply schema changes to database (fetches DATABASE_URL_SESSION from Secret Manager)
+    // Development: start postgres, apply schema, build frontend, run server with hot reload
+    "dev": "docker compose up -d && sleep 1 && deno task db:local && deno task build && export DATABASE_URL_TRANSACTION='postgres://todos:todos@localhost:5432/todos?search_path=todos&sslmode=disable' && DENO_ENV=development deno run --permission-set --watch api/main.ts",
+    // Build frontend (Vue → api/public/dist)
+    "build": "cd api/frontend && deno task build",
+    // Production start - serves pre-built frontend from api/public/dist
+    "start": "deno run --permission-set api/main.ts",
+    // Type-check API
+    "check": "deno check api/*.ts api/db/**/*.ts api/routes/**/*.ts api/services/**/*.ts",
+    // Apply schema to local database
+    "db:local": "export DATABASE_URL_SESSION='postgres://todos:todos@localhost:5432/todos?search_path=todos&sslmode=disable' && deno run --allow-run --allow-env scripts/db.ts apply",
+    // Apply schema to remote database (fetches URL from Secret Manager)
     "db:apply": "deno run --allow-run --allow-env scripts/db.ts apply",
-    // Show planned schema changes without applying
+    // Show planned schema changes
     "db:diff": "deno run --allow-run --allow-env scripts/db.ts diff",
-    // Truncate all tables (use before destructive migrations)
-    "db:seed": "deno run --allow-run --allow-env scripts/db.ts seed",
-    // Truncate all tables (use before destructive migrations)
-    "db:truncate": "deno run --allow-run --allow-env scripts/db.ts truncate",
+    // Reset local database (deletes all data)
+    "db:reset": "docker compose down -v && docker compose up -d && sleep 1 && deno task db:local",
+    // Stop local postgres
+    "db:stop": "docker compose down",
     // Format all files
     "fmt": "deno fmt",
     // Lint TypeScript files
     "lint": "deno lint",
-    // Install git hooks (run once after clone)
-    "setup": "lefthook install",
-    // Run unit tests only (default, no external deps required)
+    // Run unit tests
     "test": "deno test --permission-set tests/unit/",
     // Run all tests (unit + integration, requires PostgreSQL)
     "test:all": "deno test --permission-set tests/",
-    // Run tests with coverage report
-    "test:coverage": "deno test --permission-set --coverage=coverage tests/unit/",
-    // Run E2E tests with Playwright (requires running app)
-    "test:e2e": "deno run --allow-all tests/e2e/run.ts",
-    // Run integration tests (requires running PostgreSQL)
-    "test:integration": "deno test --permission-set tests/integration/",
-    // Run unit tests only (explicit alias)
-    "test:unit": "deno test --permission-set tests/unit/"
+    // Run integration tests (requires PostgreSQL)
+    "test:integration": "deno test --permission-set tests/integration/"
   },
 
   // Default permissions for tasks (minimal for app runtime)

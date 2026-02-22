@@ -42,12 +42,10 @@ async function getJwtKey(): Promise<CryptoKey> {
     throw new Error("SUPABASE_URL environment variable is required");
   }
 
-  const jwksUrl = `${
-    supabaseUrl.replace(
-      /\/$/,
-      "",
-    )
-  }/auth/v1/.well-known/jwks.json`;
+  const jwksUrl = `${supabaseUrl.replace(
+    /\/$/,
+    "",
+  )}/auth/v1/.well-known/jwks.json`;
   const response = await fetch(jwksUrl);
 
   if (!response.ok) {
@@ -165,8 +163,8 @@ export const authMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
   const cookieHeader = c.req.header("cookie");
   const cookies = parseCookies(cookieHeader ?? null);
 
-  // Look for session token in cookie
-  const sessionToken = cookies["sb-access-token"];
+  // Look for session token in cookie (set by login service as "session")
+  const sessionToken = cookies["session"];
 
   if (!sessionToken) {
     // Check if this is an API request
@@ -223,7 +221,8 @@ export const rateLimitMiddleware: MiddlewareHandler<AppEnv> = async (
     return;
   }
 
-  const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
+  const ip =
+    c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
     c.req.header("x-real-ip") ||
     "unknown";
 

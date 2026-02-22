@@ -1,0 +1,51 @@
+{
+  "name": "@todos/frontend",
+  "exports": "./main.ts",
+
+  // Create node_modules for Vite compatibility
+  "nodeModulesDir": "auto",
+
+  // Frontend uses Vite for dev server and builds
+  "imports": {
+    "@headlessui/vue": "npm:@headlessui/vue@^1",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2",
+    "@tailwindcss/forms": "npm:@tailwindcss/forms@^0.5",
+    "@vitejs/plugin-vue": "npm:@vitejs/plugin-vue@^5",
+    "@vueuse/core": "npm:@vueuse/core@^11",
+    "autoprefixer": "npm:autoprefixer@^10",
+    "marked": "npm:marked@^14",
+    "tailwindcss": "npm:tailwindcss@^3",
+    "vite": "npm:vite@^6",
+    "vue": "npm:vue@^3",
+    "vue-router": "npm:vue-router@^4"
+  },
+
+  // Available tasks: deno task <name>
+  "tasks": {
+    // Development server with hot reload
+    "dev": "deno run --permission-set npm:vite",
+    // Production build (outputs to dist/)
+    "build": "deno run --permission-set npm:vite build",
+    // Preview production build locally
+    "preview": "deno run --permission-set npm:vite preview"
+  },
+
+  // Permissions for Vite
+  "permissions": {
+    "default": {
+      "env": true,
+      "ffi": true,
+      "net": true,
+      "read": true,
+      "run": true,
+      "sys": true,
+      "write": true
+    }
+  },
+
+  // Compiler options for Vue JSX/template support
+  "compilerOptions": {
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "jsx": "preserve"
+  }
+}

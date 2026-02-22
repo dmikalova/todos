@@ -7,7 +7,7 @@ import {
   scoreTask,
   SCORING,
   type TaskForScoring,
-} from "../../src/services/scoring.ts";
+} from "../../api/services/scoring.ts";
 
 // Helper to create a basic task
 function createTask(overrides: Partial<TaskForScoring> = {}): TaskForScoring {

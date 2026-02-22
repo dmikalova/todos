@@ -4,7 +4,7 @@ import { assertEquals, assertThrows } from "@std/assert";
 import {
   calculateNextOccurrence,
   type RecurrenceRule,
-} from "../../src/services/recurrence.ts";
+} from "../../api/services/recurrence.ts";
 
 // Helper to create a basic rule
 function createRule(overrides: Partial<RecurrenceRule>): RecurrenceRule {

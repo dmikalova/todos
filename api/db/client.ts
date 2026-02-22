@@ -62,11 +62,16 @@ export function getConnection(): postgres.Sql {
 
   const config = getConfig();
 
+  // Check if SSL should be disabled (for local development)
+  const url = new URL(config.url);
+  const sslMode = url.searchParams.get("sslmode");
+  const sslEnabled = sslMode !== "disable";
+
   sql = postgres(config.url, {
     max: config.max,
     idle_timeout: config.idleTimeout,
     connect_timeout: config.connectTimeout,
-    ssl: "require",
+    ssl: sslEnabled ? "require" : false,
     onnotice: () => {},
     transform: {
       undefined: null,

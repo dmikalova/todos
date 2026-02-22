@@ -378,12 +378,12 @@ table "recurrence_rules" {
 
   # Fixed schedules require frequency
   check "fixed_requires_frequency" {
-    expr = "schedule_type != 'fixed' OR frequency IS NOT NULL"
+    expr = "schedule_type::text != 'fixed' OR frequency IS NOT NULL"
   }
 
   # Completion-based schedules require days_after_completion
   check "completion_requires_days" {
-    expr = "schedule_type != 'completion' OR days_after_completion IS NOT NULL"
+    expr = "schedule_type::text != 'completion' OR days_after_completion IS NOT NULL"
   }
 }
 

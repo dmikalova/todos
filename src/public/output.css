@@ -515,6 +515,9 @@ input:where([type="file"]):focus {
   margin-left: auto;
   margin-right: auto;
 }
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
 .mb-4 {
   margin-bottom: 1rem;
 }
@@ -574,6 +577,9 @@ input:where([type="file"]):focus {
 }
 .h-8 {
   height: 2rem;
+}
+.max-h-\[90vh\] {
+  max-height: 90vh;
 }
 .min-h-full {
   min-height: 100%;
@@ -686,6 +692,9 @@ input:where([type="file"]):focus {
 .overflow-y-auto {
   overflow-y: auto;
 }
+.rounded {
+  border-radius: 0.25rem;
+}
 .rounded-full {
   border-radius: 9999px;
 }
@@ -763,6 +772,9 @@ input:where([type="file"]):focus {
 }
 .p-12 {
   padding: 3rem;
+}
+.p-2 {
+  padding: 0.5rem;
 }
 .p-4 {
   padding: 1rem;
@@ -998,6 +1010,10 @@ input:where([type="file"]):focus {
 .hover\:text-lime-500:hover {
   --tw-text-opacity: 1;
   color: rgb(205 220 57/var(--tw-text-opacity, 1));
+}
+.hover\:text-red-500:hover {
+  --tw-text-opacity: 1;
+  color: rgb(239 68 68/var(--tw-text-opacity, 1));
 }
 .hover\:shadow-md:hover {
   --tw-shadow:

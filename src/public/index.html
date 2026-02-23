@@ -11,10 +11,12 @@
       [v-cloak] {
         display: none;
       }
-      .fade-enter-active, .fade-leave-active {
+      .fade-enter-active,
+      .fade-leave-active {
         transition: opacity 0.2s ease;
       }
-      .fade-enter-from, .fade-leave-to {
+      .fade-enter-from,
+      .fade-leave-to {
         opacity: 0;
       }
     </style>
@@ -165,6 +167,13 @@
                   </svg>
                   {{ currentTask.project_name }}
                 </span>
+                <span
+                  v-for="ctxId in (currentTask.context_ids || [])"
+                  :key="ctxId"
+                  class="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs"
+                >
+                  {{ getContextName(ctxId) }}
+                </span>
               </div>
             </div>
 
@@ -303,9 +312,18 @@
                 >
                   {{ task.title }}
                 </p>
-                <p v-if="task.due_date" class="text-sm text-gray-500">
-                  Due: {{ formatDate(task.due_date) }}
-                </p>
+                <div class="flex flex-wrap gap-1 mt-1">
+                  <span v-if="task.due_date" class="text-sm text-gray-500">
+                    Due: {{ formatDate(task.due_date) }}
+                  </span>
+                  <span
+                    v-for="ctxId in (task.context_ids || [])"
+                    :key="ctxId"
+                    class="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700"
+                  >
+                    {{ getContextName(ctxId) }}
+                  </span>
+                </div>
               </div>
               <span
                 v-if="task.priority"
@@ -409,8 +427,15 @@
               >
                 <div>
                   <p class="font-medium text-gray-900">{{ ctx.name }}</p>
-                  <p v-if="ctx.description" class="text-sm text-gray-500">
-                    {{ ctx.description }}
+                  <p
+                    v-if="ctx.time_windows && ctx.time_windows.length"
+                    class="text-sm text-gray-500"
+                  >
+                    {{ ctx.time_windows.length }} time window{{
+                    ctx.time_windows.length !== 1 ? 's' : '' }}
+                  </p>
+                  <p v-else class="text-sm text-gray-400">
+                    No time windows (always available)
                   </p>
                 </div>
                 <button
@@ -492,7 +517,10 @@
       <!-- Task Form Modal -->
       <div v-if="showTaskForm" class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex min-h-full items-center justify-center p-4">
-          <div class="fixed inset-0 bg-black/30" @click="showTaskForm = false">
+          <div
+            class="fixed inset-0 bg-black/30"
+            @click="showTaskForm = false"
+          >
           </div>
           <div
             class="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6"
@@ -557,6 +585,25 @@
                       {{ p.name }}
                     </option>
                   </select>
+                </div>
+                <div v-if="contexts.length > 0">
+                  <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Contexts</label>
+                  <div class="space-y-2">
+                    <label
+                      v-for="ctx in contexts"
+                      :key="ctx.id"
+                      class="flex items-center gap-2"
+                    >
+                      <input
+                        type="checkbox"
+                        :value="ctx.id"
+                        v-model="taskForm.context_ids"
+                        class="h-4 w-4 rounded border-gray-300 text-lime-600 focus:ring-lime-500"
+                      />
+                      <span class="text-sm text-gray-700">{{ ctx.name }}</span>
+                    </label>
+                  </div>
                 </div>
               </div>
               <div class="mt-6 flex justify-end gap-3">
@@ -644,7 +691,7 @@
           >
           </div>
           <div
-            class="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6"
+            class="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto"
           >
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
               {{ editingContext ? 'Edit Context' : 'New Context' }}
@@ -661,14 +708,72 @@
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500"
                   />
                 </div>
+                <!-- Time Windows -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-700"
-                  >Description</label>
-                  <textarea
-                    v-model="contextForm.description"
-                    rows="2"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500"
-                  ></textarea>
+                  <div class="flex items-center justify-between mb-2">
+                    <label class="block text-sm font-medium text-gray-700"
+                    >Time Windows</label>
+                    <button
+                      type="button"
+                      @click="addTimeWindow"
+                      class="text-sm text-lime-600 hover:text-lime-500"
+                    >
+                      + Add Window
+                    </button>
+                  </div>
+                  <p class="text-xs text-gray-500 mb-2">
+                    Tasks in this context are available during these times
+                  </p>
+                  <div class="space-y-2">
+                    <div
+                      v-for="(tw, index) in contextForm.timeWindows"
+                      :key="index"
+                      class="flex items-center gap-2 p-2 bg-gray-50 rounded"
+                    >
+                      <select
+                        v-model="tw.dayOfWeek"
+                        class="flex-shrink-0 text-sm rounded-md border-gray-300 focus:border-lime-500 focus:ring-lime-500"
+                      >
+                        <option :value="0">Sun</option>
+                        <option :value="1">Mon</option>
+                        <option :value="2">Tue</option>
+                        <option :value="3">Wed</option>
+                        <option :value="4">Thu</option>
+                        <option :value="5">Fri</option>
+                        <option :value="6">Sat</option>
+                      </select>
+                      <input
+                        v-model="tw.startTime"
+                        type="time"
+                        class="flex-1 text-sm rounded-md border-gray-300 focus:border-lime-500 focus:ring-lime-500"
+                      />
+                      <span class="text-gray-400">–</span>
+                      <input
+                        v-model="tw.endTime"
+                        type="time"
+                        class="flex-1 text-sm rounded-md border-gray-300 focus:border-lime-500 focus:ring-lime-500"
+                      />
+                      <button
+                        type="button"
+                        @click="removeTimeWindow(index)"
+                        class="text-gray-400 hover:text-red-500"
+                      >
+                        <svg
+                          class="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div class="mt-6 flex justify-end gap-3">
@@ -733,15 +838,21 @@
               if (
                 taskFilter.value.projectId &&
                 task.project_id !== taskFilter.value.projectId
-              ) return false;
+              ) {
+                return false;
+              }
               if (
                 taskFilter.value.completed === "true" &&
                 !task.completed_at
-              ) return false;
+              ) {
+                return false;
+              }
               if (
                 taskFilter.value.completed === "false" &&
                 task.completed_at
-              ) return false;
+              ) {
+                return false;
+              }
               return true;
             });
           });
@@ -759,9 +870,10 @@
             priority: 2,
             due_date: "",
             project_id: "",
+            context_ids: [],
           });
           const projectForm = ref({ name: "", description: "" });
-          const contextForm = ref({ name: "", description: "" });
+          const contextForm = ref({ name: "", timeWindows: [] });
 
           // API helpers
           const api = async (path, options = {}) => {
@@ -786,6 +898,12 @@
             if (!dateStr) return "";
             const date = new Date(dateStr);
             return date.toLocaleString();
+          };
+
+          // Helper to get context name by ID
+          const getContextName = (ctxId) => {
+            const ctx = contexts.value.find((c) => c.id === ctxId);
+            return ctx ? ctx.name : "";
           };
 
           // Next page
@@ -893,17 +1011,21 @@
                 ? task.due_date.split("T")[0]
                 : "",
               project_id: task.project_id || "",
+              context_ids: task.context_ids || [],
             };
             showTaskForm.value = true;
           };
 
           const saveTask = async () => {
             try {
-              const body = { ...taskForm.value };
-              if (body.due_date) {
-                body.due_date = new Date(body.due_date).toISOString();
-              } else delete body.due_date;
-              if (!body.project_id) body.project_id = null;
+              const body = {
+                title: taskForm.value.title,
+                description: taskForm.value.description || undefined,
+                priority: taskForm.value.priority,
+                dueDate: taskForm.value.due_date || undefined,
+                projectId: taskForm.value.project_id || null,
+                contextIds: taskForm.value.context_ids,
+              };
 
               if (editingTask.value) {
                 await api(`/tasks/${editingTask.value.id}`, {
@@ -925,6 +1047,7 @@
                 priority: 2,
                 due_date: "",
                 project_id: "",
+                context_ids: [],
               };
               await fetchTasks();
             } catch (e) {
@@ -977,28 +1100,51 @@
             editingContext.value = ctx;
             contextForm.value = {
               name: ctx.name,
-              description: ctx.description || "",
+              timeWindows: ctx.time_windows
+                ? ctx.time_windows.map((tw) => ({
+                  dayOfWeek: tw.dayOfWeek,
+                  startTime: tw.startTime,
+                  endTime: tw.endTime,
+                }))
+                : [],
             };
             showContextForm.value = true;
           };
 
+          const addTimeWindow = () => {
+            contextForm.value.timeWindows.push({
+              dayOfWeek: 1,
+              startTime: "09:00",
+              endTime: "17:00",
+            });
+          };
+
+          const removeTimeWindow = (index) => {
+            contextForm.value.timeWindows.splice(index, 1);
+          };
+
           const saveContext = async () => {
             try {
+              const body = {
+                name: contextForm.value.name,
+                timeWindows: contextForm.value.timeWindows,
+              };
+
               if (editingContext.value) {
                 await api(`/contexts/${editingContext.value.id}`, {
                   method: "PATCH",
-                  body: JSON.stringify(contextForm.value),
+                  body: JSON.stringify(body),
                 });
                 showToast("Context updated");
               } else {
                 await api("/contexts", {
                   method: "POST",
-                  body: JSON.stringify(contextForm.value),
+                  body: JSON.stringify(body),
                 });
                 showToast("Context created");
               }
               showContextForm.value = false;
-              contextForm.value = { name: "", description: "" };
+              contextForm.value = { name: "", timeWindows: [] };
               await fetchContexts();
             } catch (e) {
               showToast("Failed to save context", "error");
@@ -1089,7 +1235,10 @@
             saveProject,
             fetchContexts,
             editContext,
+            addTimeWindow,
+            removeTimeWindow,
             saveContext,
+            getContextName,
             fetchHistory,
             exportData,
             importData,

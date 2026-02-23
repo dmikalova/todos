@@ -146,14 +146,14 @@
 - [x] 14.2 Create TaskForm.vue component (create/edit task dialog with
       multi-context select)
 - [x] 14.3 Create DeferMenu.vue component (defer options dropdown)
-- [ ] 14.4 Create ProjectSelect.vue component (project picker)
-- [ ] 14.5 Create ContextSelect.vue component (multi-select context picker)
-- [ ] 14.6 Create RecurrenceForm.vue component (friendly recurrence UI)
+- [x] 14.4 Create ProjectSelect.vue component (project picker)
+- [x] 14.5 Create ContextSelect.vue component (multi-select context picker)
+- [x] 14.6 Create RecurrenceForm.vue component (friendly recurrence UI)
 - [x] 14.7 Create FilterBar.vue component (quick filters + saved filter select)
 - [x] 14.8 Create ErrorToast.vue component (top center toast notifications)
 - [x] 14.9 Create KeyboardShortcutsDialog.vue component (help dialog)
-- [ ] 14.10 Create ContextSelector.vue component (header context override)
-- [ ] 14.11 Create ImportExport.vue component (settings import/export UI)
+- [x] 14.10 Create ContextSelector.vue component (header context override)
+- [x] 14.11 Create ImportExport.vue component (settings import/export UI)
 
 ## 15. Unit Tests
 
@@ -162,9 +162,9 @@
       edge cases like 30th in February)
 - [x] 15.3 Test context matching logic (time windows, weekdays)
 - [x] 15.4 Test Next page scoring algorithm
-- [ ] 15.5 Test filter query building
-- [ ] 15.6 Test import validation
-- [ ] 15.7 Test markdown parsing (links, bold, italic, code)
+- [x] 15.5 Test filter query building
+- [x] 15.6 Test import validation
+- [x] 15.7 Test markdown parsing (links, bold, italic, code)
 
 ## 16. E2E Tests
 

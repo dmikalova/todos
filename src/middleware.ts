@@ -146,8 +146,15 @@ function parseCookies(cookieHeader: string | null): Record<string, string> {
 
 // Auth middleware - validates session and sets context
 export const authMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
-  // Allow health check without auth
-  if (c.req.path === "/health") {
+  const path = c.req.path;
+
+  // Allow static assets and health check without auth
+  if (
+    path === "/health" ||
+    path === "/favicon.svg" ||
+    path === "/output.css" ||
+    path.startsWith("/assets/")
+  ) {
     c.set("session", null);
     return next();
   }

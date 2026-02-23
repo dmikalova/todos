@@ -70,41 +70,15 @@ app.get("/output.css", async (c) => {
   }
 });
 
-// Serve built frontend assets
-app.get("/assets/*", async (c) => {
-  const path = c.req.path;
-  const distDir = new URL("./public/dist", import.meta.url).pathname;
-  try {
-    const file = await Deno.readFile(`${distDir}${path}`);
-    const ext = path.split(".").pop();
-    const contentType = ext === "js"
-      ? "application/javascript"
-      : ext === "css"
-      ? "text/css"
-      : "application/octet-stream";
-    return new Response(file, {
-      headers: { "Content-Type": contentType },
-    });
-  } catch {
-    return c.json({ error: "Not found" }, 404);
-  }
-});
-
-// Serve frontend
+// Serve frontend (single HTML file with Vue from CDN)
 app.get("/", async (c) => {
-  const distDir = new URL("./public/dist", import.meta.url).pathname;
   try {
-    const html = await Deno.readTextFile(`${distDir}/index.html`);
+    const html = await Deno.readTextFile(
+      new URL("./public/index.html", import.meta.url).pathname,
+    );
     return c.html(html);
   } catch {
-    try {
-      const html = await Deno.readTextFile(
-        new URL("./public/index.html", import.meta.url).pathname,
-      );
-      return c.html(html);
-    } catch {
-      return c.json({ message: "Todos API", version: "0.1.0" });
-    }
+    return c.json({ error: "Not found" }, 404);
   }
 });
 
@@ -115,9 +89,10 @@ app.get("*", async (c) => {
     return c.json({ error: "Not found" }, 404);
   }
 
-  const distDir = new URL("./public/dist", import.meta.url).pathname;
   try {
-    const html = await Deno.readTextFile(`${distDir}/index.html`);
+    const html = await Deno.readTextFile(
+      new URL("./public/index.html", import.meta.url).pathname,
+    );
     return c.html(html);
   } catch {
     return c.json({ error: "Not found" }, 404);

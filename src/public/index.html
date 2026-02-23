@@ -8,9 +8,15 @@
     <link rel="stylesheet" href="/output.css" />
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <style>
-      [v-cloak] { display: none; }
-      .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
-      .fade-enter-from, .fade-leave-to { opacity: 0; }
+      [v-cloak] {
+        display: none;
+      }
+      .fade-enter-active, .fade-leave-active {
+        transition: opacity 0.2s ease;
+      }
+      .fade-enter-from, .fade-leave-to {
+        opacity: 0;
+      }
     </style>
   </head>
   <body class="bg-gray-50 min-h-screen">
@@ -53,27 +59,49 @@
 
       <!-- Main Content -->
       <main class="max-w-4xl mx-auto py-6 px-4">
-
         <!-- Next Tab -->
         <div v-if="currentTab === 'next'">
           <div class="text-center mb-8">
             <h1 class="text-2xl font-bold text-gray-900">What's Next?</h1>
-            <p class="mt-1 text-sm text-gray-500">Your most important task right now</p>
+            <p class="mt-1 text-sm text-gray-500">
+              Your most important task right now
+            </p>
           </div>
 
           <!-- Loading -->
           <div v-if="loading" class="flex justify-center py-12">
-            <div class="h-8 w-8 animate-spin rounded-full border-4 border-lime-600 border-t-transparent"></div>
+            <div
+              class="h-8 w-8 animate-spin rounded-full border-4 border-lime-600 border-t-transparent"
+            >
+            </div>
           </div>
 
           <!-- No Tasks -->
-          <div v-else-if="!currentTask" class="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div
+            v-else-if="!currentTask"
+            class="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center"
+          >
+            <svg
+              class="mx-auto h-12 w-12 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
-            <h3 class="mt-4 text-lg font-medium text-gray-900">All caught up!</h3>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">
+              All caught up!
+            </h3>
             <p class="mt-2 text-sm text-gray-500">No pending tasks.</p>
-            <button @click="currentTab = 'tasks'" class="mt-4 inline-flex items-center rounded-md bg-lime-600 px-4 py-2 text-sm font-semibold text-white hover:bg-lime-500">
+            <button
+              @click="currentTab = 'tasks'"
+              class="mt-4 inline-flex items-center rounded-md bg-lime-600 px-4 py-2 text-sm font-semibold text-white hover:bg-lime-500"
+            >
               View all tasks
             </button>
           </div>
@@ -83,21 +111,58 @@
             <div class="bg-white rounded-lg shadow-md p-6">
               <div class="flex items-start justify-between">
                 <div class="flex-1">
-                  <h2 class="text-xl font-semibold text-gray-900">{{ currentTask.title }}</h2>
-                  <p v-if="currentTask.description" class="mt-2 text-gray-600">{{ currentTask.description }}</p>
+                  <h2 class="text-xl font-semibold text-gray-900">
+                    {{ currentTask.title }}
+                  </h2>
+                  <p v-if="currentTask.description" class="mt-2 text-gray-600">
+                    {{ currentTask.description }}
+                  </p>
                 </div>
-                <span v-if="currentTask.priority" class="ml-4 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  :class="currentTask.priority >= 3 ? 'bg-red-100 text-red-800' : currentTask.priority >= 2 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'">
+                <span
+                  v-if="currentTask.priority"
+                  class="ml-4 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  :class="currentTask.priority >= 3 ? 'bg-red-100 text-red-800' : currentTask.priority >= 2 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'"
+                >
                   P{{ currentTask.priority }}
                 </span>
               </div>
               <div class="mt-4 flex flex-wrap gap-2 text-sm text-gray-500">
-                <span v-if="currentTask.due_date" class="flex items-center gap-1">
-                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <span
+                  v-if="currentTask.due_date"
+                  class="flex items-center gap-1"
+                >
+                  <svg
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
                   Due: {{ formatDate(currentTask.due_date) }}
                 </span>
-                <span v-if="currentTask.project_name" class="flex items-center gap-1">
-                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+                <span
+                  v-if="currentTask.project_name"
+                  class="flex items-center gap-1"
+                >
+                  <svg
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                    />
+                  </svg>
                   {{ currentTask.project_name }}
                 </span>
               </div>
@@ -105,15 +170,49 @@
 
             <!-- Actions -->
             <div class="flex flex-wrap items-center justify-center gap-3">
-              <button @click="completeTask" class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-500">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+              <button
+                @click="completeTask"
+                class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-500"
+              >
+                <svg
+                  class="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
                 Complete
               </button>
-              <button @click="skipTask" class="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-200">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+              <button
+                @click="skipTask"
+                class="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-200"
+              >
+                <svg
+                  class="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                  />
+                </svg>
                 Skip
               </button>
-              <select v-model="deferOption" @change="deferTask" class="rounded-lg border-gray-300 px-4 py-3 text-sm shadow-sm focus:border-lime-500 focus:ring-lime-500">
+              <select
+                v-model="deferOption"
+                @change="deferTask"
+                class="rounded-lg border-gray-300 px-4 py-3 text-sm shadow-sm focus:border-lime-500 focus:ring-lime-500"
+              >
                 <option value="">Defer...</option>
                 <option value="1h">1 hour</option>
                 <option value="3h">3 hours</option>
@@ -128,19 +227,42 @@
         <div v-if="currentTab === 'tasks'">
           <div class="flex items-center justify-between mb-6">
             <h1 class="text-2xl font-bold text-gray-900">Tasks</h1>
-            <button @click="showTaskForm = true; editingTask = null" class="inline-flex items-center rounded-md bg-lime-600 px-4 py-2 text-sm font-semibold text-white hover:bg-lime-500">
-              <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+            <button
+              @click="showTaskForm = true; editingTask = null"
+              class="inline-flex items-center rounded-md bg-lime-600 px-4 py-2 text-sm font-semibold text-white hover:bg-lime-500"
+            >
+              <svg
+                class="h-4 w-4 mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
               New Task
             </button>
           </div>
 
           <!-- Filters -->
           <div class="mb-4 flex flex-wrap gap-2">
-            <select v-model="taskFilter.projectId" class="rounded-md border-gray-300 text-sm focus:border-lime-500">
+            <select
+              v-model="taskFilter.projectId"
+              class="rounded-md border-gray-300 text-sm focus:border-lime-500"
+            >
               <option value="">All Projects</option>
-              <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+              <option v-for="p in projects" :key="p.id" :value="p.id">
+                {{ p.name }}
+              </option>
             </select>
-            <select v-model="taskFilter.completed" class="rounded-md border-gray-300 text-sm focus:border-lime-500">
+            <select
+              v-model="taskFilter.completed"
+              class="rounded-md border-gray-300 text-sm focus:border-lime-500"
+            >
               <option value="false">Active</option>
               <option value="true">Completed</option>
               <option value="">All</option>
@@ -149,31 +271,72 @@
 
           <!-- Task List -->
           <div class="space-y-2">
-            <div v-for="task in filteredTasks" :key="task.id"
-              class="bg-white rounded-lg shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div
+              v-for="task in filteredTasks"
+              :key="task.id"
+              class="bg-white rounded-lg shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition-shadow"
+            >
               <button @click="toggleComplete(task)" class="flex-shrink-0">
-                <div :class="[
+                <div
+                  :class="[
                   'h-5 w-5 rounded-full border-2 flex items-center justify-center',
                   task.completed_at ? 'bg-lime-600 border-lime-600' : 'border-gray-300 hover:border-lime-500'
-                ]">
-                  <svg v-if="task.completed_at" class="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                ]"
+                >
+                  <svg
+                    v-if="task.completed_at"
+                    class="h-3 w-3 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clip-rule="evenodd"
+                    />
                   </svg>
                 </div>
               </button>
               <div class="flex-1 min-w-0">
-                <p :class="['font-medium', task.completed_at ? 'text-gray-400 line-through' : 'text-gray-900']">{{ task.title }}</p>
-                <p v-if="task.due_date" class="text-sm text-gray-500">Due: {{ formatDate(task.due_date) }}</p>
+                <p
+                  :class="['font-medium', task.completed_at ? 'text-gray-400 line-through' : 'text-gray-900']"
+                >
+                  {{ task.title }}
+                </p>
+                <p v-if="task.due_date" class="text-sm text-gray-500">
+                  Due: {{ formatDate(task.due_date) }}
+                </p>
               </div>
-              <span v-if="task.priority" class="text-xs font-medium px-2 py-0.5 rounded-full"
-                :class="task.priority >= 3 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-600'">
+              <span
+                v-if="task.priority"
+                class="text-xs font-medium px-2 py-0.5 rounded-full"
+                :class="task.priority >= 3 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-600'"
+              >
                 P{{ task.priority }}
               </span>
-              <button @click="editTask(task)" class="text-gray-400 hover:text-gray-600">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+              <button
+                @click="editTask(task)"
+                class="text-gray-400 hover:text-gray-600"
+              >
+                <svg
+                  class="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
               </button>
             </div>
-            <div v-if="filteredTasks.length === 0" class="text-center py-8 text-gray-500">
+            <div
+              v-if="filteredTasks.length === 0"
+              class="text-center py-8 text-gray-500"
+            >
               No tasks found
             </div>
           </div>
@@ -183,21 +346,42 @@
         <div v-if="currentTab === 'projects'">
           <div class="flex items-center justify-between mb-6">
             <h1 class="text-2xl font-bold text-gray-900">Projects</h1>
-            <button @click="showProjectForm = true; editingProject = null" class="inline-flex items-center rounded-md bg-lime-600 px-4 py-2 text-sm font-semibold text-white hover:bg-lime-500">
-              <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+            <button
+              @click="showProjectForm = true; editingProject = null"
+              class="inline-flex items-center rounded-md bg-lime-600 px-4 py-2 text-sm font-semibold text-white hover:bg-lime-500"
+            >
+              <svg
+                class="h-4 w-4 mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
               New Project
             </button>
           </div>
 
           <div class="grid gap-4 sm:grid-cols-2">
-            <div v-for="project in projects" :key="project.id"
+            <div
+              v-for="project in projects"
+              :key="project.id"
               class="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer"
-              @click="taskFilter.projectId = project.id; currentTab = 'tasks'">
+              @click="taskFilter.projectId = project.id; currentTab = 'tasks'"
+            >
               <div class="flex items-center justify-between">
                 <h3 class="font-semibold text-gray-900">{{ project.name }}</h3>
-                <span class="text-sm text-gray-500">{{ project.task_count || 0 }} tasks</span>
+                <span class="text-sm text-gray-500"
+                >{{ project.task_count || 0 }} tasks</span>
               </div>
-              <p v-if="project.description" class="mt-1 text-sm text-gray-600">{{ project.description }}</p>
+              <p v-if="project.description" class="mt-1 text-sm text-gray-600">
+                {{ project.description }}
+              </p>
             </div>
           </div>
         </div>
@@ -210,16 +394,42 @@
           <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-lg font-semibold text-gray-900">Contexts</h2>
-              <button @click="showContextForm = true; editingContext = null" class="text-sm text-lime-600 hover:text-lime-500">+ Add Context</button>
+              <button
+                @click="showContextForm = true; editingContext = null"
+                class="text-sm text-lime-600 hover:text-lime-500"
+              >
+                + Add Context
+              </button>
             </div>
             <div class="space-y-3">
-              <div v-for="ctx in contexts" :key="ctx.id" class="flex items-center justify-between py-2 border-b last:border-0">
+              <div
+                v-for="ctx in contexts"
+                :key="ctx.id"
+                class="flex items-center justify-between py-2 border-b last:border-0"
+              >
                 <div>
                   <p class="font-medium text-gray-900">{{ ctx.name }}</p>
-                  <p v-if="ctx.description" class="text-sm text-gray-500">{{ ctx.description }}</p>
+                  <p v-if="ctx.description" class="text-sm text-gray-500">
+                    {{ ctx.description }}
+                  </p>
                 </div>
-                <button @click="editContext(ctx)" class="text-gray-400 hover:text-gray-600">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                <button
+                  @click="editContext(ctx)"
+                  class="text-gray-400 hover:text-gray-600"
+                >
+                  <svg
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -229,12 +439,22 @@
           <div class="bg-white rounded-lg shadow-sm p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Data</h2>
             <div class="flex gap-4">
-              <button @click="exportData" class="inline-flex items-center rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+              <button
+                @click="exportData"
+                class="inline-flex items-center rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+              >
                 Export Data
               </button>
-              <label class="inline-flex items-center rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 cursor-pointer">
+              <label
+                class="inline-flex items-center rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 cursor-pointer"
+              >
                 Import Data
-                <input type="file" @change="importData" accept=".json" class="hidden" />
+                <input
+                  type="file"
+                  @change="importData"
+                  accept=".json"
+                  class="hidden"
+                />
               </label>
             </div>
           </div>
@@ -244,16 +464,25 @@
         <div v-if="currentTab === 'history'">
           <h1 class="text-2xl font-bold text-gray-900 mb-6">History</h1>
           <div class="space-y-2">
-            <div v-for="entry in history" :key="entry.id" class="bg-white rounded-lg shadow-sm p-4">
+            <div
+              v-for="entry in history"
+              :key="entry.id"
+              class="bg-white rounded-lg shadow-sm p-4"
+            >
               <div class="flex items-center justify-between">
                 <p class="text-gray-900">
-                  <span class="font-medium">{{ entry.task_title || 'Task' }}</span>
+                  <span class="font-medium"
+                  >{{ entry.task_title || 'Task' }}</span>
                   <span class="text-gray-500"> — {{ entry.action }}</span>
                 </p>
-                <span class="text-sm text-gray-400">{{ formatTime(entry.created_at) }}</span>
+                <span class="text-sm text-gray-400"
+                >{{ formatTime(entry.created_at) }}</span>
               </div>
             </div>
-            <div v-if="history.length === 0" class="text-center py-8 text-gray-500">
+            <div
+              v-if="history.length === 0"
+              class="text-center py-8 text-gray-500"
+            >
               No history yet
             </div>
           </div>
@@ -263,23 +492,43 @@
       <!-- Task Form Modal -->
       <div v-if="showTaskForm" class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex min-h-full items-center justify-center p-4">
-          <div class="fixed inset-0 bg-black/30" @click="showTaskForm = false"></div>
-          <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ editingTask ? 'Edit Task' : 'New Task' }}</h3>
+          <div class="fixed inset-0 bg-black/30" @click="showTaskForm = false">
+          </div>
+          <div
+            class="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6"
+          >
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+              {{ editingTask ? 'Edit Task' : 'New Task' }}
+            </h3>
             <form @submit.prevent="saveTask">
               <div class="space-y-4">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700">Title</label>
-                  <input v-model="taskForm.title" type="text" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500" />
+                  <label class="block text-sm font-medium text-gray-700"
+                  >Title</label>
+                  <input
+                    v-model="taskForm.title"
+                    type="text"
+                    required
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500"
+                  />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700">Description</label>
-                  <textarea v-model="taskForm.description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500"></textarea>
+                  <label class="block text-sm font-medium text-gray-700"
+                  >Description</label>
+                  <textarea
+                    v-model="taskForm.description"
+                    rows="3"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500"
+                  ></textarea>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                   <div>
-                    <label class="block text-sm font-medium text-gray-700">Priority</label>
-                    <select v-model="taskForm.priority" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500">
+                    <label class="block text-sm font-medium text-gray-700"
+                    >Priority</label>
+                    <select
+                      v-model="taskForm.priority"
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500"
+                    >
                       <option :value="1">P1 - Low</option>
                       <option :value="2">P2 - Medium</option>
                       <option :value="3">P3 - High</option>
@@ -287,21 +536,43 @@
                     </select>
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-700">Due Date</label>
-                    <input v-model="taskForm.due_date" type="date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500" />
+                    <label class="block text-sm font-medium text-gray-700"
+                    >Due Date</label>
+                    <input
+                      v-model="taskForm.due_date"
+                      type="date"
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500"
+                    />
                   </div>
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700">Project</label>
-                  <select v-model="taskForm.project_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500">
+                  <label class="block text-sm font-medium text-gray-700"
+                  >Project</label>
+                  <select
+                    v-model="taskForm.project_id"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500"
+                  >
                     <option value="">No Project (Inbox)</option>
-                    <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+                    <option v-for="p in projects" :key="p.id" :value="p.id">
+                      {{ p.name }}
+                    </option>
                   </select>
                 </div>
               </div>
               <div class="mt-6 flex justify-end gap-3">
-                <button type="button" @click="showTaskForm = false" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">Cancel</button>
-                <button type="submit" class="px-4 py-2 bg-lime-600 text-white text-sm font-medium rounded-md hover:bg-lime-500">Save</button>
+                <button
+                  type="button"
+                  @click="showTaskForm = false"
+                  class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="px-4 py-2 bg-lime-600 text-white text-sm font-medium rounded-md hover:bg-lime-500"
+                >
+                  Save
+                </button>
               </div>
             </form>
           </div>
@@ -311,23 +582,53 @@
       <!-- Project Form Modal -->
       <div v-if="showProjectForm" class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex min-h-full items-center justify-center p-4">
-          <div class="fixed inset-0 bg-black/30" @click="showProjectForm = false"></div>
-          <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ editingProject ? 'Edit Project' : 'New Project' }}</h3>
+          <div
+            class="fixed inset-0 bg-black/30"
+            @click="showProjectForm = false"
+          >
+          </div>
+          <div
+            class="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6"
+          >
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+              {{ editingProject ? 'Edit Project' : 'New Project' }}
+            </h3>
             <form @submit.prevent="saveProject">
               <div class="space-y-4">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700">Name</label>
-                  <input v-model="projectForm.name" type="text" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500" />
+                  <label class="block text-sm font-medium text-gray-700"
+                  >Name</label>
+                  <input
+                    v-model="projectForm.name"
+                    type="text"
+                    required
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500"
+                  />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700">Description</label>
-                  <textarea v-model="projectForm.description" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500"></textarea>
+                  <label class="block text-sm font-medium text-gray-700"
+                  >Description</label>
+                  <textarea
+                    v-model="projectForm.description"
+                    rows="2"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500"
+                  ></textarea>
                 </div>
               </div>
               <div class="mt-6 flex justify-end gap-3">
-                <button type="button" @click="showProjectForm = false" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">Cancel</button>
-                <button type="submit" class="px-4 py-2 bg-lime-600 text-white text-sm font-medium rounded-md hover:bg-lime-500">Save</button>
+                <button
+                  type="button"
+                  @click="showProjectForm = false"
+                  class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="px-4 py-2 bg-lime-600 text-white text-sm font-medium rounded-md hover:bg-lime-500"
+                >
+                  Save
+                </button>
               </div>
             </form>
           </div>
@@ -337,23 +638,53 @@
       <!-- Context Form Modal -->
       <div v-if="showContextForm" class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex min-h-full items-center justify-center p-4">
-          <div class="fixed inset-0 bg-black/30" @click="showContextForm = false"></div>
-          <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ editingContext ? 'Edit Context' : 'New Context' }}</h3>
+          <div
+            class="fixed inset-0 bg-black/30"
+            @click="showContextForm = false"
+          >
+          </div>
+          <div
+            class="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6"
+          >
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+              {{ editingContext ? 'Edit Context' : 'New Context' }}
+            </h3>
             <form @submit.prevent="saveContext">
               <div class="space-y-4">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700">Name</label>
-                  <input v-model="contextForm.name" type="text" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500" />
+                  <label class="block text-sm font-medium text-gray-700"
+                  >Name</label>
+                  <input
+                    v-model="contextForm.name"
+                    type="text"
+                    required
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500"
+                  />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700">Description</label>
-                  <textarea v-model="contextForm.description" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500"></textarea>
+                  <label class="block text-sm font-medium text-gray-700"
+                  >Description</label>
+                  <textarea
+                    v-model="contextForm.description"
+                    rows="2"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500"
+                  ></textarea>
                 </div>
               </div>
               <div class="mt-6 flex justify-end gap-3">
-                <button type="button" @click="showContextForm = false" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">Cancel</button>
-                <button type="submit" class="px-4 py-2 bg-lime-600 text-white text-sm font-medium rounded-md hover:bg-lime-500">Save</button>
+                <button
+                  type="button"
+                  @click="showContextForm = false"
+                  class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="px-4 py-2 bg-lime-600 text-white text-sm font-medium rounded-md hover:bg-lime-500"
+                >
+                  Save
+                </button>
               </div>
             </form>
           </div>
@@ -368,21 +699,21 @@
         setup() {
           // Navigation
           const tabs = [
-            { id: 'next', label: 'Next' },
-            { id: 'tasks', label: 'Tasks' },
-            { id: 'projects', label: 'Projects' },
-            { id: 'settings', label: 'Settings' },
-            { id: 'history', label: 'History' },
+            { id: "next", label: "Next" },
+            { id: "tasks", label: "Tasks" },
+            { id: "projects", label: "Projects" },
+            { id: "settings", label: "Settings" },
+            { id: "history", label: "History" },
           ];
-          const currentTab = ref('next');
+          const currentTab = ref("next");
 
           // Toast notifications
           const toasts = ref([]);
-          const showToast = (message, type = 'success') => {
+          const showToast = (message, type = "success") => {
             const id = Date.now();
             toasts.value.push({ id, message, type });
             setTimeout(() => {
-              toasts.value = toasts.value.filter(t => t.id !== id);
+              toasts.value = toasts.value.filter((t) => t.id !== id);
             }, 3000);
           };
 
@@ -393,15 +724,24 @@
           const projects = ref([]);
           const contexts = ref([]);
           const history = ref([]);
-          const deferOption = ref('');
+          const deferOption = ref("");
 
           // Filters
-          const taskFilter = ref({ projectId: '', completed: 'false' });
+          const taskFilter = ref({ projectId: "", completed: "false" });
           const filteredTasks = computed(() => {
-            return tasks.value.filter(task => {
-              if (taskFilter.value.projectId && task.project_id !== taskFilter.value.projectId) return false;
-              if (taskFilter.value.completed === 'true' && !task.completed_at) return false;
-              if (taskFilter.value.completed === 'false' && task.completed_at) return false;
+            return tasks.value.filter((task) => {
+              if (
+                taskFilter.value.projectId &&
+                task.project_id !== taskFilter.value.projectId
+              ) return false;
+              if (
+                taskFilter.value.completed === "true" &&
+                !task.completed_at
+              ) return false;
+              if (
+                taskFilter.value.completed === "false" &&
+                task.completed_at
+              ) return false;
               return true;
             });
           });
@@ -413,15 +753,24 @@
           const editingTask = ref(null);
           const editingProject = ref(null);
           const editingContext = ref(null);
-          const taskForm = ref({ title: '', description: '', priority: 2, due_date: '', project_id: '' });
-          const projectForm = ref({ name: '', description: '' });
-          const contextForm = ref({ name: '', description: '' });
+          const taskForm = ref({
+            title: "",
+            description: "",
+            priority: 2,
+            due_date: "",
+            project_id: "",
+          });
+          const projectForm = ref({ name: "", description: "" });
+          const contextForm = ref({ name: "", description: "" });
 
           // API helpers
           const api = async (path, options = {}) => {
-            const res = await fetch('/api' + path, {
+            const res = await fetch("/api" + path, {
               ...options,
-              headers: { 'Content-Type': 'application/json', ...options.headers },
+              headers: {
+                "Content-Type": "application/json",
+                ...options.headers,
+              },
             });
             if (!res.ok) throw new Error(await res.text());
             return res.json();
@@ -429,12 +778,12 @@
 
           // Date formatting
           const formatDate = (dateStr) => {
-            if (!dateStr) return '';
+            if (!dateStr) return "";
             const date = new Date(dateStr);
             return date.toLocaleDateString();
           };
           const formatTime = (dateStr) => {
-            if (!dateStr) return '';
+            if (!dateStr) return "";
             const date = new Date(dateStr);
             return date.toLocaleString();
           };
@@ -443,7 +792,7 @@
           const fetchNext = async () => {
             loading.value = true;
             try {
-              const result = await api('/next');
+              const result = await api("/next");
               currentTask.value = result.tasks?.[0] || null;
             } catch (e) {
               currentTask.value = null;
@@ -455,12 +804,14 @@
           const completeTask = async () => {
             if (!currentTask.value) return;
             try {
-              await api(`/tasks/${currentTask.value.id}/complete`, { method: 'POST' });
-              showToast('Task completed!');
+              await api(`/tasks/${currentTask.value.id}/complete`, {
+                method: "POST",
+              });
+              showToast("Task completed!");
               await fetchNext();
               await fetchTasks();
             } catch (e) {
-              showToast('Failed to complete task', 'error');
+              showToast("Failed to complete task", "error");
             }
           };
 
@@ -473,44 +824,62 @@
             const now = new Date();
             let deferUntil;
             switch (deferOption.value) {
-              case '1h': deferUntil = new Date(now.getTime() + 3600000); break;
-              case '3h': deferUntil = new Date(now.getTime() + 10800000); break;
-              case 'tomorrow': deferUntil = new Date(now); deferUntil.setDate(deferUntil.getDate() + 1); deferUntil.setHours(9, 0, 0, 0); break;
-              case 'nextweek': deferUntil = new Date(now); deferUntil.setDate(deferUntil.getDate() + 7); break;
-              default: return;
+              case "1h":
+                deferUntil = new Date(now.getTime() + 3600000);
+                break;
+              case "3h":
+                deferUntil = new Date(now.getTime() + 10800000);
+                break;
+              case "tomorrow":
+                deferUntil = new Date(now);
+                deferUntil.setDate(deferUntil.getDate() + 1);
+                deferUntil.setHours(9, 0, 0, 0);
+                break;
+              case "nextweek":
+                deferUntil = new Date(now);
+                deferUntil.setDate(deferUntil.getDate() + 7);
+                break;
+              default:
+                return;
             }
             try {
               await api(`/tasks/${currentTask.value.id}/defer`, {
-                method: 'POST',
-                body: JSON.stringify({ deferred_until: deferUntil.toISOString() }),
+                method: "POST",
+                body: JSON.stringify({
+                  deferred_until: deferUntil.toISOString(),
+                }),
               });
-              showToast('Task deferred');
-              deferOption.value = '';
+              showToast("Task deferred");
+              deferOption.value = "";
               await fetchNext();
             } catch (e) {
-              showToast('Failed to defer task', 'error');
+              showToast("Failed to defer task", "error");
             }
           };
 
           // Tasks
           const fetchTasks = async () => {
             try {
-              tasks.value = await api('/tasks');
+              tasks.value = await api("/tasks");
             } catch (e) {
-              showToast('Failed to load tasks', 'error');
+              showToast("Failed to load tasks", "error");
             }
           };
 
           const toggleComplete = async (task) => {
             try {
               if (task.completed_at) {
-                await api(`/tasks/${task.id}/complete`, { method: 'DELETE' });
+                await api(`/tasks/${task.id}/complete`, {
+                  method: "DELETE",
+                });
               } else {
-                await api(`/tasks/${task.id}/complete`, { method: 'POST' });
+                await api(`/tasks/${task.id}/complete`, {
+                  method: "POST",
+                });
               }
               await fetchTasks();
             } catch (e) {
-              showToast('Failed to update task', 'error');
+              showToast("Failed to update task", "error");
             }
           };
 
@@ -518,10 +887,12 @@
             editingTask.value = task;
             taskForm.value = {
               title: task.title,
-              description: task.description || '',
+              description: task.description || "",
               priority: task.priority || 2,
-              due_date: task.due_date ? task.due_date.split('T')[0] : '',
-              project_id: task.project_id || '',
+              due_date: task.due_date
+                ? task.due_date.split("T")[0]
+                : "",
+              project_id: task.project_id || "",
             };
             showTaskForm.value = true;
           };
@@ -529,95 +900,123 @@
           const saveTask = async () => {
             try {
               const body = { ...taskForm.value };
-              if (body.due_date) body.due_date = new Date(body.due_date).toISOString();
-              else delete body.due_date;
+              if (body.due_date) {
+                body.due_date = new Date(body.due_date).toISOString();
+              } else delete body.due_date;
               if (!body.project_id) body.project_id = null;
 
               if (editingTask.value) {
-                await api(`/tasks/${editingTask.value.id}`, { method: 'PATCH', body: JSON.stringify(body) });
-                showToast('Task updated');
+                await api(`/tasks/${editingTask.value.id}`, {
+                  method: "PATCH",
+                  body: JSON.stringify(body),
+                });
+                showToast("Task updated");
               } else {
-                await api('/tasks', { method: 'POST', body: JSON.stringify(body) });
-                showToast('Task created');
+                await api("/tasks", {
+                  method: "POST",
+                  body: JSON.stringify(body),
+                });
+                showToast("Task created");
               }
               showTaskForm.value = false;
-              taskForm.value = { title: '', description: '', priority: 2, due_date: '', project_id: '' };
+              taskForm.value = {
+                title: "",
+                description: "",
+                priority: 2,
+                due_date: "",
+                project_id: "",
+              };
               await fetchTasks();
             } catch (e) {
-              showToast('Failed to save task', 'error');
+              showToast("Failed to save task", "error");
             }
           };
 
           // Projects
           const fetchProjects = async () => {
             try {
-              projects.value = await api('/projects');
+              projects.value = await api("/projects");
             } catch (e) {
-              showToast('Failed to load projects', 'error');
+              showToast("Failed to load projects", "error");
             }
           };
 
           const saveProject = async () => {
             try {
               if (editingProject.value) {
-                await api(`/projects/${editingProject.value.id}`, { method: 'PATCH', body: JSON.stringify(projectForm.value) });
-                showToast('Project updated');
+                await api(`/projects/${editingProject.value.id}`, {
+                  method: "PATCH",
+                  body: JSON.stringify(projectForm.value),
+                });
+                showToast("Project updated");
               } else {
-                await api('/projects', { method: 'POST', body: JSON.stringify(projectForm.value) });
-                showToast('Project created');
+                await api("/projects", {
+                  method: "POST",
+                  body: JSON.stringify(projectForm.value),
+                });
+                showToast("Project created");
               }
               showProjectForm.value = false;
-              projectForm.value = { name: '', description: '' };
+              projectForm.value = { name: "", description: "" };
               await fetchProjects();
             } catch (e) {
-              showToast('Failed to save project', 'error');
+              showToast("Failed to save project", "error");
             }
           };
 
           // Contexts
           const fetchContexts = async () => {
             try {
-              contexts.value = await api('/contexts');
+              contexts.value = await api("/contexts");
             } catch (e) {
-              showToast('Failed to load contexts', 'error');
+              showToast("Failed to load contexts", "error");
             }
           };
 
           const editContext = (ctx) => {
             editingContext.value = ctx;
-            contextForm.value = { name: ctx.name, description: ctx.description || '' };
+            contextForm.value = {
+              name: ctx.name,
+              description: ctx.description || "",
+            };
             showContextForm.value = true;
           };
 
           const saveContext = async () => {
             try {
               if (editingContext.value) {
-                await api(`/contexts/${editingContext.value.id}`, { method: 'PATCH', body: JSON.stringify(contextForm.value) });
-                showToast('Context updated');
+                await api(`/contexts/${editingContext.value.id}`, {
+                  method: "PATCH",
+                  body: JSON.stringify(contextForm.value),
+                });
+                showToast("Context updated");
               } else {
-                await api('/contexts', { method: 'POST', body: JSON.stringify(contextForm.value) });
-                showToast('Context created');
+                await api("/contexts", {
+                  method: "POST",
+                  body: JSON.stringify(contextForm.value),
+                });
+                showToast("Context created");
               }
               showContextForm.value = false;
-              contextForm.value = { name: '', description: '' };
+              contextForm.value = { name: "", description: "" };
               await fetchContexts();
             } catch (e) {
-              showToast('Failed to save context', 'error');
+              showToast("Failed to save context", "error");
             }
           };
 
           // History
           const fetchHistory = async () => {
             try {
-              history.value = await api('/history');
+              history.value = await api("/history");
             } catch (e) {
-              showToast('Failed to load history', 'error');
+              showToast("Failed to load history", "error");
             }
           };
 
           // Import/Export
           const exportData = () => {
-            window.location.href = '/api/export';
+            window.location.href = "/api/export";
           };
 
           const importData = async (event) => {
@@ -627,13 +1026,16 @@
             reader.onload = async (e) => {
               try {
                 const data = JSON.parse(e.target.result);
-                await api('/import', { method: 'POST', body: JSON.stringify(data) });
-                showToast('Data imported');
+                await api("/import", {
+                  method: "POST",
+                  body: JSON.stringify(data),
+                });
+                showToast("Data imported");
                 await fetchTasks();
                 await fetchProjects();
                 await fetchContexts();
               } catch (e) {
-                showToast('Failed to import data', 'error');
+                showToast("Failed to import data", "error");
               }
             };
             reader.readAsText(file);
@@ -641,26 +1043,59 @@
 
           // Initialize
           onMounted(async () => {
-            await Promise.all([fetchNext(), fetchTasks(), fetchProjects(), fetchContexts(), fetchHistory()]);
+            await Promise.all([
+              fetchNext(),
+              fetchTasks(),
+              fetchProjects(),
+              fetchContexts(),
+              fetchHistory(),
+            ]);
           });
 
           return {
-            tabs, currentTab, toasts, showToast,
-            loading, currentTask, deferOption,
-            tasks, projects, contexts, history,
-            taskFilter, filteredTasks,
-            showTaskForm, showProjectForm, showContextForm,
-            editingTask, editingProject, editingContext,
-            taskForm, projectForm, contextForm,
-            formatDate, formatTime,
-            fetchNext, completeTask, skipTask, deferTask,
-            fetchTasks, toggleComplete, editTask, saveTask,
-            fetchProjects, saveProject,
-            fetchContexts, editContext, saveContext,
-            fetchHistory, exportData, importData,
+            tabs,
+            currentTab,
+            toasts,
+            showToast,
+            loading,
+            currentTask,
+            deferOption,
+            tasks,
+            projects,
+            contexts,
+            history,
+            taskFilter,
+            filteredTasks,
+            showTaskForm,
+            showProjectForm,
+            showContextForm,
+            editingTask,
+            editingProject,
+            editingContext,
+            taskForm,
+            projectForm,
+            contextForm,
+            formatDate,
+            formatTime,
+            fetchNext,
+            completeTask,
+            skipTask,
+            deferTask,
+            fetchTasks,
+            toggleComplete,
+            editTask,
+            saveTask,
+            fetchProjects,
+            saveProject,
+            fetchContexts,
+            editContext,
+            saveContext,
+            fetchHistory,
+            exportData,
+            importData,
           };
         },
-      }).mount('#app');
+      }).mount("#app");
     </script>
   </body>
 </html>

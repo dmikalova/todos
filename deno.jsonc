@@ -11,7 +11,7 @@
     "hono": "npm:hono@^4",
     "playwright": "npm:playwright@^1.49",
     "postgres": "npm:postgres@^3",
-    "zod": "npm:zod@^3",
+    "zod": "npm:zod@^3"
   },
 
   // Available tasks: deno task <name>
@@ -43,7 +43,7 @@
     // Run all tests (unit + integration, requires PostgreSQL)
     "test:all": "deno test --permission-set tests/",
     // Run integration tests (requires PostgreSQL)
-    "test:integration": "deno test --permission-set tests/integration/",
+    "test:integration": "deno test --permission-set tests/integration/"
   },
 
   // Permission sets for different contexts
@@ -52,26 +52,26 @@
     "default": {
       "env": true,
       "net": true,
-      "read": true,
+      "read": true
     },
     // Build: CSS compilation with Tailwind (needs sys for cpu detection)
     "build": {
       "env": true,
       "read": true,
       "sys": true,
-      "write": true,
+      "write": true
     },
     // Scripts: database migrations and tooling
     "scripts": {
       "env": true,
       "read": true,
-      "run": true,
-    },
+      "run": true
+    }
   },
 
   // Test configuration
   "test": {
-    "include": ["tests/"],
+    "include": ["tests/"]
   },
 
   // Strict TypeScript settings
@@ -80,13 +80,13 @@
     "noImplicitAny": true,
     "strictNullChecks": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedParameters": true
   },
 
   // Linter rules
   "lint": {
     "rules": {
-      "tags": ["recommended"],
-    },
-  },
+      "tags": ["recommended"]
+    }
+  }
 }

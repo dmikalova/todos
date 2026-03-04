@@ -1,6 +1,8 @@
 // Hono Application Setup
 
-import { Hono } from "hono";
+import * as esbuild from "esbuild";
+import { type Context, Hono } from "hono";
+import { serveStatic } from "hono/deno";
 import {
   authMiddleware,
   errorHandler,
@@ -16,6 +18,47 @@ import { projects } from "./routes/projects.ts";
 import { recurrence } from "./routes/recurrence.ts";
 import { tasks } from "./routes/tasks.ts";
 import type { AppEnv } from "./types.ts";
+
+// Bundle frontend at startup (cached in memory)
+let frontendBundle: string | null = null;
+let frontendSourceMap: string | null = null;
+
+async function bundleFrontend(): Promise<void> {
+  const isDev = Deno.env.get("DENO_ENV") === "development";
+  console.log("Bundling frontend...");
+
+  const result = await esbuild.build({
+    entryPoints: ["./src/frontend/app.ts"],
+    bundle: true,
+    format: "esm",
+    write: false,
+    minify: !isDev,
+    sourcemap: isDev,
+    target: ["es2022"],
+    // TypeScript config for Lit decorators
+    tsconfigRaw: {
+      compilerOptions: {
+        experimentalDecorators: true,
+        useDefineForClassFields: false,
+      },
+    },
+  });
+
+  frontendBundle = new TextDecoder().decode(result.outputFiles[0].contents);
+  if (isDev && result.outputFiles[1]) {
+    frontendSourceMap = new TextDecoder().decode(
+      result.outputFiles[1].contents,
+    );
+  }
+
+  console.log(
+    `Frontend bundled: ${Math.round(frontendBundle.length / 1024)}KB`,
+  );
+  await esbuild.stop();
+}
+
+// Bundle on module load
+await bundleFrontend();
 
 export const app = new Hono<AppEnv>();
 
@@ -42,59 +85,86 @@ app.route("/api/next", next);
 app.route("/api/export", exportRoutes);
 app.route("/api/import", importRoutes);
 
+// Static file serving - check dist/ first (production build), fallback to public/
+
+// Serve static assets from dist/ (production build)
+app.use("/assets/*", serveStatic({ root: "./dist" }));
+
+// Serve bundled frontend JS (from memory, bundled at startup)
+app.get("/app.js", (c) => {
+  if (!frontendBundle) {
+    return c.json({ error: "Frontend not bundled" }, 500);
+  }
+  return new Response(frontendBundle, {
+    headers: { "Content-Type": "application/javascript" },
+  });
+});
+
+// Serve source map for debugging (from memory)
+app.get("/app.js.map", (c) => {
+  if (!frontendSourceMap) {
+    return c.json({ error: "Source map not available" }, 404);
+  }
+  return new Response(frontendSourceMap, {
+    headers: { "Content-Type": "application/json" },
+  });
+});
+
 // Serve favicon
 app.get("/favicon.svg", async (c) => {
-  try {
-    const svg = await Deno.readTextFile(
-      new URL("./public/favicon.svg", import.meta.url).pathname,
-    );
-    return new Response(svg, {
-      headers: { "Content-Type": "image/svg+xml" },
-    });
-  } catch {
-    return c.json({ error: "Not found" }, 404);
+  // Try dist first, then public
+  for (const dir of ["./dist", "./src/public"]) {
+    try {
+      const svg = await Deno.readTextFile(`${dir}/favicon.svg`);
+      return new Response(svg, {
+        headers: { "Content-Type": "image/svg+xml" },
+      });
+    } catch {
+      continue;
+    }
   }
+  return c.json({ error: "Not found" }, 404);
 });
 
-// Serve compiled CSS
-app.get("/output.css", async (c) => {
-  try {
-    const css = await Deno.readTextFile(
-      new URL("./public/output.css", import.meta.url).pathname,
-    );
-    return new Response(css, {
-      headers: { "Content-Type": "text/css" },
-    });
-  } catch {
-    return c.json({ error: "Not found" }, 404);
+// Serve theme CSS (Material 3 tokens)
+app.get("/theme.css", async (c) => {
+  // Try dist first, then public
+  for (const dir of ["./dist", "./src/public"]) {
+    try {
+      const css = await Deno.readTextFile(`${dir}/theme.css`);
+      return new Response(css, {
+        headers: { "Content-Type": "text/css" },
+      });
+    } catch {
+      continue;
+    }
   }
+  return c.json({ error: "Not found" }, 404);
 });
 
-// Serve frontend (single HTML file with Vue from CDN)
-app.get("/", async (c) => {
-  try {
-    const html = await Deno.readTextFile(
-      new URL("./public/index.html", import.meta.url).pathname,
-    );
-    return c.html(html);
-  } catch {
-    return c.json({ error: "Not found" }, 404);
+// Serve frontend
+async function serveIndex(
+  c: Context,
+): Promise<Response> {
+  // Try dist first (production build), then src/public (legacy)
+  for (const path of ["./dist/index.html", "./src/public/index.html"]) {
+    try {
+      const html = await Deno.readTextFile(path);
+      return c.html(html);
+    } catch {
+      continue;
+    }
   }
-});
+  return c.json({ error: "Not found" }, 404);
+}
+
+app.get("/", (c) => serveIndex(c));
 
 // Catch-all for SPA routing - serve index.html for any unmatched routes
-app.get("*", async (c) => {
+app.get("*", (c) => {
   // Skip API routes
   if (c.req.path.startsWith("/api/")) {
     return c.json({ error: "Not found" }, 404);
   }
-
-  try {
-    const html = await Deno.readTextFile(
-      new URL("./public/index.html", import.meta.url).pathname,
-    );
-    return c.html(html);
-  } catch {
-    return c.json({ error: "Not found" }, 404);
-  }
+  return serveIndex(c);
 });

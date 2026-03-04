@@ -2,13 +2,19 @@
   "name": "@todos/app",
   "exports": "./src/main.ts",
 
+  // Vendor npm dependencies locally (replaces deno vendor command)
+  "vendor": true,
+
   // Import map for npm packages and external dependencies
   "imports": {
+    "@lit-labs/ssr": "npm:@lit-labs/ssr@^3",
+    "@material/web/": "npm:@material/web/",
     "@std/assert": "jsr:@std/assert@^1.0.18",
     "@supabase/supabase-js": "npm:@supabase/supabase-js@^2",
-    "@tailwindcss/forms": "npm:@tailwindcss/forms@^0.5",
     "djwt": "jsr:@zaubrik/djwt@^3",
+    "esbuild": "npm:esbuild@0.24",
     "hono": "npm:hono@^4",
+    "lit": "npm:lit@^3",
     "playwright": "npm:playwright@^1.49",
     "postgres": "npm:postgres@^3",
     "zod": "npm:zod@^3"
@@ -16,14 +22,12 @@
 
   // Available tasks: deno task <name>
   "tasks": {
-    // Development: start postgres, apply schema, build CSS, run server with hot reload
-    "dev": "docker compose up -d && sleep 1 && deno task db:local && deno task build && export DATABASE_URL_TRANSACTION='postgres://todos:todos@localhost:5432/todos?search_path=todos&sslmode=disable' && DENO_ENV=development deno run --permission-set --watch src/main.ts",
-    // Build CSS with Tailwind (Vue CDN app - no frontend build step)
-    "build": "deno run --permission-set=build scripts/build-css.ts",
+    // Development: start postgres, apply schema, run server with hot reload (frontend bundled on startup)
+    "dev": "docker compose up -d && sleep 1 && deno task db:local && export DATABASE_URL_TRANSACTION='postgres://todos:todos@localhost:5432/todos?search_path=todos&sslmode=disable' && DENO_ENV=development deno run --permission-set --watch src/main.ts",
     // Production start
     "start": "deno run --permission-set src/main.ts",
-    // Type-check API
-    "check": "deno check src/*.ts src/db/**/*.ts src/routes/**/*.ts src/services/**/*.ts",
+    // Type-check API and frontend
+    "check": "deno check src/*.ts src/db/**/*.ts src/routes/**/*.ts src/services/**/*.ts src/frontend/**/*.ts",
     // Apply schema to local database
     "db:local": "export DATABASE_URL_SESSION='postgres://todos:todos@localhost:5432/todos?search_path=todos&sslmode=disable' && deno run --permission-set=scripts scripts/db.ts apply",
     // Apply schema to remote database (fetches URL from Secret Manager)
@@ -48,18 +52,12 @@
 
   // Permission sets for different contexts
   "permissions": {
-    // Default: app runtime (server)
+    // Default: app runtime (server + esbuild bundler)
     "default": {
       "env": true,
       "net": true,
-      "read": true
-    },
-    // Build: CSS compilation with Tailwind (needs sys for cpu detection)
-    "build": {
-      "env": true,
       "read": true,
-      "sys": true,
-      "write": true
+      "run": true
     },
     // Scripts: database migrations and tooling
     "scripts": {
@@ -74,13 +72,16 @@
     "include": ["tests/"]
   },
 
-  // Strict TypeScript settings
+  // TypeScript settings
+  // Using TC39 standard decorators (Lit 3 supports both, standard is the future)
   "compilerOptions": {
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    // DOM types for frontend code
+    "lib": ["deno.ns", "esnext", "dom", "dom.iterable"]
   },
 
   // Linter rules

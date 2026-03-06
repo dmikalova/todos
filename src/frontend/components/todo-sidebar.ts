@@ -9,7 +9,8 @@ import { store } from "../store.ts";
 export class TodoSidebar extends StoreElement {
   static override styles = css`
     :host {
-      display: block;
+      display: flex;
+      flex-direction: column;
     }
 
     aside {
@@ -32,9 +33,14 @@ export class TodoSidebar extends StoreElement {
     }
 
     @media (min-width: 1024px) {
+      :host {
+        height: 100%;
+      }
+
       aside {
         position: static;
         transform: none;
+        height: 100%;
       }
     }
 
@@ -61,6 +67,8 @@ export class TodoSidebar extends StoreElement {
       justify-content: center;
       font-weight: 500;
       font-size: 14px;
+      flex-shrink: 0;
+      object-fit: cover;
     }
 
     .user-name {
@@ -183,6 +191,9 @@ export class TodoSidebar extends StoreElement {
           height: 8px;
           border-radius: 50%;
           flex-shrink: 0;
+          box-shadow:
+            0 0 0 1.5px rgba(0, 0, 0, 0.25),
+            inset 0 0 0 0 transparent;
         }
 
         .section.scrollable {
@@ -202,8 +213,24 @@ export class TodoSidebar extends StoreElement {
             <!-- User Section -->
             <div class="user-section">
               <div class="user-info">
-                <div class="avatar">U</div>
-                <span class="user-name">User</span>
+                ${store.user?.picture
+                  ? html`
+                    <img
+                      class="avatar"
+                      src="${store.user.picture}"
+                      alt="${store.user.name || store.user.email}"
+                      referrerpolicy="no-referrer"
+                    />
+                  `
+                  : html`
+                    <div class="avatar">
+                      ${(store.user?.name || store.user?.email || "U")
+                        .charAt(0)
+                        .toUpperCase()}
+                    </div>
+                  `}
+                <span class="user-name">${store.user?.name ||
+                  store.user?.email || "User"}</span>
               </div>
             </div>
 

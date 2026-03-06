@@ -2,17 +2,17 @@
 // Uses a simple pub/sub pattern for Lit components
 
 export interface Task {
-  id: number;
+  id: string;
   title: string;
   notes?: string;
   priority: number;
   status: string;
   due_date?: string;
   deferred_until?: string;
-  project_id?: number;
+  project_id?: string;
   project_name?: string;
-  context_id?: number;
-  context_ids?: number[];
+  context_id?: string;
+  context_ids?: string[];
   recurrence_type?: string;
   recurrence_interval?: number;
   recurrence_days?: number[];
@@ -22,14 +22,14 @@ export interface Task {
 }
 
 export interface Project {
-  id: number;
+  id: string;
   name: string;
   color?: string;
   task_count?: number;
 }
 
 export interface Context {
-  id: number;
+  id: string;
   name: string;
   color?: string;
   time_windows?: Array<{
@@ -40,8 +40,8 @@ export interface Context {
 }
 
 export interface HistoryEntry {
-  id: number;
-  task_id: number;
+  id: string;
+  task_id: string;
   task_title?: string;
   action: string;
   created_at: string;
@@ -51,6 +51,12 @@ export interface Toast {
   id: number;
   message: string;
   type: "success" | "error";
+}
+
+export interface UserProfile {
+  email: string;
+  name?: string;
+  picture?: string;
 }
 
 type Listener = () => void;
@@ -63,11 +69,12 @@ class Store {
   private _history: HistoryEntry[] = [];
   private _currentTask: Task | null = null;
   private _loading = true;
+  private _user: UserProfile | null = null;
 
   // UI State
   private _currentTab = "next";
-  private _selectedProjectId: number | null = null;
-  private _selectedContextId: number | null = null;
+  private _selectedProjectId: string | null = null;
+  private _selectedContextId: string | null = null;
   private _sidebarOpen = false;
   private _showTaskForm = false;
   private _showProjectForm = false;
@@ -100,6 +107,9 @@ class Store {
   }
   get loading() {
     return this._loading;
+  }
+  get user() {
+    return this._user;
   }
   get currentTab() {
     return this._currentTab;
@@ -219,6 +229,23 @@ class Store {
     }
   }
 
+  get currentBreadcrumb(): string | null {
+    switch (this._currentTab) {
+      case "project":
+        return "Projects";
+      case "context":
+        return "Contexts";
+      case "due":
+        return "Filters";
+      default:
+        return null;
+    }
+  }
+
+  get currentTitleEditable(): boolean {
+    return this._currentTab === "project" || this._currentTab === "context";
+  }
+
   // Subscribe to changes
   subscribe(listener: Listener): () => void {
     this.listeners.add(listener);
@@ -254,7 +281,7 @@ class Store {
   }
 
   // Navigation
-  navigate(tab: string, id: number | null = null) {
+  navigate(tab: string, id: string | null = null) {
     this._currentTab = tab;
     this._sidebarOpen = false;
     if (tab === "project") {
@@ -276,10 +303,10 @@ class Store {
       const [, tab, id] = match;
       if (tab === "projects" && id) {
         this._currentTab = "project";
-        this._selectedProjectId = parseInt(id, 10);
+        this._selectedProjectId = id;
       } else if (tab === "contexts" && id) {
         this._currentTab = "context";
-        this._selectedContextId = parseInt(id, 10);
+        this._selectedContextId = id;
       } else if (
         ["inbox", "next", "due", "history", "settings"].includes(tab)
       ) {
@@ -345,6 +372,16 @@ class Store {
     } finally {
       this._loading = false;
       this.notify();
+    }
+    this.fetchUser();
+  }
+
+  async fetchUser() {
+    try {
+      this._user = await fetch("/api/me").then((r) => r.json());
+      this.notify();
+    } catch (_e) {
+      // non-critical
     }
   }
 
@@ -480,7 +517,7 @@ class Store {
     }
   }
 
-  async deleteTask(id: number) {
+  async deleteTask(id: string) {
     try {
       await this.api(`/tasks/${id}`, { method: "DELETE" });
       this.showToast("Task deleted");
@@ -520,7 +557,7 @@ class Store {
     }
   }
 
-  async deleteProject(id: number) {
+  async deleteProject(id: string) {
     try {
       await this.api(`/projects/${id}`, { method: "DELETE" });
       this.showToast("Project deleted");
@@ -559,7 +596,7 @@ class Store {
     }
   }
 
-  async deleteContext(id: number) {
+  async deleteContext(id: string) {
     try {
       await this.api(`/contexts/${id}`, { method: "DELETE" });
       this.showToast("Context deleted");
@@ -575,7 +612,7 @@ class Store {
   }
 
   // History operations
-  async incompleteFromHistory(taskId: number) {
+  async incompleteFromHistory(taskId: string) {
     try {
       await this.api(`/tasks/${taskId}`, {
         method: "PATCH",
@@ -592,7 +629,7 @@ class Store {
     }
   }
 
-  editTaskById(taskId: number) {
+  editTaskById(taskId: string) {
     const task = this._tasks.find((t) => t.id === taskId);
     if (task) {
       this.setShowTaskForm(true, task);
@@ -623,11 +660,11 @@ class Store {
   }
 
   // Helpers
-  getContextName(id: number): string {
+  getContextName(id: string): string {
     return this._contexts.find((c) => c.id === id)?.name || "";
   }
 
-  getProjectName(id: number): string {
+  getProjectName(id: string): string {
     return this._projects.find((p) => p.id === id)?.name || "";
   }
 

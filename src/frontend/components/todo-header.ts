@@ -1,4 +1,4 @@
-// Header component
+// Header component - mobile hamburger only; page titles render inline in views
 
 import { css, html } from "lit";
 import { customElement } from "lit/decorators.js";
@@ -15,10 +15,9 @@ export class TodoHeader extends StoreElement {
     header {
       background: var(--md-sys-color-surface);
       border-bottom: 1px solid var(--md-sys-color-outline-variant);
-      padding: 12px 16px;
+      padding: 8px 16px;
       display: flex;
       align-items: center;
-      gap: 16px;
     }
 
     .menu-btn {
@@ -36,28 +35,9 @@ export class TodoHeader extends StoreElement {
     }
 
     @media (min-width: 1024px) {
-      .menu-btn {
+      :host {
         display: none;
       }
-    }
-
-    .title-area {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .logo {
-      width: 24px;
-      height: 24px;
-      color: var(--md-sys-color-primary);
-    }
-
-    h1 {
-      font-size: 18px;
-      font-weight: 600;
-      margin: 0;
-      color: var(--md-sys-color-on-surface);
     }
   `;
 
@@ -83,19 +63,6 @@ export class TodoHeader extends StoreElement {
             />
           </svg>
         </button>
-        <div class="title-area">
-          <svg class="logo" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          <h1>${store.currentPageTitle}</h1>
-        </div>
       </header>
     `;
   }

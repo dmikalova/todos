@@ -2,9 +2,8 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { withDb, withTransaction } from "../db/index.ts";
+import { type SqlQuery, withDb, withTransaction } from "../db/index.ts";
 import type { AppEnv } from "../types.ts";
-import { type SqlQuery } from "../db/index.ts";
 
 export const projects = new Hono<AppEnv>();
 
@@ -13,11 +12,13 @@ export const projects = new Hono<AppEnv>();
 const createProjectSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
+  color: z.string().optional(),
 });
 
 const updateProjectSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional().nullable(),
+  color: z.string().optional().nullable(),
 });
 
 // Types
@@ -26,6 +27,7 @@ interface Project {
   id: string;
   name: string;
   description: string | null;
+  color: string | null;
   created_at: Date;
 }
 
@@ -45,12 +47,12 @@ projects.post("/", async (c) => {
     );
   }
 
-  const { name, description } = result.data;
+  const { name, description, color } = result.data;
 
   const project = await withDb(async (sql: SqlQuery) => {
     const [created] = await sql<Project[]>`
-      INSERT INTO projects (name, description)
-      VALUES (${name}, ${description || null})
+      INSERT INTO projects (name, description, color)
+      VALUES (${name}, ${description || null}, ${color || null})
       RETURNING *
     `;
     return created;
@@ -144,7 +146,8 @@ projects.patch("/:id", async (c) => {
       updates.description !== undefined
         ? updates.description
         : existing.description
-    }
+    },
+        color = ${updates.color !== undefined ? updates.color : existing.color}
       WHERE id = ${id}
       RETURNING *
     `;

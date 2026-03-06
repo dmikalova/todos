@@ -9,8 +9,8 @@ interface TaskFormData {
   notes: string;
   priority: number;
   due_date: string;
-  project_id: number | null;
-  context_id: number | null;
+  project_id: string | null;
+  context_id: string | null;
   recurrence_type: string | null;
   recurrence_interval: number;
   recurrence_days: number[];
@@ -384,7 +384,7 @@ export class TaskForm extends LitElement {
                 @change="${(e: Event) => (this.form = {
                   ...this.form,
                   project_id: (e.target as HTMLSelectElement).value
-                    ? parseInt((e.target as HTMLSelectElement).value)
+                    ? (e.target as HTMLSelectElement).value
                     : null,
                 })}"
               >
@@ -405,7 +405,7 @@ export class TaskForm extends LitElement {
                 @change="${(e: Event) => (this.form = {
                   ...this.form,
                   context_id: (e.target as HTMLSelectElement).value
-                    ? parseInt((e.target as HTMLSelectElement).value)
+                    ? (e.target as HTMLSelectElement).value
                     : null,
                 })}"
               >

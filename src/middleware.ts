@@ -114,6 +114,9 @@ async function validateSession(token: string): Promise<SessionData | null> {
 
     const sub = payload.sub as string;
     const email = payload.email as string;
+    const meta = payload.user_metadata as Record<string, string> | undefined;
+    const name = meta?.full_name || meta?.name || email.split("@")[0];
+    const picture = meta?.avatar_url || meta?.picture;
 
     if (!sub) {
       console.warn("JWT validation failed: missing subject");
@@ -123,6 +126,8 @@ async function validateSession(token: string): Promise<SessionData | null> {
     return {
       userId: sub,
       email: email || "",
+      name,
+      picture,
       expiresAt: new Date(exp * 1000),
     };
   } catch (error) {
@@ -164,6 +169,7 @@ export const authMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
     c.set("session", {
       userId: "dev-user-id",
       email: "dev@localhost",
+      name: "Dev User",
       expiresAt: new Date(Date.now() + 86400000), // 24 hours
     });
     return next();
@@ -217,7 +223,7 @@ export const errorHandler = (err: Error, c: Context): Response => {
 
 // Rate limiting middleware (simple in-memory)
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 100; // requests per window
+const RATE_LIMIT = 200; // requests per window
 const RATE_WINDOW = 60 * 1000; // 1 minute
 
 export const rateLimitMiddleware: MiddlewareHandler<AppEnv> = async (

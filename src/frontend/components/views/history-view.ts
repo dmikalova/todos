@@ -61,7 +61,7 @@ export class HistoryView extends StoreElement {
     }
   `;
 
-  private handleItemClick(taskId: number) {
+  private handleItemClick(taskId: string) {
     store.editTaskById(taskId);
   }
 

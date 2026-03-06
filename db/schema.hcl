@@ -52,6 +52,11 @@ table "projects" {
     null = true
   }
 
+  column "color" {
+    type = text
+    null = true
+  }
+
   column "created_at" {
     type    = timestamptz
     null    = false
@@ -75,6 +80,11 @@ table "contexts" {
   column "name" {
     type = text
     null = false
+  }
+
+  column "color" {
+    type = text
+    null = true
   }
 
   column "created_at" {

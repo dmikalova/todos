@@ -85,6 +85,17 @@ app.route("/api/next", next);
 app.route("/api/export", exportRoutes);
 app.route("/api/import", importRoutes);
 
+// Current user profile
+app.get("/api/me", (c) => {
+  const session = c.get("session");
+  if (!session) return c.json({ error: "Unauthorized" }, 401);
+  return c.json({
+    email: session.email,
+    name: session.name,
+    picture: session.picture,
+  });
+});
+
 // Static file serving - check dist/ first (production build), fallback to public/
 
 // Serve static assets from dist/ (production build)

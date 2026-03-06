@@ -17,11 +17,13 @@ const timeWindowSchema = z.object({
 
 const createContextSchema = z.object({
   name: z.string().min(1).max(100),
+  color: z.string().optional(),
   timeWindows: z.array(timeWindowSchema).default([]),
 });
 
 const updateContextSchema = z.object({
   name: z.string().min(1).max(100).optional(),
+  color: z.string().optional(),
   timeWindows: z.array(timeWindowSchema).optional(),
 });
 
@@ -30,6 +32,7 @@ const updateContextSchema = z.object({
 interface Context {
   id: string;
   name: string;
+  color?: string;
   created_at: Date;
 }
 
@@ -86,11 +89,13 @@ contexts.post("/", async (c) => {
     );
   }
 
-  const { name, timeWindows } = result.data;
+  const { name, color, timeWindows } = result.data;
 
   const context = await withTransaction(async (tx) => {
     const [created] = await tx<Context[]>`
-      INSERT INTO contexts (name) VALUES (${name}) RETURNING *
+      INSERT INTO contexts (name, color) VALUES (${name}, ${
+      color ?? null
+    }) RETURNING *
     `;
 
     // Add time windows
@@ -205,6 +210,11 @@ contexts.patch("/:id", async (c) => {
     // Update name if provided
     if (updates.name) {
       await tx`UPDATE contexts SET name = ${updates.name} WHERE id = ${id}`;
+    }
+
+    // Update color if provided
+    if (updates.color !== undefined) {
+      await tx`UPDATE contexts SET color = ${updates.color} WHERE id = ${id}`;
     }
 
     // Replace time windows if provided

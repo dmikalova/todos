@@ -9,5 +9,7 @@ export interface AppEnv {
 export interface SessionData {
   userId: string;
   email: string;
+  name?: string;
+  picture?: string;
   expiresAt: Date;
 }

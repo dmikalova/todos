@@ -225,11 +225,8 @@ export class NextView extends StoreElement {
       `;
     }
 
-    if (!store.currentTask) {
+    if (!store.currentTask?.id) {
       return html`
-        <div class="intro">
-          <p>Your most important task right now</p>
-        </div>
         <div class="empty-state">
           <svg
             class="empty-icon"
@@ -253,10 +250,6 @@ export class NextView extends StoreElement {
     const task = store.currentTask;
 
     return html`
-      <div class="intro">
-        <p>Your most important task right now</p>
-      </div>
-
       <div class="task-card" @click="${() =>
         store.setShowTaskForm(true, task)}">
         <div class="task-header">

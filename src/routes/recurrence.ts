@@ -139,6 +139,13 @@ recurrence.post("/", async (c) => {
 recurrence.get("/:taskId", async (c) => {
   const taskId = c.req.param("taskId");
 
+  // Validate UUID format
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(taskId)) {
+    return c.json({ error: "Invalid task ID format" }, 400);
+  }
+
   const rule = await withDb(async (sql: SqlQuery) => {
     const [result] = await sql<RecurrenceRule[]>`
       SELECT * FROM recurrence_rules WHERE task_id = ${taskId}

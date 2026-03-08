@@ -21,6 +21,17 @@ export interface Task {
   updated_at: string;
 }
 
+// Input type for API (camelCase)
+export interface TaskInput {
+  title: string;
+  description?: string | null;
+  projectId?: string | null;
+  priority?: number;
+  dueDate?: string | null;
+  mustDo?: boolean;
+  contextIds?: string[];
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -434,9 +445,8 @@ class Store {
   async completeTask() {
     if (!this._currentTask) return;
     try {
-      await this.api(`/tasks/${this._currentTask.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: "completed" }),
+      await this.api(`/tasks/${this._currentTask.id}/complete`, {
+        method: "POST",
       });
       this.showToast("Task completed!");
       await Promise.all([
@@ -475,10 +485,9 @@ class Store {
 
   async toggleComplete(task: Task) {
     try {
-      const newStatus = task.completed_at ? "active" : "completed";
-      await this.api(`/tasks/${task.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: newStatus }),
+      const isCompleted = !!task.completed_at;
+      await this.api(`/tasks/${task.id}/complete`, {
+        method: isCompleted ? "DELETE" : "POST",
       });
       await Promise.all([
         this.fetchTasks(),
@@ -490,21 +499,42 @@ class Store {
     }
   }
 
-  async saveTask(data: Partial<Task>) {
+  async saveTask(
+    data: Partial<TaskInput>,
+    recurrence?: {
+      frequency: string;
+      interval: number;
+      daysOfWeek?: number[];
+    } | null,
+  ) {
+    console.log("saveTask called with:", JSON.stringify(data, null, 2));
+    console.log("recurrence:", recurrence);
     try {
+      let taskId: string;
+
       if (this._editingTask) {
-        await this.api(`/tasks/${this._editingTask.id}`, {
+        console.log("Updating task:", this._editingTask.id);
+        const result = await this.api(`/tasks/${this._editingTask.id}`, {
           method: "PATCH",
           body: JSON.stringify(data),
         });
+        console.log("Update result:", result);
+        taskId = this._editingTask.id;
         this.showToast("Task updated");
       } else {
-        await this.api("/tasks", {
+        console.log("Creating new task");
+        const created = await this.api<{ id: string }>("/tasks", {
           method: "POST",
           body: JSON.stringify(data),
         });
+        console.log("Create result:", created);
+        taskId = created.id;
         this.showToast("Task created");
       }
+
+      // Handle recurrence
+      await this.saveRecurrence(taskId, recurrence);
+
       this._showTaskForm = false;
       this._editingTask = null;
       await Promise.all([
@@ -514,6 +544,48 @@ class Store {
       ]);
     } catch (_e) {
       this.showToast("Failed to save task", "error");
+    }
+  }
+
+  private async saveRecurrence(
+    taskId: string,
+    recurrence?: {
+      frequency: string;
+      interval: number;
+      daysOfWeek?: number[];
+    } | null,
+  ) {
+    // Check if task already has recurrence
+    let hasExisting = false;
+    try {
+      await this.api(`/recurrence/${taskId}`);
+      hasExisting = true;
+    } catch {
+      hasExisting = false;
+    }
+
+    if (recurrence) {
+      const payload = {
+        scheduleType: "fixed",
+        frequency: recurrence.frequency,
+        interval: recurrence.interval,
+        daysOfWeek: recurrence.daysOfWeek,
+      };
+
+      if (hasExisting) {
+        await this.api(`/recurrence/${taskId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await this.api("/recurrence", {
+          method: "POST",
+          body: JSON.stringify({ taskId, ...payload }),
+        });
+      }
+    } else if (hasExisting) {
+      // Remove recurrence if it existed but user cleared it
+      await this.api(`/recurrence/${taskId}`, { method: "DELETE" });
     }
   }
 

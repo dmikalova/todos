@@ -3,7 +3,7 @@
 
 import { assertEquals } from "@std/assert";
 import postgres from "postgres";
-import { app } from "../../api/app.ts";
+import { app } from "../../src/app.ts";
 
 // Test database configuration
 // Uses the same schema as production but a separate test database

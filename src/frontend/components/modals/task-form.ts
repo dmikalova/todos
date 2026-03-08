@@ -258,22 +258,26 @@ export class TaskForm extends LitElement {
 
   private async handleSubmit(e: Event) {
     e.preventDefault();
-    await store.saveTask({
-      title: this.form.title,
-      notes: this.form.notes || undefined,
-      priority: this.form.priority,
-      due_date: this.form.due_date || undefined,
-      project_id: this.form.project_id || undefined,
-      context_id: this.form.context_id || undefined,
-      recurrence_type: this.form.recurrence_type || undefined,
-      recurrence_interval: this.form.recurrence_type
-        ? this.form.recurrence_interval
-        : undefined,
-      recurrence_days: this.form.recurrence_type === "weekly" &&
-          this.form.recurrence_days.length > 0
-        ? this.form.recurrence_days
-        : undefined,
-    });
+    await store.saveTask(
+      {
+        title: this.form.title,
+        description: this.form.notes || null,
+        priority: this.form.priority,
+        dueDate: this.form.due_date || null,
+        projectId: this.form.project_id || null,
+        contextIds: this.form.context_id ? [this.form.context_id] : [],
+      },
+      this.form.recurrence_type
+        ? {
+            frequency: this.form.recurrence_type,
+            interval: this.form.recurrence_interval,
+            daysOfWeek:
+              this.form.recurrence_type === "weekly"
+                ? this.form.recurrence_days
+                : undefined,
+          }
+        : null,
+    );
   }
 
   private async handleDelete() {

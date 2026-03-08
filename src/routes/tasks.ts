@@ -4,6 +4,10 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { type SqlQuery, withDb, withTransaction } from "../db/index.ts";
 import { logTaskActionTx } from "../services/history.ts";
+import {
+  calculateNextOccurrence,
+  type RecurrenceRule,
+} from "../services/recurrence.ts";
 import type { AppEnv } from "../types.ts";
 
 export const tasks = new Hono<AppEnv>();
@@ -12,13 +16,14 @@ export const tasks = new Hono<AppEnv>();
 
 const createTaskSchema = z.object({
   title: z.string().min(1).max(500),
-  description: z.string().max(5000).optional(),
-  projectId: z.string().uuid().optional(),
+  description: z.string().max(5000).optional().nullable(),
+  projectId: z.string().uuid().optional().nullable(),
   priority: z.number().int().min(1).max(4).default(2),
   dueDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+    .optional()
+    .nullable(),
   mustDo: z.boolean().default(false),
   contextIds: z.array(z.string().uuid()).default([]),
 });
@@ -350,7 +355,7 @@ tasks.delete("/:id", async (c) => {
 tasks.post("/:id/complete", async (c) => {
   const id = c.req.param("id");
 
-  const task = await withTransaction(async (tx) => {
+  const result = await withTransaction(async (tx) => {
     const [existing] = await tx<Task[]>`SELECT * FROM tasks WHERE id = ${id}`;
     if (!existing) {
       return null;
@@ -360,8 +365,15 @@ tasks.post("/:id/complete", async (c) => {
       return { error: "Task already completed", task: existing };
     }
 
+    // Check for recurrence rule
+    const [rule] = await tx<RecurrenceRule[]>`
+      SELECT * FROM recurrence_rules WHERE task_id = ${id}
+    `;
+
+    const completionDate = new Date();
+
     const [completed] = await tx<Task[]>`
-      UPDATE tasks SET completed_at = NOW(), updated_at = NOW()
+      UPDATE tasks SET completed_at = ${completionDate}, updated_at = NOW()
       WHERE id = ${id}
       RETURNING *
     `;
@@ -369,21 +381,84 @@ tasks.post("/:id/complete", async (c) => {
     await logTaskActionTx(tx, {
       taskId: id,
       action: "completed",
-      details: { title: existing.title },
+      details: { title: existing.title, recurring: !!rule },
     });
 
-    return { task: completed };
+    let newTask: Task | null = null;
+
+    // If task has recurrence, create next instance
+    if (rule) {
+      const nextDueDate = calculateNextOccurrence(rule, completionDate);
+
+      // Get task contexts
+      const contexts: { context_id: string }[] = await tx`
+        SELECT context_id FROM task_contexts WHERE task_id = ${id}
+      `;
+      const contextIds = contexts.map((c) => c.context_id);
+
+      // Create next task instance
+      [newTask] = await tx<Task[]>`
+        INSERT INTO tasks (title, description, project_id, priority, due_date, must_do)
+        VALUES (
+          ${existing.title},
+          ${existing.description},
+          ${existing.project_id},
+          ${existing.priority},
+          ${nextDueDate.toISOString().split("T")[0]},
+          ${existing.must_do}
+        )
+        RETURNING *
+      `;
+
+      // Copy contexts to new task
+      for (const contextId of contextIds) {
+        await tx`
+          INSERT INTO task_contexts (task_id, context_id)
+          VALUES (${newTask.id}, ${contextId})
+        `;
+      }
+
+      // Copy recurrence rule to new task
+      await tx`
+        INSERT INTO recurrence_rules (
+          task_id, schedule_type, frequency, interval,
+          days_of_week, day_of_month, month_of_year, days_after_completion
+        )
+        VALUES (
+          ${newTask.id},
+          ${rule.schedule_type},
+          ${rule.frequency},
+          ${rule.interval},
+          ${rule.days_of_week},
+          ${rule.day_of_month},
+          ${rule.month_of_year},
+          ${rule.days_after_completion}
+        )
+      `;
+
+      await logTaskActionTx(tx, {
+        taskId: newTask.id,
+        action: "created",
+        details: {
+          title: newTask.title,
+          fromRecurrence: true,
+          previousTaskId: id,
+        },
+      });
+    }
+
+    return { task: completed, newTask };
   });
 
-  if (!task) {
+  if (!result) {
     return c.json({ error: "Task not found" }, 404);
   }
 
-  if ("error" in task) {
-    return c.json({ error: task.error }, 400);
+  if ("error" in result) {
+    return c.json({ error: result.error }, 400);
   }
 
-  return c.json(task.task);
+  return c.json(result.task);
 });
 
 // DELETE /api/tasks/:id/complete - Undo complete

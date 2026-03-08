@@ -265,21 +265,16 @@ export class SearchModal extends LitElement {
     if (!date) return null;
     const d = new Date(date);
     const now = new Date();
-    const isOverdue = d < now && !this.isSameDay(d, now);
+    now.setHours(0, 0, 0, 0);
+    const dOnly = new Date(d);
+    dOnly.setHours(0, 0, 0, 0);
+    const isOverdue = dOnly < now;
 
     const formatted = d.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
     });
     return { text: formatted, isOverdue };
-  }
-
-  private isSameDay(a: Date, b: Date) {
-    return (
-      a.getFullYear() === b.getFullYear() &&
-      a.getMonth() === b.getMonth() &&
-      a.getDate() === b.getDate()
-    );
   }
 
   override render() {

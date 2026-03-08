@@ -11,19 +11,22 @@ export class TodoToasts extends StoreElement {
     :host {
       position: fixed;
       top: 16px;
-      right: 16px;
+      left: 50%;
+      transform: translateX(-50%);
       z-index: 100;
       display: flex;
       flex-direction: column;
+      align-items: center;
       gap: 8px;
     }
 
     .toast {
-      padding: 12px 16px;
+      padding: 12px 24px;
       border-radius: var(--md-sys-shape-corner-medium);
       font-size: 14px;
       box-shadow: var(--md-sys-elevation-level3);
       animation: slideIn 0.2s ease;
+      white-space: nowrap;
     }
 
     .toast.success {
@@ -38,11 +41,11 @@ export class TodoToasts extends StoreElement {
 
     @keyframes slideIn {
       from {
-        transform: translateX(100%);
+        transform: translateY(-100%);
         opacity: 0;
       }
       to {
-        transform: translateX(0);
+        transform: translateY(0);
         opacity: 1;
       }
     }

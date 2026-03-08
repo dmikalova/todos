@@ -191,9 +191,7 @@ export class TodoSidebar extends StoreElement {
           height: 8px;
           border-radius: 50%;
           flex-shrink: 0;
-          box-shadow:
-            0 0 0 1.5px rgba(0, 0, 0, 0.25),
-            inset 0 0 0 0 transparent;
+          box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.25), inset 0 0 0 0 transparent;
         }
 
         .section.scrollable {

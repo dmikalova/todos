@@ -90,6 +90,37 @@ async function runAtlas(
   if (code !== 0) {
     Deno.exit(code);
   }
+
+  // Apply RLS policies after schema apply (Atlas community edition does not manage RLS)
+  if (subcommand === "apply") {
+    await runRls(databaseUrl);
+  }
+}
+
+async function runRls(databaseUrl: string): Promise<void> {
+  console.log("\nApplying RLS policies...\n");
+
+  const repoRoot = new URL("../", import.meta.url).pathname;
+  const rlsFile = `${repoRoot}db/rls.sql`;
+
+  // Strip query parameters (e.g. search_path) that psql doesn't support as URI params.
+  // rls.sql uses fully-qualified table names so search_path is not needed.
+  const psqlUrl = databaseUrl.split("?")[0];
+
+  const command = new Deno.Command("psql", {
+    args: [psqlUrl, "-f", rlsFile],
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+
+  const { code } = await command.output();
+
+  if (code !== 0) {
+    console.error("Failed to apply RLS policies");
+    Deno.exit(code);
+  }
+
+  console.log("RLS policies applied successfully.");
 }
 
 async function runTruncate(databaseUrl: string): Promise<void> {
@@ -114,8 +145,9 @@ BEGIN
 END $$;
 `;
 
+  const psqlUrl = databaseUrl.split("?")[0];
   const command = new Deno.Command("psql", {
-    args: [databaseUrl, "-c", sql],
+    args: [psqlUrl, "-c", sql],
     stdout: "inherit",
     stderr: "inherit",
   });
@@ -132,11 +164,17 @@ END $$;
 async function runSeed(databaseUrl: string): Promise<void> {
   console.log("Seeding default data...\n");
 
+  // Dev user UUID must match the dev bypass in src/middleware.ts
+  const DEV_USER_ID = "00000000-0000-0000-0000-000000000001";
+
   // Insert default "work" context with Mon-Fri 9am-5pm time windows
   const sql = `
+-- Set app.user_id so RLS INSERT policies pass
+SET LOCAL app.user_id = '${DEV_USER_ID}';
+
 -- Create default work context if it doesn't exist
-INSERT INTO ${SCHEMA_NAME}.contexts (id, name)
-VALUES ('00000000-0000-0000-0000-000000000001', 'work')
+INSERT INTO ${SCHEMA_NAME}.contexts (id, user_id, name)
+VALUES ('00000000-0000-0000-0000-000000000001', '${DEV_USER_ID}', 'work')
 ON CONFLICT DO NOTHING;
 
 -- Create time windows for Mon-Fri (days 1-5)
@@ -148,8 +186,9 @@ ON CONFLICT DO NOTHING;
 SELECT 'Seeded default work context' AS status;
 `;
 
+  const psqlUrl = databaseUrl.split("?")[0];
   const command = new Deno.Command("psql", {
-    args: [databaseUrl, "-c", sql],
+    args: [psqlUrl, "-c", sql],
     stdout: "inherit",
     stderr: "inherit",
   });
@@ -168,9 +207,9 @@ const subcommand = Deno.args[0];
 
 if (
   !subcommand ||
-  !["apply", "diff", "truncate", "seed"].includes(subcommand)
+  !["apply", "diff", "truncate", "seed", "rls"].includes(subcommand)
 ) {
-  console.log("Usage: db.ts <apply|diff|truncate|seed>");
+  console.log("Usage: db.ts <apply|diff|truncate|seed|rls>");
   console.log("");
   console.log("Commands:");
   console.log("  apply     Apply schema changes to the database");
@@ -179,6 +218,9 @@ if (
     "  truncate  Truncate all tables (use before destructive migrations)",
   );
   console.log("  seed      Insert default data (work context)");
+  console.log(
+    "  rls       Apply RLS policies (also runs automatically after apply)",
+  );
   Deno.exit(1);
 }
 
@@ -188,6 +230,8 @@ if (subcommand === "truncate") {
   await runTruncate(databaseUrl);
 } else if (subcommand === "seed") {
   await runSeed(databaseUrl);
+} else if (subcommand === "rls") {
+  await runRls(databaseUrl);
 } else {
   await runAtlas(subcommand, databaseUrl);
 }

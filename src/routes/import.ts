@@ -3,7 +3,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { withTransaction } from "../db/index.ts";
-import type { AppEnv } from "../types.ts";
+import type { AppEnv, SessionData } from "../types.ts";
 
 export const importRoutes = new Hono<AppEnv>();
 
@@ -78,6 +78,7 @@ interface ImportResult {
 
 // POST /api/import - Import full data
 importRoutes.post("/", async (c) => {
+  const session = c.get("session") as SessionData;
   const body = await c.req.json();
 
   // Parse options from query string
@@ -122,7 +123,6 @@ importRoutes.post("/", async (c) => {
     await withTransaction(async (tx) => {
       // If replace mode, clear existing data
       if (options.mode === "replace") {
-        await tx`DELETE FROM task_contexts`;
         await tx`DELETE FROM recurrence_rules`;
         await tx`DELETE FROM task_history`;
         await tx`DELETE FROM tasks`;
@@ -148,8 +148,10 @@ importRoutes.post("/", async (c) => {
             }
 
             const [created] = await tx<{ id: string }[]>`
-              INSERT INTO projects (name, description)
-              VALUES (${project.name}, ${project.description || null})
+              INSERT INTO projects (user_id, name, description)
+              VALUES (${session.userId}, ${project.name}, ${
+              project.description || null
+            })
               RETURNING id
             `;
             projectIdMap.set(project.id || project.name, created.id);
@@ -178,8 +180,10 @@ importRoutes.post("/", async (c) => {
             }
 
             const [created] = await tx<{ id: string }[]>`
-              INSERT INTO contexts (name, description)
-              VALUES (${context.name}, ${context.description || null})
+              INSERT INTO contexts (user_id, name, description)
+              VALUES (${session.userId}, ${context.name}, ${
+              context.description || null
+            })
               RETURNING id
             `;
             contextIdMap.set(context.id || context.name, created.id);
@@ -227,8 +231,9 @@ importRoutes.post("/", async (c) => {
             }
 
             const [created] = await tx<{ id: string }[]>`
-              INSERT INTO tasks (title, description, due_date, project_id)
+              INSERT INTO tasks (user_id, title, description, due_date, project_id)
               VALUES (
+                ${session.userId},
                 ${task.title},
                 ${task.description || null},
                 ${task.due_date || null},
@@ -236,18 +241,6 @@ importRoutes.post("/", async (c) => {
               )
               RETURNING id
             `;
-
-            // Add context associations
-            if (task.contexts && task.contexts.length > 0) {
-              for (const ctxId of task.contexts) {
-                const resolvedCtxId = contextIdMap.get(ctxId) || ctxId;
-                await tx`
-                  INSERT INTO task_contexts (task_id, context_id)
-                  VALUES (${created.id}, ${resolvedCtxId})
-                  ON CONFLICT DO NOTHING
-                `;
-              }
-            }
 
             // Add recurrence rule
             if (task.recurrence) {
@@ -274,18 +267,19 @@ importRoutes.post("/", async (c) => {
           }
         }
       }
-    });
+    }, { userId: session.userId });
   } catch (err) {
     result.success = false;
     result.errors.push(`Transaction failed: ${err}`);
   }
 
-  const status = result.success && result.errors.length === 0 ? 200 : 207; // 207 Multi-Status for partial success
+  const status = result.success && result.errors.length === 0 ? 200 : 207;
   return c.json(result, status);
 });
 
 // POST /api/import/tasks - Import just tasks (simple format)
 importRoutes.post("/tasks", async (c) => {
+  const session = c.get("session") as SessionData;
   const body = await c.req.json();
 
   const tasksArraySchema = z.object({
@@ -315,17 +309,17 @@ importRoutes.post("/tasks", async (c) => {
     for (const task of tasks) {
       try {
         await tx`
-          INSERT INTO tasks (title, description, due_date)
-          VALUES (${task.title}, ${task.description || null}, ${
-          task.due_date || null
-        })
+          INSERT INTO tasks (user_id, title, description, due_date)
+          VALUES (${session.userId}, ${task.title}, ${
+          task.description || null
+        }, ${task.due_date || null})
         `;
         imported++;
       } catch (err) {
         errors.push(`Failed to import "${task.title}": ${err}`);
       }
     }
-  });
+  }, { userId: session.userId });
 
   return c.json({
     success: errors.length === 0,

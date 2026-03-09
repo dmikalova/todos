@@ -10,7 +10,6 @@ interface TaskFormData {
   priority: number;
   due_date: string;
   project_id: string | null;
-  context_id: string | null;
   recurrence_type: string | null;
   recurrence_interval: number;
   recurrence_days: number[];
@@ -226,7 +225,6 @@ export class TaskForm extends LitElement {
     priority: 4,
     due_date: "",
     project_id: null,
-    context_id: null,
     recurrence_type: null,
     recurrence_interval: 1,
     recurrence_days: [],
@@ -242,7 +240,6 @@ export class TaskForm extends LitElement {
         priority: t.priority,
         due_date: t.due_date ? t.due_date.split("T")[0] : "",
         project_id: t.project_id || null,
-        context_id: t.context_id || null,
         recurrence_type: t.recurrence_type || null,
         recurrence_interval: t.recurrence_interval || 1,
         recurrence_days: t.recurrence_days || [],
@@ -265,17 +262,15 @@ export class TaskForm extends LitElement {
         priority: this.form.priority,
         dueDate: this.form.due_date || null,
         projectId: this.form.project_id || null,
-        contextIds: this.form.context_id ? [this.form.context_id] : [],
       },
       this.form.recurrence_type
         ? {
-            frequency: this.form.recurrence_type,
-            interval: this.form.recurrence_interval,
-            daysOfWeek:
-              this.form.recurrence_type === "weekly"
-                ? this.form.recurrence_days
-                : undefined,
-          }
+          frequency: this.form.recurrence_type,
+          interval: this.form.recurrence_interval,
+          daysOfWeek: this.form.recurrence_type === "weekly"
+            ? this.form.recurrence_days
+            : undefined,
+        }
         : null,
     );
   }
@@ -397,27 +392,6 @@ export class TaskForm extends LitElement {
                   (p) =>
                     html`
                       <option value="${p.id}">${p.name}</option>
-                    `,
-                )}
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label>Context</label>
-              <select
-                .value="${String(this.form.context_id || "")}"
-                @change="${(e: Event) => (this.form = {
-                  ...this.form,
-                  context_id: (e.target as HTMLSelectElement).value
-                    ? (e.target as HTMLSelectElement).value
-                    : null,
-                })}"
-              >
-                <option value="">None</option>
-                ${store.contexts.map(
-                  (c) =>
-                    html`
-                      <option value="${c.id}">${c.name}</option>
                     `,
                 )}
               </select>

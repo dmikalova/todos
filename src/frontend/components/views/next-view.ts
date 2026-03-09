@@ -142,14 +142,6 @@ export class NextView extends StoreElement {
       gap: 4px;
     }
 
-    .context-tag {
-      padding: 2px 8px;
-      background: var(--md-sys-color-secondary-container);
-      color: var(--md-sys-color-on-secondary-container);
-      border-radius: var(--md-sys-shape-corner-small);
-      font-size: 12px;
-    }
-
     .actions {
       display: flex;
       flex-wrap: wrap;
@@ -297,14 +289,7 @@ export class NextView extends StoreElement {
                 ${task.project_name}
               </span>
             `
-            : null} ${(task.context_ids || []).map(
-              (ctxId) =>
-                html`
-                  <span class="context-tag">${store.getContextName(
-                    ctxId,
-                  )}</span>
-                `,
-            )}
+            : null}
         </div>
       </div>
 

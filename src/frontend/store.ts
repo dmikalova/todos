@@ -11,8 +11,6 @@ export interface Task {
   deferred_until?: string;
   project_id?: string;
   project_name?: string;
-  context_id?: string;
-  context_ids?: string[];
   recurrence_type?: string;
   recurrence_interval?: number;
   recurrence_days?: number[];
@@ -29,13 +27,15 @@ export interface TaskInput {
   priority?: number;
   dueDate?: string | null;
   mustDo?: boolean;
-  contextIds?: string[];
 }
 
 export interface Project {
   id: string;
   name: string;
   color?: string;
+  description?: string | null;
+  context_id?: string | null;
+  parent_project_id?: string | null;
   task_count?: number;
 }
 
@@ -78,7 +78,9 @@ class Store {
   private _projects: Project[] = [];
   private _contexts: Context[] = [];
   private _history: HistoryEntry[] = [];
-  private _currentTask: Task | null = null;
+  private _historyTotal = 0;
+  private _historyLoading = false;
+  private _nextTasks: Task[] = [];
   private _loading = true;
   private _user: UserProfile | null = null;
 
@@ -113,8 +115,17 @@ class Store {
   get history() {
     return this._history;
   }
+  get historyTotal() {
+    return this._historyTotal;
+  }
+  get historyLoading() {
+    return this._historyLoading;
+  }
+  get nextTasks() {
+    return this._nextTasks;
+  }
   get currentTask() {
-    return this._currentTask;
+    return this._nextTasks[0] || null;
   }
   get loading() {
     return this._loading;
@@ -206,9 +217,13 @@ class Store {
 
   get contextTasks(): Task[] {
     if (!this._selectedContextId) return [];
+    // Find projects that have this context (directly or inherited)
+    const projectIds = this._projects
+      .filter((p) => this.resolveProjectContext(p) === this._selectedContextId)
+      .map((p) => p.id);
     return this._tasks.filter(
       (t) =>
-        t.context_id === this._selectedContextId &&
+        t.project_id && projectIds.includes(t.project_id) &&
         (this._taskFilter.completed === "true"
           ? t.completed_at
           : !t.completed_at),
@@ -218,25 +233,25 @@ class Store {
   get currentPageTitle(): string {
     switch (this._currentTab) {
       case "next":
-        return "Next";
+        return "next";
       case "inbox":
-        return "Inbox";
+        return "inbox";
       case "due":
-        return "Due";
+        return "due";
       case "history":
-        return "History";
+        return "history";
       case "settings":
-        return "Settings";
+        return "settings";
       case "project": {
         const p = this._projects.find((p) => p.id === this._selectedProjectId);
-        return p?.name || "Project";
+        return p?.name || "project";
       }
       case "context": {
         const c = this._contexts.find((c) => c.id === this._selectedContextId);
-        return c?.name || "Context";
+        return c?.name || "context";
       }
       default:
-        return "Todos";
+        return "todos";
     }
   }
 
@@ -366,18 +381,22 @@ class Store {
     this._loading = true;
     this.notify();
     try {
-      const [next, tasks, projects, contexts, history] = await Promise.all([
-        this.api<Task | null>("/next"),
-        this.api<Task[]>("/tasks"),
-        this.api<Project[]>("/projects"),
-        this.api<Context[]>("/contexts"),
-        this.api<HistoryEntry[]>("/history"),
-      ]);
-      this._currentTask = next;
+      const [nextResult, tasks, projects, contexts, historyResult] =
+        await Promise.all([
+          this.api<{ tasks: Task[]; totalEligible: number }>("/next"),
+          this.api<Task[]>("/tasks"),
+          this.api<Project[]>("/projects"),
+          this.api<Context[]>("/contexts"),
+          this.api<{ entries: HistoryEntry[]; total: number }>(
+            "/history?limit=100&offset=0",
+          ),
+        ]);
+      this._nextTasks = nextResult.tasks;
       this._tasks = tasks;
       this._projects = projects;
       this._contexts = contexts;
-      this._history = history;
+      this._history = historyResult.entries;
+      this._historyTotal = historyResult.total;
     } catch (_e) {
       this.showToast("Failed to load data", "error");
     } finally {
@@ -398,7 +417,10 @@ class Store {
 
   async fetchNext() {
     try {
-      this._currentTask = await this.api<Task | null>("/next");
+      const result = await this.api<{ tasks: Task[]; totalEligible: number }>(
+        "/next",
+      );
+      this._nextTasks = result.tasks;
       this.notify();
     } catch (_e) {
       this.showToast("Failed to load next task", "error");
@@ -434,18 +456,42 @@ class Store {
 
   async fetchHistory() {
     try {
-      this._history = await this.api<HistoryEntry[]>("/history");
+      const result = await this.api<{ entries: HistoryEntry[]; total: number }>(
+        "/history?limit=100&offset=0",
+      );
+      this._history = result.entries;
+      this._historyTotal = result.total;
       this.notify();
     } catch (_e) {
       this.showToast("Failed to load history", "error");
     }
   }
 
+  async fetchMoreHistory(pageSize = 50) {
+    if (this._historyLoading || this._history.length >= this._historyTotal) {
+      return;
+    }
+    this._historyLoading = true;
+    this.notify();
+    try {
+      const result = await this.api<{ entries: HistoryEntry[]; total: number }>(
+        `/history?limit=${pageSize}&offset=${this._history.length}`,
+      );
+      this._history = [...this._history, ...result.entries];
+      this._historyTotal = result.total;
+    } catch (_e) {
+      this.showToast("Failed to load more history", "error");
+    } finally {
+      this._historyLoading = false;
+      this.notify();
+    }
+  }
+
   // Task operations
   async completeTask() {
-    if (!this._currentTask) return;
+    if (!this.currentTask) return;
     try {
-      await this.api(`/tasks/${this._currentTask.id}/complete`, {
+      await this.api(`/tasks/${this.currentTask.id}/complete`, {
         method: "POST",
       });
       this.showToast("Task completed!");
@@ -460,9 +506,9 @@ class Store {
   }
 
   async skipTask() {
-    if (!this._currentTask) return;
+    if (!this.currentTask) return;
     try {
-      await this.api(`/tasks/${this._currentTask.id}/skip`, { method: "POST" });
+      await this.api(`/tasks/${this.currentTask.id}/skip`, { method: "POST" });
       await this.fetchNext();
     } catch (_e) {
       this.showToast("Failed to skip task", "error");
@@ -470,9 +516,9 @@ class Store {
   }
 
   async deferTask(duration: string) {
-    if (!this._currentTask || !duration) return;
+    if (!this.currentTask || !duration) return;
     try {
-      await this.api(`/tasks/${this._currentTask.id}/defer`, {
+      await this.api(`/tasks/${this.currentTask.id}/defer`, {
         method: "POST",
         body: JSON.stringify({ duration }),
       });
@@ -763,6 +809,80 @@ class Store {
 
   isOverdue(dateStr: string): boolean {
     return new Date(dateStr) < new Date();
+  }
+
+  // Context inheritance — walk parent_project_id ancestors to find nearest context_id
+  resolveProjectContext(project: Project): string | null {
+    if (project.context_id) return project.context_id;
+    if (!project.parent_project_id) return null;
+    const parent = this._projects.find((p) =>
+      p.id === project.parent_project_id
+    );
+    if (!parent) return null;
+    return this.resolveProjectContext(parent);
+  }
+
+  // Check if a time window is currently active
+  isWindowActive(
+    window: { dayOfWeek: number; startTime: string; endTime: string },
+    now: Date = new Date(),
+  ): boolean {
+    if (now.getDay() !== window.dayOfWeek) return false;
+    const hhmm = `${String(now.getHours()).padStart(2, "0")}:${
+      String(now.getMinutes()).padStart(2, "0")
+    }`;
+    return hhmm >= window.startTime && hhmm < window.endTime;
+  }
+
+  // Return context IDs that have at least one active window right now
+  getActiveContextIds(now: Date = new Date()): string[] {
+    return this._contexts
+      .filter((c) => {
+        if (!c.time_windows || c.time_windows.length === 0) return true;
+        return c.time_windows.some((w) => this.isWindowActive(w, now));
+      })
+      .map((c) => c.id);
+  }
+
+  // Filter projects whose effective context is in the active set
+  getNextProjects(activeContextIds: string[]): Project[] {
+    return this._projects.filter((p) => {
+      const ctx = this.resolveProjectContext(p);
+      return ctx !== null && activeContextIds.includes(ctx);
+    });
+  }
+
+  // Return incomplete tasks in the given projects (excluding inbox/unassigned and future-dated)
+  filterNextTasks(tasks: Task[], nextProjectIds: string[]): Task[] {
+    const today = new Date().toISOString().split("T")[0];
+    return tasks.filter(
+      (t) =>
+        t.project_id &&
+        nextProjectIds.includes(t.project_id) &&
+        !t.completed_at &&
+        (!t.due_date || t.due_date.split("T")[0] <= today),
+    );
+  }
+
+  // Sort by due date ascending, undated last
+  sortNextTasks(tasks: Task[]): Task[] {
+    return [...tasks].sort((a, b) => {
+      if (a.due_date && b.due_date) {
+        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      }
+      if (a.due_date) return -1;
+      if (b.due_date) return 1;
+      return 0;
+    });
+  }
+
+  // Full next pipeline: context windows → active projects → eligible tasks → sorted
+  get pipelineTasks(): Task[] {
+    const activeContextIds = this.getActiveContextIds();
+    const nextProjects = this.getNextProjects(activeContextIds);
+    const nextProjectIds = nextProjects.map((p) => p.id);
+    const filtered = this.filterNextTasks(this._tasks, nextProjectIds);
+    return this.sortNextTasks(filtered);
   }
 }
 

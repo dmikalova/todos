@@ -23,7 +23,8 @@
   // Available tasks: deno task <name>
   "tasks": {
     // Development: start postgres, apply schema, run server with hot reload (frontend bundled on startup)
-    "dev": "docker compose up -d && sleep 1 && deno task db:local && export DATABASE_URL_TRANSACTION='postgres://todos:todos@localhost:5432/todos?search_path=todos&sslmode=disable' && DENO_ENV=development deno run --permission-set --watch src/main.ts",
+    // App connects as todos_app (non-superuser) so RLS policies are enforced
+    "dev": "docker compose up -d && sleep 1 && deno task db:local && export DATABASE_URL_TRANSACTION='postgres://todos_app:todos_app@localhost:5432/todos?search_path=todos&sslmode=disable' && DENO_ENV=development deno run --permission-set --watch src/main.ts",
     // Production start
     "start": "deno run --permission-set src/main.ts",
     // Type-check API and frontend

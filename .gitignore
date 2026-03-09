@@ -1,8 +1,9 @@
-node_modules
+.cache
 .DS_Store
+.vite
+*.local
+coverage
 dist
 dist-ssr
-*.local
-.cache
-.vite
+node_modules
 vendor

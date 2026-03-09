@@ -3,7 +3,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { type SqlQuery, withDb, withTransaction } from "../db/index.ts";
-import type { AppEnv } from "../types.ts";
+import type { AppEnv, SessionData } from "../types.ts";
 
 export const contexts = new Hono<AppEnv>();
 
@@ -31,6 +31,7 @@ const updateContextSchema = z.object({
 
 interface Context {
   id: string;
+  user_id: string;
   name: string;
   color?: string;
   created_at: Date;
@@ -79,6 +80,7 @@ async function getContextWithWindows(
 
 // POST /api/contexts - Create context
 contexts.post("/", async (c) => {
+  const session = c.get("session") as SessionData;
   const body = await c.req.json();
   const result = createContextSchema.safeParse(body);
 
@@ -93,7 +95,7 @@ contexts.post("/", async (c) => {
 
   const context = await withTransaction(async (tx) => {
     const [created] = await tx<Context[]>`
-      INSERT INTO contexts (name, color) VALUES (${name}, ${
+      INSERT INTO contexts (user_id, name, color) VALUES (${session.userId}, ${name}, ${
       color ?? null
     }) RETURNING *
     `;
@@ -110,13 +112,15 @@ contexts.post("/", async (c) => {
       ...created,
       time_windows: timeWindows,
     };
-  });
+  }, { userId: session.userId });
 
   return c.json(context, 201);
 });
 
 // GET /api/contexts - List all contexts
 contexts.get("/", async (c) => {
+  const session = c.get("session") as SessionData;
+
   const contextList = await withDb(async (sql: SqlQuery) => {
     const allContexts = await sql<Context[]>`
       SELECT * FROM contexts ORDER BY name
@@ -139,45 +143,19 @@ contexts.get("/", async (c) => {
     }
 
     return result;
-  });
+  }, { userId: session.userId });
 
   return c.json(contextList);
 });
 
-// GET /api/contexts/current - Get active contexts for current time
-contexts.get("/current", async (c) => {
-  // Client should send local time via query param
-  const localTimeParam = c.req.query("localTime");
-  const localTime = localTimeParam ? new Date(localTimeParam) : new Date();
-
-  const dayOfWeek = localTime.getDay();
-  const timeStr = localTime.toTimeString().slice(0, 5); // HH:MM
-
-  const activeContexts = await withDb(async (sql: SqlQuery) => {
-    // Find contexts where current day/time matches a window
-    const active = await sql<Context[]>`
-      SELECT DISTINCT c.*
-      FROM contexts c
-      JOIN context_time_windows w ON c.id = w.context_id
-      WHERE w.day_of_week = ${dayOfWeek}
-        AND w.start_time <= ${timeStr}
-        AND w.end_time > ${timeStr}
-      ORDER BY c.name
-    `;
-
-    return active;
-  });
-
-  return c.json(activeContexts);
-});
-
 // GET /api/contexts/:id - Get single context
 contexts.get("/:id", async (c) => {
+  const session = c.get("session") as SessionData;
   const id = c.req.param("id");
 
   const context = await withDb((sql: SqlQuery) => {
     return getContextWithWindows(sql, id);
-  });
+  }, { userId: session.userId });
 
   if (!context) {
     return c.json({ error: "Context not found" }, 404);
@@ -188,6 +166,7 @@ contexts.get("/:id", async (c) => {
 
 // PATCH /api/contexts/:id - Update context
 contexts.patch("/:id", async (c) => {
+  const session = c.get("session") as SessionData;
   const id = c.req.param("id");
   const body = await c.req.json();
   const result = updateContextSchema.safeParse(body);
@@ -244,7 +223,7 @@ contexts.patch("/:id", async (c) => {
         endTime: w.end_time,
       })),
     };
-  });
+  }, { userId: session.userId });
 
   if (!context) {
     return c.json({ error: "Context not found" }, 404);
@@ -255,6 +234,7 @@ contexts.patch("/:id", async (c) => {
 
 // DELETE /api/contexts/:id - Delete context
 contexts.delete("/:id", async (c) => {
+  const session = c.get("session") as SessionData;
   const id = c.req.param("id");
 
   const deleted = await withTransaction(async (tx) => {
@@ -263,10 +243,12 @@ contexts.delete("/:id", async (c) => {
     >`SELECT * FROM contexts WHERE id = ${id}`;
     if (!existing) return null;
 
-    // Cascade delete removes time windows and task_contexts automatically
+    // Cascade delete removes time windows automatically
+    // Also clear context_id from projects that reference this context
+    await tx`UPDATE projects SET context_id = NULL WHERE context_id = ${id}`;
     await tx`DELETE FROM contexts WHERE id = ${id}`;
     return existing;
-  });
+  }, { userId: session.userId });
 
   if (!deleted) {
     return c.json({ error: "Context not found" }, 404);

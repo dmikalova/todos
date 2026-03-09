@@ -273,3 +273,126 @@ Deno.test("getActiveContexts - context with no windows is never active", () => {
 
   assertEquals(active, []);
 });
+
+// ---------------------------------------------------------------------------
+// Multi-Day Window Tests
+// ---------------------------------------------------------------------------
+
+Deno.test(
+  "isContextActive - Mon-Fri windows: true for each covered day",
+  () => {
+    const context: Context = {
+      id: "work",
+      name: "Work",
+      timeWindows: [
+        { dayOfWeek: 1, startTime: "09:00", endTime: "17:00" },
+        { dayOfWeek: 2, startTime: "09:00", endTime: "17:00" },
+        { dayOfWeek: 3, startTime: "09:00", endTime: "17:00" },
+        { dayOfWeek: 4, startTime: "09:00", endTime: "17:00" },
+        { dayOfWeek: 5, startTime: "09:00", endTime: "17:00" },
+      ],
+    };
+
+    // Week of 2026-02-23 (Mon) through 2026-03-01 (Sun)
+    const monday = new Date("2026-02-23T12:00:00");
+    const tuesday = new Date("2026-02-24T12:00:00");
+    const wednesday = new Date("2026-02-25T12:00:00");
+    const thursday = new Date("2026-02-26T12:00:00");
+    const friday = new Date("2026-02-27T12:00:00");
+    const saturday = new Date("2026-02-28T12:00:00");
+    const sunday = new Date("2026-03-01T12:00:00");
+
+    assertEquals(isContextActive(context, monday), true);
+    assertEquals(isContextActive(context, tuesday), true);
+    assertEquals(isContextActive(context, wednesday), true);
+    assertEquals(isContextActive(context, thursday), true);
+    assertEquals(isContextActive(context, friday), true);
+    assertEquals(isContextActive(context, saturday), false);
+    assertEquals(isContextActive(context, sunday), false);
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Project Context Inheritance Tests
+// ---------------------------------------------------------------------------
+
+interface Project {
+  id: string;
+  name: string;
+  context_id?: string | null;
+  parent_project_id?: string | null;
+}
+
+/**
+ * Walk parent_project_id ancestors to find nearest context_id.
+ * Same logic as Store.resolveProjectContext.
+ */
+function resolveProjectContext(
+  project: Project,
+  projects: Project[],
+): string | null {
+  if (project.context_id) return project.context_id;
+  if (!project.parent_project_id) return null;
+  const parent = projects.find((p) => p.id === project.parent_project_id);
+  if (!parent) return null;
+  return resolveProjectContext(parent, projects);
+}
+
+Deno.test("resolveProjectContext - nearest ancestor wins (grandparent)", () => {
+  const projects: Project[] = [
+    { id: "grandparent", name: "GP", context_id: "ctx-gp" },
+    { id: "parent", name: "P", parent_project_id: "grandparent" },
+    { id: "child", name: "C", parent_project_id: "parent" },
+  ];
+
+  const child = projects.find((p) => p.id === "child")!;
+  assertEquals(resolveProjectContext(child, projects), "ctx-gp");
+});
+
+Deno.test("resolveProjectContext - direct assignment beats ancestor", () => {
+  const projects: Project[] = [
+    { id: "parent", name: "P", context_id: "ctx-parent" },
+    {
+      id: "child",
+      name: "C",
+      context_id: "ctx-child",
+      parent_project_id: "parent",
+    },
+  ];
+
+  const child = projects.find((p) => p.id === "child")!;
+  assertEquals(resolveProjectContext(child, projects), "ctx-child");
+});
+
+Deno.test(
+  "resolveProjectContext - no ancestor has context returns null",
+  () => {
+    const projects: Project[] = [
+      { id: "grandparent", name: "GP" },
+      { id: "parent", name: "P", parent_project_id: "grandparent" },
+      { id: "child", name: "C", parent_project_id: "parent" },
+    ];
+
+    const child = projects.find((p) => p.id === "child")!;
+    assertEquals(resolveProjectContext(child, projects), null);
+  },
+);
+
+Deno.test(
+  "resolveProjectContext - middle ancestor context wins over grandparent",
+  () => {
+    const projects: Project[] = [
+      { id: "grandparent", name: "GP", context_id: "ctx-gp" },
+      {
+        id: "parent",
+        name: "P",
+        context_id: "ctx-parent",
+        parent_project_id: "grandparent",
+      },
+      { id: "child", name: "C", parent_project_id: "parent" },
+    ];
+
+    const child = projects.find((p) => p.id === "child")!;
+    assertEquals(resolveProjectContext(child, projects), "ctx-parent");
+  },
+);

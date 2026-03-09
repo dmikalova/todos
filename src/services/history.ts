@@ -13,6 +13,7 @@ export type TaskAction =
 
 export interface HistoryEntry {
   taskId: string;
+  userId: string;
   action: TaskAction;
   details?: Record<string, unknown>;
 }
@@ -23,12 +24,12 @@ export interface HistoryEntry {
 export async function logTaskAction(entry: HistoryEntry): Promise<void> {
   await withDb(async (sql: SqlQuery) => {
     await sql`
-      INSERT INTO task_history (task_id, action, details)
-      VALUES (${entry.taskId}, ${entry.action}, ${
+      INSERT INTO task_history (task_id, user_id, action, details)
+      VALUES (${entry.taskId}, ${entry.userId}, ${entry.action}, ${
       JSON.stringify(entry.details || {})
     })
     `;
-  });
+  }, { userId: entry.userId });
 }
 
 /**
@@ -39,8 +40,8 @@ export async function logTaskActionTx(
   entry: HistoryEntry,
 ): Promise<void> {
   await tx`
-    INSERT INTO task_history (task_id, action, details)
-    VALUES (${entry.taskId}, ${entry.action}, ${
+    INSERT INTO task_history (task_id, user_id, action, details)
+    VALUES (${entry.taskId}, ${entry.userId}, ${entry.action}, ${
     JSON.stringify(entry.details || {})
   })
   `;

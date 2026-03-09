@@ -3,7 +3,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { withDb } from "../db/index.ts";
-import type { AppEnv } from "../types.ts";
+import type { AppEnv, SessionData } from "../types.ts";
 import { type SqlQuery } from "../db/index.ts";
 
 export const history = new Hono<AppEnv>();
@@ -42,6 +42,7 @@ interface HistoryEntryWithTask extends HistoryEntry {
 
 // GET /api/history - Get paginated history
 history.get("/", async (c) => {
+  const session = c.get("session") as SessionData;
   const query = c.req.query();
   const result = historyQuerySchema.safeParse(query);
 
@@ -129,7 +130,7 @@ history.get("/", async (c) => {
     }
 
     return { entries, total };
-  });
+  }, { userId: session.userId });
 
   return c.json({
     entries: historyResult.entries,
@@ -144,6 +145,7 @@ history.get("/", async (c) => {
 
 // GET /api/history/task/:taskId - Get history for specific task
 history.get("/task/:taskId", async (c) => {
+  const session = c.get("session") as SessionData;
   const taskId = c.req.param("taskId");
 
   const entries = await withDb(async (sql: SqlQuery) => {
@@ -153,13 +155,14 @@ history.get("/task/:taskId", async (c) => {
       ORDER BY created_at DESC
     `;
     return result;
-  });
+  }, { userId: session.userId });
 
   return c.json({ entries });
 });
 
 // GET /api/history/stats - Get history statistics
 history.get("/stats", async (c) => {
+  const session = c.get("session") as SessionData;
   const query = c.req.query();
   const days = parseInt(query.days || "30", 10);
 
@@ -208,7 +211,7 @@ history.get("/stats", async (c) => {
       })),
       tasksCompleted: parseInt(completedCount?.count || "0", 10),
     };
-  });
+  }, { userId: session.userId });
 
   return c.json(stats);
 });

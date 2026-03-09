@@ -4,11 +4,12 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { type SqlQuery, withDb, withTransaction } from "../db/index.ts";
 import { logTaskActionTx } from "../services/history.ts";
+import { assertOwnership } from "../services/ownership.ts";
 import {
   calculateNextOccurrence,
   type RecurrenceRule,
 } from "../services/recurrence.ts";
-import type { AppEnv } from "../types.ts";
+import type { AppEnv, SessionData } from "../types.ts";
 
 export const tasks = new Hono<AppEnv>();
 
@@ -25,7 +26,6 @@ const createTaskSchema = z.object({
     .optional()
     .nullable(),
   mustDo: z.boolean().default(false),
-  contextIds: z.array(z.string().uuid()).default([]),
 });
 
 const updateTaskSchema = z.object({
@@ -39,12 +39,10 @@ const updateTaskSchema = z.object({
     .optional()
     .nullable(),
   mustDo: z.boolean().optional(),
-  contextIds: z.array(z.string().uuid()).optional(),
 });
 
 const listTasksSchema = z.object({
   projectId: z.string().uuid().optional(),
-  contextId: z.string().uuid().optional(),
   completed: z.enum(["true", "false"]).optional(),
   deleted: z.enum(["true", "false"]).optional(),
   dueBefore: z
@@ -63,6 +61,7 @@ const listTasksSchema = z.object({
 
 interface Task {
   id: string;
+  user_id: string;
   title: string;
   description: string | null;
   project_id: string | null;
@@ -76,53 +75,9 @@ interface Task {
   updated_at: Date;
 }
 
-interface TaskWithContexts extends Task {
-  context_ids: string[];
-}
-
-// Helper to fetch task with contexts
-async function getTaskWithContexts(
-  sql: SqlQuery,
-  taskId: string,
-): Promise<TaskWithContexts | null> {
-  const [task] = await sql<Task[]>`
-    SELECT * FROM tasks WHERE id = ${taskId}
-  `;
-
-  if (!task) return null;
-
-  const contexts = await sql<{ context_id: string }[]>`
-    SELECT context_id FROM task_contexts WHERE task_id = ${taskId}
-  `;
-
-  return {
-    ...task,
-    context_ids: contexts.map((c) => c.context_id),
-  };
-}
-
-// Helper to sync task contexts
-async function syncTaskContexts(
-  tx: SqlQuery,
-  taskId: string,
-  contextIds: string[],
-): Promise<void> {
-  // Delete existing contexts
-  await tx`DELETE FROM task_contexts WHERE task_id = ${taskId}`;
-
-  // Insert new contexts
-  if (contextIds.length > 0) {
-    for (const contextId of contextIds) {
-      await tx`
-        INSERT INTO task_contexts (task_id, context_id)
-        VALUES (${taskId}, ${contextId})
-      `;
-    }
-  }
-}
-
 // POST /api/tasks - Create task
 tasks.post("/", async (c) => {
+  const session = c.get("session") as SessionData;
   const body = await c.req.json();
   const result = createTaskSchema.safeParse(body);
 
@@ -140,38 +95,39 @@ tasks.post("/", async (c) => {
     priority,
     dueDate,
     mustDo,
-    contextIds,
   } = result.data;
 
   const task = await withTransaction(async (tx) => {
+    // Validate project ownership if provided
+    if (projectId) {
+      await assertOwnership(tx, "projects", projectId, session.userId);
+    }
+
     const [created] = await tx<Task[]>`
-      INSERT INTO tasks (title, description, project_id, priority, due_date, must_do)
-      VALUES (${title}, ${description || null}, ${
+      INSERT INTO tasks (user_id, title, description, project_id, priority, due_date, must_do)
+      VALUES (${session.userId}, ${title}, ${description || null}, ${
       projectId || null
     }, ${priority}, ${dueDate || null}, ${mustDo})
       RETURNING *
     `;
 
-    // Add contexts
-    if (contextIds.length > 0) {
-      await syncTaskContexts(tx, created.id, contextIds);
-    }
-
     // Log creation
     await logTaskActionTx(tx, {
       taskId: created.id,
+      userId: session.userId,
       action: "created",
-      details: { title, projectId, priority, dueDate, mustDo, contextIds },
+      details: { title, projectId, priority, dueDate, mustDo },
     });
 
-    return { ...created, context_ids: contextIds };
-  });
+    return created;
+  }, { userId: session.userId });
 
   return c.json(task, 201);
 });
 
 // GET /api/tasks - List tasks
 tasks.get("/", async (c) => {
+  const session = c.get("session") as SessionData;
   const query = Object.fromEntries(new URL(c.req.url).searchParams);
   const result = listTasksSchema.safeParse(query);
 
@@ -184,7 +140,6 @@ tasks.get("/", async (c) => {
 
   const {
     projectId,
-    contextId,
     completed,
     deleted,
     dueBefore,
@@ -194,50 +149,37 @@ tasks.get("/", async (c) => {
   } = result.data;
 
   const taskList = await withDb(async (sql: SqlQuery) => {
-    // Execute with conditional fragments
     const tasks = await sql<Task[]>`
-      SELECT DISTINCT t.*
-      FROM tasks t
-      LEFT JOIN task_contexts tc ON t.id = tc.task_id
+      SELECT *
+      FROM tasks
       WHERE 1=1
-      ${projectId ? sql`AND t.project_id = ${projectId}` : sql``}
-      ${contextId ? sql`AND tc.context_id = ${contextId}` : sql``}
-      ${completed === "true" ? sql`AND t.completed_at IS NOT NULL` : sql``}
-      ${completed === "false" ? sql`AND t.completed_at IS NULL` : sql``}
-      ${deleted === "true" ? sql`AND t.deleted_at IS NOT NULL` : sql``}
-      ${deleted === "false" ? sql`AND t.deleted_at IS NULL` : sql``}
-      ${dueBefore ? sql`AND t.due_date <= ${dueBefore}` : sql``}
-      ${dueAfter ? sql`AND t.due_date >= ${dueAfter}` : sql``}
-      ORDER BY t.created_at DESC
+      ${projectId ? sql`AND project_id = ${projectId}` : sql``}
+      ${completed === "true" ? sql`AND completed_at IS NOT NULL` : sql``}
+      ${completed === "false" ? sql`AND completed_at IS NULL` : sql``}
+      ${deleted === "true" ? sql`AND deleted_at IS NOT NULL` : sql``}
+      ${deleted === "false" ? sql`AND deleted_at IS NULL` : sql``}
+      ${dueBefore ? sql`AND due_date <= ${dueBefore}` : sql``}
+      ${dueAfter ? sql`AND due_date >= ${dueAfter}` : sql``}
+      ORDER BY created_at DESC
       LIMIT ${limit}
       OFFSET ${offset}
     `;
 
-    // Fetch contexts for each task
-    const tasksWithContexts: TaskWithContexts[] = [];
-    for (const task of tasks) {
-      const contexts = await sql<{ context_id: string }[]>`
-        SELECT context_id FROM task_contexts WHERE task_id = ${task.id}
-      `;
-      tasksWithContexts.push({
-        ...task,
-        context_ids: contexts.map((c) => c.context_id),
-      });
-    }
-
-    return tasksWithContexts;
-  });
+    return tasks;
+  }, { userId: session.userId });
 
   return c.json(taskList);
 });
 
 // GET /api/tasks/:id - Get single task
 tasks.get("/:id", async (c) => {
+  const session = c.get("session") as SessionData;
   const id = c.req.param("id");
 
-  const task = await withDb((sql: SqlQuery) => {
-    return getTaskWithContexts(sql, id);
-  });
+  const task = await withDb(async (sql: SqlQuery) => {
+    const [result] = await sql<Task[]>`SELECT * FROM tasks WHERE id = ${id}`;
+    return result || null;
+  }, { userId: session.userId });
 
   if (!task) {
     return c.json({ error: "Task not found" }, 404);
@@ -248,6 +190,7 @@ tasks.get("/:id", async (c) => {
 
 // PATCH /api/tasks/:id - Update task
 tasks.patch("/:id", async (c) => {
+  const session = c.get("session") as SessionData;
   const id = c.req.param("id");
   const body = await c.req.json();
   const result = updateTaskSchema.safeParse(body);
@@ -262,6 +205,11 @@ tasks.patch("/:id", async (c) => {
   const updates = result.data;
 
   const task = await withTransaction(async (tx) => {
+    // Validate project ownership if updating projectId
+    if (updates.projectId) {
+      await assertOwnership(tx, "projects", updates.projectId, session.userId);
+    }
+
     // Get current task for history
     const [existing] = await tx<Task[]>`SELECT * FROM tasks WHERE id = ${id}`;
     if (!existing) {
@@ -290,27 +238,16 @@ tasks.patch("/:id", async (c) => {
       RETURNING *
     `;
 
-    // Update contexts if provided
-    let contextIds: string[] = [];
-    if (updates.contextIds !== undefined) {
-      await syncTaskContexts(tx, id, updates.contextIds);
-      contextIds = updates.contextIds;
-    } else {
-      const contexts: { context_id: string }[] = await tx`
-        SELECT context_id FROM task_contexts WHERE task_id = ${id}
-      `;
-      contextIds = contexts.map((c: { context_id: string }) => c.context_id);
-    }
-
     // Log update
     await logTaskActionTx(tx, {
       taskId: id,
+      userId: session.userId,
       action: "updated",
       details: { changes: updates },
     });
 
-    return { ...updated, context_ids: contextIds };
-  });
+    return updated;
+  }, { userId: session.userId });
 
   if (!task) {
     return c.json({ error: "Task not found" }, 404);
@@ -321,6 +258,7 @@ tasks.patch("/:id", async (c) => {
 
 // DELETE /api/tasks/:id - Soft delete task
 tasks.delete("/:id", async (c) => {
+  const session = c.get("session") as SessionData;
   const id = c.req.param("id");
 
   const task = await withTransaction(async (tx) => {
@@ -337,12 +275,13 @@ tasks.delete("/:id", async (c) => {
 
     await logTaskActionTx(tx, {
       taskId: id,
+      userId: session.userId,
       action: "deleted",
       details: { title: existing.title },
     });
 
     return deleted;
-  });
+  }, { userId: session.userId });
 
   if (!task) {
     return c.json({ error: "Task not found" }, 404);
@@ -353,6 +292,7 @@ tasks.delete("/:id", async (c) => {
 
 // POST /api/tasks/:id/complete - Complete task
 tasks.post("/:id/complete", async (c) => {
+  const session = c.get("session") as SessionData;
   const id = c.req.param("id");
 
   const result = await withTransaction(async (tx) => {
@@ -380,6 +320,7 @@ tasks.post("/:id/complete", async (c) => {
 
     await logTaskActionTx(tx, {
       taskId: id,
+      userId: session.userId,
       action: "completed",
       details: { title: existing.title, recurring: !!rule },
     });
@@ -390,16 +331,11 @@ tasks.post("/:id/complete", async (c) => {
     if (rule) {
       const nextDueDate = calculateNextOccurrence(rule, completionDate);
 
-      // Get task contexts
-      const contexts: { context_id: string }[] = await tx`
-        SELECT context_id FROM task_contexts WHERE task_id = ${id}
-      `;
-      const contextIds = contexts.map((c) => c.context_id);
-
       // Create next task instance
       [newTask] = await tx<Task[]>`
-        INSERT INTO tasks (title, description, project_id, priority, due_date, must_do)
+        INSERT INTO tasks (user_id, title, description, project_id, priority, due_date, must_do)
         VALUES (
+          ${session.userId},
           ${existing.title},
           ${existing.description},
           ${existing.project_id},
@@ -409,14 +345,6 @@ tasks.post("/:id/complete", async (c) => {
         )
         RETURNING *
       `;
-
-      // Copy contexts to new task
-      for (const contextId of contextIds) {
-        await tx`
-          INSERT INTO task_contexts (task_id, context_id)
-          VALUES (${newTask.id}, ${contextId})
-        `;
-      }
 
       // Copy recurrence rule to new task
       await tx`
@@ -438,6 +366,7 @@ tasks.post("/:id/complete", async (c) => {
 
       await logTaskActionTx(tx, {
         taskId: newTask.id,
+        userId: session.userId,
         action: "created",
         details: {
           title: newTask.title,
@@ -448,7 +377,7 @@ tasks.post("/:id/complete", async (c) => {
     }
 
     return { task: completed, newTask };
-  });
+  }, { userId: session.userId });
 
   if (!result) {
     return c.json({ error: "Task not found" }, 404);
@@ -463,6 +392,7 @@ tasks.post("/:id/complete", async (c) => {
 
 // DELETE /api/tasks/:id/complete - Undo complete
 tasks.delete("/:id/complete", async (c) => {
+  const session = c.get("session") as SessionData;
   const id = c.req.param("id");
 
   const task = await withTransaction(async (tx) => {
@@ -483,12 +413,13 @@ tasks.delete("/:id/complete", async (c) => {
 
     await logTaskActionTx(tx, {
       taskId: id,
+      userId: session.userId,
       action: "uncompleted",
       details: { title: existing.title },
     });
 
     return { task: uncompleted };
-  });
+  }, { userId: session.userId });
 
   if (!task) {
     return c.json({ error: "Task not found" }, 404);
@@ -503,6 +434,7 @@ tasks.delete("/:id/complete", async (c) => {
 
 // POST /api/tasks/:id/defer - Defer task
 tasks.post("/:id/defer", async (c) => {
+  const session = c.get("session") as SessionData;
   const id = c.req.param("id");
   const body = await c.req.json();
 
@@ -575,12 +507,13 @@ tasks.post("/:id/defer", async (c) => {
 
     await logTaskActionTx(tx, {
       taskId: id,
+      userId: session.userId,
       action: "deferred",
       details: { until: deferUntil.toISOString(), preset: result.data.preset },
     });
 
     return { task: deferred };
-  });
+  }, { userId: session.userId });
 
   if (!task) {
     return c.json({ error: "Task not found" }, 404);
@@ -595,6 +528,7 @@ tasks.post("/:id/defer", async (c) => {
 
 // DELETE /api/tasks/:id/defer - Clear defer
 tasks.delete("/:id/defer", async (c) => {
+  const session = c.get("session") as SessionData;
   const id = c.req.param("id");
 
   const task = await withTransaction(async (tx) => {
@@ -611,12 +545,13 @@ tasks.delete("/:id/defer", async (c) => {
 
     await logTaskActionTx(tx, {
       taskId: id,
+      userId: session.userId,
       action: "undeferred",
       details: { title: existing.title },
     });
 
     return undeferred;
-  });
+  }, { userId: session.userId });
 
   if (!task) {
     return c.json({ error: "Task not found" }, 404);

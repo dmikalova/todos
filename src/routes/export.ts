@@ -3,7 +3,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { type SqlQuery, withDb } from "../db/index.ts";
-import type { AppEnv } from "../types.ts";
+import type { AppEnv, SessionData } from "../types.ts";
 
 export const exportRoutes = new Hono<AppEnv>();
 
@@ -14,7 +14,6 @@ const exportQuerySchema = z.object({
   includeCompleted: z.coerce.boolean().default(false),
   includeDeleted: z.coerce.boolean().default(false),
   projectId: z.string().uuid().optional(),
-  contextId: z.string().uuid().optional(),
 });
 
 // Types
@@ -71,11 +70,12 @@ interface ExportData {
   version: string;
   projects: Project[];
   contexts: Context[];
-  tasks: (Task & { contexts: string[]; recurrence?: RecurrenceRule | null })[];
+  tasks: (Task & { recurrence?: RecurrenceRule | null })[];
 }
 
 // GET /api/export - Export all data
 exportRoutes.get("/", async (c) => {
+  const session = c.get("session") as SessionData;
   const query = c.req.query();
   const result = exportQuerySchema.safeParse(query);
 
@@ -86,8 +86,7 @@ exportRoutes.get("/", async (c) => {
     );
   }
 
-  const { format, includeCompleted, includeDeleted, projectId, contextId } =
-    result.data;
+  const { format, includeCompleted, includeDeleted, projectId } = result.data;
 
   const data = await withDb(async (sql: SqlQuery) => {
     // Export projects
@@ -138,26 +137,6 @@ exportRoutes.get("/", async (c) => {
       tasks = tasks.filter((t) => t.project_id === projectId);
     }
 
-    // Get task contexts
-    const taskContexts = await sql<{ task_id: string; context_id: string }[]>`
-      SELECT task_id, context_id FROM task_contexts
-    `;
-    const taskContextMap = new Map<string, string[]>();
-    for (const tc of taskContexts) {
-      if (!taskContextMap.has(tc.task_id)) {
-        taskContextMap.set(tc.task_id, []);
-      }
-      taskContextMap.get(tc.task_id)!.push(tc.context_id);
-    }
-
-    // Apply context filter after joining
-    if (contextId) {
-      tasks = tasks.filter((t) => {
-        const ctxIds = taskContextMap.get(t.id) || [];
-        return ctxIds.includes(contextId);
-      });
-    }
-
     // Get recurrence rules
     const recurrenceRules = await sql<
       RecurrenceRule[]
@@ -170,7 +149,6 @@ exportRoutes.get("/", async (c) => {
     // Combine task data
     const enrichedTasks = tasks.map((task) => ({
       ...task,
-      contexts: taskContextMap.get(task.id) || [],
       recurrence: recurrenceMap.get(task.id) || null,
     }));
 
@@ -181,7 +159,7 @@ exportRoutes.get("/", async (c) => {
       contexts,
       tasks: enrichedTasks,
     } as ExportData;
-  });
+  }, { userId: session.userId });
 
   if (format === "csv") {
     // Convert to CSV format (tasks only for CSV)
@@ -205,6 +183,7 @@ exportRoutes.get("/", async (c) => {
 
 // GET /api/export/tasks - Export just tasks
 exportRoutes.get("/tasks", async (c) => {
+  const session = c.get("session") as SessionData;
   const query = c.req.query();
   const format = query.format || "json";
 
@@ -214,7 +193,7 @@ exportRoutes.get("/tasks", async (c) => {
       WHERE deleted_at IS NULL
       ORDER BY created_at
     `;
-  });
+  }, { userId: session.userId });
 
   if (format === "csv") {
     const csv = tasksToCSV(tasks);
@@ -231,15 +210,17 @@ exportRoutes.get("/tasks", async (c) => {
 
 // GET /api/export/projects - Export just projects
 exportRoutes.get("/projects", async (c) => {
+  const session = c.get("session") as SessionData;
   const projects = await withDb(async (sql: SqlQuery) => {
     return await sql<Project[]>`SELECT * FROM projects ORDER BY name`;
-  });
+  }, { userId: session.userId });
 
   return c.json({ projects, exportedAt: new Date().toISOString() });
 });
 
 // GET /api/export/contexts - Export just contexts
 exportRoutes.get("/contexts", async (c) => {
+  const session = c.get("session") as SessionData;
   const contexts = await withDb(async (sql: SqlQuery) => {
     return await sql<Context[]>`
       SELECT c.*,
@@ -258,7 +239,7 @@ exportRoutes.get("/contexts", async (c) => {
       GROUP BY c.id
       ORDER BY c.name
     `;
-  });
+  }, { userId: session.userId });
 
   return c.json({ contexts, exportedAt: new Date().toISOString() });
 });

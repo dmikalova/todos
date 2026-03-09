@@ -62,7 +62,7 @@ filters.post("/", async (c) => {
       RETURNING *
     `;
     return created;
-  });
+  }, { userId: session.userId });
 
   return c.json(filter, 201);
 });
@@ -78,7 +78,7 @@ filters.get("/", async (c) => {
       ORDER BY name
     `;
     return result;
-  });
+  }, { userId: session.userId });
 
   return c.json(filterList);
 });
@@ -94,7 +94,7 @@ filters.get("/:id", async (c) => {
       WHERE id = ${id} AND user_id = ${session.userId}
     `;
     return result || null;
-  });
+  }, { userId: session.userId });
 
   if (!filter) {
     return c.json({ error: "Filter not found" }, 404);
@@ -135,7 +135,7 @@ filters.patch("/:id", async (c) => {
       RETURNING *
     `;
     return updated;
-  });
+  }, { userId: session.userId });
 
   if (!filter) {
     return c.json({ error: "Filter not found" }, 404);
@@ -157,7 +157,7 @@ filters.delete("/:id", async (c) => {
 
     await sql`DELETE FROM saved_filters WHERE id = ${id}`;
     return existing;
-  });
+  }, { userId: session.userId });
 
   if (!deleted) {
     return c.json({ error: "Filter not found" }, 404);
@@ -188,37 +188,25 @@ filters.post("/:id/apply", async (c) => {
     };
 
     // Build dynamic query based on criteria
-    // This is a simplified version - in production you'd want a query builder
     interface TaskRow {
       id: string;
       title: string;
       due_date: Date | null;
       completed_at: Date | null;
       project_id: string | null;
-      context_ids: string[] | null;
     }
 
     const taskRows = await sql<TaskRow[]>`
-      SELECT t.*, 
-        ARRAY_AGG(DISTINCT tc.context_id) FILTER (WHERE tc.context_id IS NOT NULL) as context_ids 
+      SELECT t.*
       FROM tasks t
-      LEFT JOIN task_contexts tc ON t.id = tc.task_id
       WHERE t.deleted_at IS NULL
-      GROUP BY t.id
       ORDER BY t.due_date NULLS LAST, t.created_at DESC
     `;
 
     // Copy to mutable array for filtering
     let tasks: TaskRow[] = [...taskRows];
 
-    // Apply filters in memory for now (can be optimized with dynamic SQL later)
-    if (criteria.contexts && criteria.contexts.length > 0) {
-      tasks = tasks.filter((t) => {
-        const contextIds = t.context_ids || [];
-        return criteria.contexts!.some((c) => contextIds.includes(c));
-      });
-    }
-
+    // Apply filters in memory
     if (criteria.projects && criteria.projects.length > 0) {
       tasks = tasks.filter((t) =>
         criteria.projects!.includes(t.project_id || "")
@@ -246,7 +234,7 @@ filters.post("/:id/apply", async (c) => {
     }
 
     return { filter, tasks };
-  });
+  }, { userId: session.userId });
 
   if (!result) {
     return c.json({ error: "Filter not found" }, 404);

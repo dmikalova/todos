@@ -62,7 +62,18 @@ export class ProjectForm extends LitElement {
       font-size: 14px;
     }
 
-    input:focus {
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: var(--md-sys-shape-corner-small);
+      background: var(--md-sys-color-surface);
+      color: var(--md-sys-color-on-surface);
+      font-size: 14px;
+    }
+
+    input:focus,
+    select:focus {
       outline: 2px solid var(--md-sys-color-primary);
       outline-offset: -1px;
     }
@@ -136,6 +147,7 @@ export class ProjectForm extends LitElement {
   accessor form = {
     name: "",
     color: "#4caf50",
+    context_id: null as string | null,
   };
 
   override connectedCallback() {
@@ -144,6 +156,7 @@ export class ProjectForm extends LitElement {
       this.form = {
         name: store.editingProject.name,
         color: store.editingProject.color || "#4caf50",
+        context_id: store.editingProject.context_id || null,
       };
     }
   }
@@ -157,7 +170,8 @@ export class ProjectForm extends LitElement {
     await store.saveProject({
       name: this.form.name,
       color: this.form.color,
-    });
+      contextId: this.form.context_id || undefined,
+    } as Record<string, unknown>);
   }
 
   private async handleDelete() {
@@ -205,6 +219,27 @@ export class ProjectForm extends LitElement {
               />
               <span class="color-value">${this.form.color}</span>
             </div>
+          </div>
+
+          <div class="form-group">
+            <label>Context</label>
+            <select
+              .value="${String(this.form.context_id || "")}"
+              @change="${(e: Event) => (this.form = {
+                ...this.form,
+                context_id: (e.target as HTMLSelectElement).value
+                  ? (e.target as HTMLSelectElement).value
+                  : null,
+              })}"
+            >
+              <option value="">None</option>
+              ${store.contexts.map(
+                (c) =>
+                  html`
+                    <option value="${c.id}">${c.name}</option>
+                  `,
+              )}
+            </select>
           </div>
 
           <div class="actions">

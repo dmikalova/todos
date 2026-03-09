@@ -9,7 +9,7 @@ import {
   type RecurrenceRule,
   validateRecurrenceRule,
 } from "../services/recurrence.ts";
-import type { AppEnv } from "../types.ts";
+import type { AppEnv, SessionData } from "../types.ts";
 
 export const recurrence = new Hono<AppEnv>();
 
@@ -58,6 +58,7 @@ interface Task {
 
 // POST /api/recurrence - Create recurrence rule for a task
 recurrence.post("/", async (c) => {
+  const session = c.get("session") as SessionData;
   const body = await c.req.json();
   const result = createRecurrenceSchema.safeParse(body);
 
@@ -125,7 +126,7 @@ recurrence.post("/", async (c) => {
     `;
 
     return { rule: created };
-  });
+  }, { userId: session.userId });
 
   if ("error" in rule) {
     const status = rule.error === "Task not found" ? 404 : 400;
@@ -137,6 +138,7 @@ recurrence.post("/", async (c) => {
 
 // GET /api/recurrence/:taskId - Get recurrence rule for a task
 recurrence.get("/:taskId", async (c) => {
+  const session = c.get("session") as SessionData;
   const taskId = c.req.param("taskId");
 
   // Validate UUID format
@@ -151,7 +153,7 @@ recurrence.get("/:taskId", async (c) => {
       SELECT * FROM recurrence_rules WHERE task_id = ${taskId}
     `;
     return result || null;
-  });
+  }, { userId: session.userId });
 
   if (!rule) {
     return c.json({ error: "No recurrence rule for this task" }, 404);
@@ -162,6 +164,7 @@ recurrence.get("/:taskId", async (c) => {
 
 // PATCH /api/recurrence/:taskId - Update recurrence rule
 recurrence.patch("/:taskId", async (c) => {
+  const session = c.get("session") as SessionData;
   const taskId = c.req.param("taskId");
   const body = await c.req.json();
   const result = updateRecurrenceSchema.safeParse(body);
@@ -223,7 +226,7 @@ recurrence.patch("/:taskId", async (c) => {
     `;
 
     return { rule: updated };
-  });
+  }, { userId: session.userId });
 
   if ("error" in rule) {
     const status = rule.error === "No recurrence rule for this task"
@@ -237,6 +240,7 @@ recurrence.patch("/:taskId", async (c) => {
 
 // DELETE /api/recurrence/:taskId - Remove recurrence (convert to one-time task)
 recurrence.delete("/:taskId", async (c) => {
+  const session = c.get("session") as SessionData;
   const taskId = c.req.param("taskId");
 
   const deleted = await withDb(async (sql: SqlQuery) => {
@@ -249,7 +253,7 @@ recurrence.delete("/:taskId", async (c) => {
 
     await sql`DELETE FROM recurrence_rules WHERE task_id = ${taskId}`;
     return true;
-  });
+  }, { userId: session.userId });
 
   if (!deleted) {
     return c.json({ error: "No recurrence rule for this task" }, 404);
@@ -260,6 +264,7 @@ recurrence.delete("/:taskId", async (c) => {
 
 // POST /api/recurrence/:taskId/complete - Complete recurring task and create next instance
 recurrence.post("/:taskId/complete", async (c) => {
+  const session = c.get("session") as SessionData;
   const taskId = c.req.param("taskId");
 
   const result = await withTransaction(async (tx) => {
@@ -290,6 +295,7 @@ recurrence.post("/:taskId/complete", async (c) => {
 
     await logTaskActionTx(tx, {
       taskId,
+      userId: session.userId,
       action: "completed",
       details: { title: task.title, recurring: true },
     });
@@ -297,18 +303,11 @@ recurrence.post("/:taskId/complete", async (c) => {
     // Calculate next occurrence
     const nextDueDate = calculateNextOccurrence(rule, completionDate);
 
-    // Get task contexts
-    const contexts: { context_id: string }[] = await tx`
-      SELECT context_id FROM task_contexts WHERE task_id = ${taskId}
-    `;
-    const contextIds = contexts.map(
-      (c: { context_id: string }) => c.context_id,
-    );
-
     // Create next task instance
     const [newTask] = await tx<Task[]>`
-      INSERT INTO tasks (title, description, project_id, priority, due_date, must_do)
+      INSERT INTO tasks (user_id, title, description, project_id, priority, due_date, must_do)
       VALUES (
+        ${session.userId},
         ${task.title},
         ${task.description},
         ${task.project_id},
@@ -318,14 +317,6 @@ recurrence.post("/:taskId/complete", async (c) => {
       )
       RETURNING *
     `;
-
-    // Copy contexts to new task
-    for (const contextId of contextIds) {
-      await tx`
-        INSERT INTO task_contexts (task_id, context_id)
-        VALUES (${newTask.id}, ${contextId})
-      `;
-    }
 
     // Copy recurrence rule to new task
     await tx`
@@ -347,6 +338,7 @@ recurrence.post("/:taskId/complete", async (c) => {
 
     await logTaskActionTx(tx, {
       taskId: newTask.id,
+      userId: session.userId,
       action: "created",
       details: {
         title: newTask.title,
@@ -358,9 +350,9 @@ recurrence.post("/:taskId/complete", async (c) => {
 
     return {
       completedTask: { ...task, completed_at: completionDate },
-      nextTask: { ...newTask, context_ids: contextIds },
+      nextTask: newTask,
     };
-  });
+  }, { userId: session.userId });
 
   if ("error" in result) {
     return c.json({ error: result.error }, result.status as 400 | 404 | 500);

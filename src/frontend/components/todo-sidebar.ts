@@ -3,6 +3,7 @@
 import { css, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { StoreElement } from "../base.ts";
+import { NAV_LABELS, SECTION_LABELS } from "../labels.ts";
 import { store } from "../store.ts";
 
 @customElement("todo-sidebar")
@@ -249,7 +250,7 @@ export class TodoSidebar extends StoreElement {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Add task
+                ${NAV_LABELS.addTask}
               </button>
 
               <button
@@ -267,7 +268,7 @@ export class TodoSidebar extends StoreElement {
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
-                Search
+                ${NAV_LABELS.search}
               </button>
 
               <button
@@ -284,7 +285,7 @@ export class TodoSidebar extends StoreElement {
                     d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
                   />
                 </svg>
-                Inbox ${store.inboxCount > 0
+                ${NAV_LABELS.inbox} ${store.inboxCount > 0
                   ? html`
                     <span class="count">${store.inboxCount}</span>
                   `
@@ -305,14 +306,14 @@ export class TodoSidebar extends StoreElement {
                     d="M9 5l7 7-7 7"
                   />
                 </svg>
-                Next
+                ${NAV_LABELS.next}
               </button>
             </div>
 
             <!-- Filters -->
             <div class="section">
               <div class="section-header">
-                <span class="section-title">Filters</span>
+                <span class="section-title">${SECTION_LABELS.filters}</span>
               </div>
               <button
                 class="nav-button ${store.currentTab === "due" ? "active" : ""}"
@@ -322,7 +323,7 @@ export class TodoSidebar extends StoreElement {
                   class="color-dot"
                   style="background: var(--md-sys-color-tertiary)"
                 ></span>
-                Due ${store.dueCount > 0
+                ${NAV_LABELS.due} ${store.dueCount > 0
                   ? html`
                     <span class="count">${store.dueCount}</span>
                   `
@@ -333,7 +334,7 @@ export class TodoSidebar extends StoreElement {
             <!-- Projects -->
             <div class="section scrollable">
               <div class="section-header">
-                <span class="section-title">Projects</span>
+                <span class="section-title">${SECTION_LABELS.projects}</span>
                 <button
                   class="section-add"
                   @click="${() => store.setShowProjectForm(true)}"
@@ -403,7 +404,7 @@ export class TodoSidebar extends StoreElement {
 
               <!-- Contexts -->
               <div class="section-header" style="margin-top: 16px;">
-                <span class="section-title">Contexts</span>
+                <span class="section-title">${SECTION_LABELS.contexts}</span>
                 <button
                   class="section-add"
                   @click="${() => store.setShowContextForm(true)}"
@@ -484,7 +485,7 @@ export class TodoSidebar extends StoreElement {
                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                History
+                ${NAV_LABELS.history}
               </button>
               <button
                 class="nav-button ${store.currentTab === "settings"
@@ -506,7 +507,7 @@ export class TodoSidebar extends StoreElement {
                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-                Settings
+                ${NAV_LABELS.settings}
               </button>
             </div>
           </aside>

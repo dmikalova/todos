@@ -102,14 +102,6 @@ export class TaskItem extends LitElement {
       color: var(--md-sys-color-error);
     }
 
-    .context-tag {
-      padding: 2px 8px;
-      background: var(--md-sys-color-secondary-container);
-      color: var(--md-sys-color-on-secondary-container);
-      border-radius: var(--md-sys-shape-corner-small);
-      font-size: 11px;
-    }
-
     .priority-badge {
       font-size: 11px;
       font-weight: 500;
@@ -205,14 +197,7 @@ export class TaskItem extends LitElement {
                   ${this.task.project_name}
                 </span>
               `
-              : null} ${(this.task.context_ids || []).map(
-                (ctxId) =>
-                  html`
-                    <span class="context-tag">${store.getContextName(
-                      ctxId,
-                    )}</span>
-                  `,
-              )}
+              : null}
           </div>
         </div>
 

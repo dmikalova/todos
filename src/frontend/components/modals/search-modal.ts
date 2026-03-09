@@ -256,9 +256,11 @@ export class SearchModal extends LitElement {
   }
 
   private getContext(task: Task) {
-    return task.context_id
-      ? store.contexts.find((c) => c.id === task.context_id)
-      : null;
+    if (!task.project_id) return null;
+    const project = store.projects.find((p) => p.id === task.project_id);
+    if (!project) return null;
+    const contextId = store.resolveProjectContext(project);
+    return contextId ? store.contexts.find((c) => c.id === contextId) : null;
   }
 
   private formatDate(date: string | null) {

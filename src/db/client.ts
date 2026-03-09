@@ -99,11 +99,14 @@ export async function closeConnection(): Promise<void> {
 
 // Transaction wrapper with automatic retry on transient errors
 // Uses SqlQuery type which works for both Sql and TransactionSql
+// userId sets `app.user_id` for RLS policies within the transaction
 export async function withTransaction<T>(
   fn: (sql: SqlQuery) => Promise<T>,
-  retries = 3,
+  options?: { userId?: string; retries?: number },
 ): Promise<T> {
   const schema = getSchema();
+  const retries = options?.retries ?? 3;
+  const userId = options?.userId;
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < retries; attempt++) {
@@ -111,6 +114,11 @@ export async function withTransaction<T>(
     try {
       const result = (await connection.begin(async (tx) => {
         await tx.unsafe(`SET LOCAL search_path TO ${schema}, public`);
+        if (userId) {
+          await tx.unsafe(
+            `SET LOCAL app.user_id = '${userId.replace(/'/g, "''")}'`,
+          );
+        }
         // Cast through unknown to break TypeScript's type tracking
         const sqlQuery: SqlQuery = tx as unknown as SqlQuery;
         return await fn(sqlQuery);
@@ -153,9 +161,11 @@ export async function withTransaction<T>(
 // Simple query helper with retry logic
 export async function query<T>(
   queryFn: (sql: SqlQuery) => Promise<T>,
-  retries = 3,
+  options?: { userId?: string; retries?: number },
 ): Promise<T> {
   const schema = getSchema();
+  const retries = options?.retries ?? 3;
+  const userId = options?.userId;
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < retries; attempt++) {
@@ -163,6 +173,11 @@ export async function query<T>(
     try {
       return (await connection.begin(async (tx) => {
         await tx.unsafe(`SET LOCAL search_path TO ${schema}, public`);
+        if (userId) {
+          await tx.unsafe(
+            `SET LOCAL app.user_id = '${userId.replace(/'/g, "''")}'`,
+          );
+        }
         // Cast through unknown to break TypeScript's type tracking
         const sqlQuery: SqlQuery = tx as unknown as SqlQuery;
         return await queryFn(sqlQuery);
@@ -199,6 +214,9 @@ export async function query<T>(
   throw lastError;
 }
 
-export function withDb<T>(fn: (sql: SqlQuery) => Promise<T>): Promise<T> {
-  return query(fn);
+export function withDb<T>(
+  fn: (sql: SqlQuery) => Promise<T>,
+  options?: { userId?: string },
+): Promise<T> {
+  return query(fn, options);
 }

@@ -5,13 +5,15 @@ import { assertEquals } from "@std/assert";
 import postgres from "postgres";
 import { app } from "../../src/app.ts";
 
-// Test database configuration
-// Uses the same schema as production but a separate test database
-const TEST_DATABASE_URL = Deno.env.get("TEST_DATABASE_URL") ||
-  Deno.env.get("DATABASE_URL_TRANSACTION") ||
-  "postgres://localhost:5432/todos_test";
+// Test user UUID — must match dev bypass in src/middleware.ts
+export const TEST_USER_ID = "00000000-0000-0000-0000-000000000001";
 
-// Create a test database client
+// Test database configuration
+// Uses superuser connection for setup/cleanup (bypasses RLS)
+const TEST_DATABASE_URL = Deno.env.get("TEST_DATABASE_URL") ||
+  "postgres://todos:todos@localhost:5432/todos";
+
+// Create a test database client (superuser, bypasses RLS for setup/cleanup)
 export function createTestDb() {
   return postgres(TEST_DATABASE_URL, {
     max: 5,
@@ -50,13 +52,13 @@ export async function teardownTestContext(ctx: TestContext): Promise<void> {
 
 // Clean test data from database
 async function cleanTestData(db: ReturnType<typeof postgres>): Promise<void> {
-  // Delete in reverse dependency order
-  await db`DELETE FROM todos.task_contexts WHERE task_id LIKE 'test-%'`;
-  await db`DELETE FROM todos.recurrence_rules WHERE task_id LIKE 'test-%'`;
-  await db`DELETE FROM todos.task_history WHERE task_id LIKE 'test-%'`;
-  await db`DELETE FROM todos.tasks WHERE id LIKE 'test-%' OR title LIKE 'Integration Test%'`;
-  await db`DELETE FROM todos.contexts WHERE id LIKE 'test-%' OR name LIKE 'Test Context%'`;
-  await db`DELETE FROM todos.projects WHERE id LIKE 'test-%' OR name LIKE 'Test Project%'`;
+  // Delete in reverse dependency order, matching by name/title patterns (not UUID ids)
+  await db`DELETE FROM todos.recurrence_rules WHERE task_id IN (SELECT id FROM todos.tasks WHERE title LIKE 'Integration Test%')`;
+  await db`DELETE FROM todos.task_history WHERE task_id IN (SELECT id FROM todos.tasks WHERE title LIKE 'Integration Test%')`;
+  await db`DELETE FROM todos.tasks WHERE title LIKE 'Integration Test%'`;
+  await db`DELETE FROM todos.context_time_windows WHERE context_id IN (SELECT id FROM todos.contexts WHERE name LIKE 'Test Context%' OR name LIKE 'RLS %' OR name LIKE 'Other User%')`;
+  await db`DELETE FROM todos.contexts WHERE name LIKE 'Test Context%' OR name LIKE 'RLS %' OR name LIKE 'Other User%'`;
+  await db`DELETE FROM todos.projects WHERE name LIKE 'Test Project%' OR name LIKE 'RLS %' OR name LIKE 'Other User%' OR name LIKE 'Integration Test%'`;
 }
 
 // Create a mock authenticated request
@@ -91,7 +93,7 @@ export function apiCall(
   body?: unknown,
 ): Promise<Response> {
   const req = mockAuthRequest(method, path, body);
-  return testApp.fetch(req);
+  return Promise.resolve(testApp.fetch(req));
 }
 
 // Helper to assert API response

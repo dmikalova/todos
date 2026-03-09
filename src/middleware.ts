@@ -2,6 +2,7 @@
 
 import { verify } from "djwt";
 import { type Context, type MiddlewareHandler } from "hono";
+import { HTTPException } from "hono/http-exception";
 import type { AppEnv, SessionData } from "./types.ts";
 
 function getSessionDomain(): string {
@@ -167,7 +168,7 @@ export const authMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
   // Dev bypass - skip auth in development mode
   if (Deno.env.get("DENO_ENV") === "development") {
     c.set("session", {
-      userId: "dev-user-id",
+      userId: "00000000-0000-0000-0000-000000000001",
       email: "dev@localhost",
       name: "Dev User",
       expiresAt: new Date(Date.now() + 86400000), // 24 hours
@@ -207,6 +208,10 @@ export const authMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
 
 // Error handling middleware
 export const errorHandler = (err: Error, c: Context): Response => {
+  if (err instanceof HTTPException) {
+    return c.json({ error: err.message }, err.status);
+  }
+
   console.error("Unhandled error:", err);
 
   // Don't expose internal errors in production

@@ -7,7 +7,6 @@ import {
   setupTestContext,
   teardownTestContext,
   type TestContext,
-  testId,
 } from "./setup.ts";
 
 let ctx: TestContext;
@@ -20,108 +19,109 @@ Deno.test({
     await t.step(
       "completing daily recurring task creates next occurrence",
       async () => {
-        // Create a task with daily recurrence
-        const taskId = testId("daily-recur");
+        // Create task via API
         const today = new Date().toISOString().split("T")[0];
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Daily Task",
+          priority: 3,
+          dueDate: today,
+        });
+        assertEquals(createRes.status, 201);
+        const task = await createRes.json();
 
+        // Add recurrence rule via superuser DB (no API for this yet)
+        const ruleId = crypto.randomUUID();
         await ctx.db`
-        INSERT INTO todos.tasks (id, title, due_date, created_at, updated_at)
-        VALUES (${taskId}, 'Integration Test Daily Task', ${today}, NOW(), NOW())
-      `;
-
-        await ctx.db`
-        INSERT INTO todos.recurrence_rules (
-          id, task_id, schedule_type, frequency, interval, created_at, updated_at
-        )
-        VALUES (
-          ${testId("rule")}, ${taskId}, 'fixed', 'daily', 1, NOW(), NOW()
-        )
-      `;
+          INSERT INTO todos.recurrence_rules (
+            id, task_id, schedule_type, frequency, interval, created_at
+          )
+          VALUES (
+            ${ruleId}, ${task.id}, 'fixed', 'daily', 1, NOW()
+          )
+        `;
 
         // Complete the task via API
         const res = await apiCall(
           ctx.app,
           "POST",
-          `/api/tasks/${taskId}/complete`,
+          `/api/tasks/${task.id}/complete`,
         );
 
-        // Check for success (may fail auth in test mode)
-        if (res.status === 200) {
-          // Verify original task is completed
-          const [original] = await ctx.db`
-          SELECT completed_at FROM todos.tasks WHERE id = ${taskId}
-        `;
-          assertExists(original.completed_at);
+        assertEquals(res.status, 200);
 
-          // Verify new task was created with tomorrow's date
-          const [nextTask] = await ctx.db`
+        // Verify original task is completed
+        const [original] = await ctx.db`
+          SELECT completed_at FROM todos.tasks WHERE id = ${task.id}
+        `;
+        assertExists(original.completed_at);
+
+        // Verify new task was created with tomorrow's date
+        const [nextTask] = await ctx.db`
           SELECT id, due_date
           FROM todos.tasks
           WHERE title = 'Integration Test Daily Task'
-          AND id != ${taskId}
+          AND id != ${task.id}
           ORDER BY created_at DESC
           LIMIT 1
         `;
 
-          // New task should exist
-          assertExists(nextTask);
+        assertExists(nextTask);
 
-          // Due date should be tomorrow
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          assertEquals(
-            nextTask.due_date.toISOString().split("T")[0],
-            tomorrow.toISOString().split("T")[0],
-          );
-        }
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        assertEquals(
+          nextTask.due_date.toISOString().split("T")[0],
+          tomorrow.toISOString().split("T")[0],
+        );
       },
     );
 
     await t.step(
       "completing weekly recurring task advances to correct weekday",
       async () => {
-        const taskId = testId("weekly-recur");
         const today = new Date();
-        const dayOfWeek = today.getDay(); // 0-6
+        const dayOfWeek = today.getDay();
 
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Weekly Task",
+          priority: 3,
+          dueDate: today.toISOString().split("T")[0],
+        });
+        assertEquals(createRes.status, 201);
+        const task = await createRes.json();
+
+        const ruleId = crypto.randomUUID();
         await ctx.db`
-        INSERT INTO todos.tasks (id, title, due_date, created_at, updated_at)
-        VALUES (${taskId}, 'Integration Test Weekly Task', ${today.toISOString()}, NOW(), NOW())
-      `;
+          INSERT INTO todos.recurrence_rules (
+            id, task_id, schedule_type, frequency, interval, days_of_week, created_at
+          )
+          VALUES (
+            ${ruleId}, ${task.id}, 'fixed', 'weekly', 1,
+            ${[dayOfWeek]}::int[],
+            NOW()
+          )
+        `;
 
-        await ctx.db`
-        INSERT INTO todos.recurrence_rules (
-          id, task_id, schedule_type, frequency, interval, days_of_week, created_at, updated_at
-        )
-        VALUES (
-          ${testId("rule")}, ${taskId}, 'fixed', 'weekly', 1,
-          ${[dayOfWeek]}::int[],
-          NOW(), NOW()
-        )
-      `;
-
-        // Complete the task
         const res = await apiCall(
           ctx.app,
           "POST",
-          `/api/tasks/${taskId}/complete`,
+          `/api/tasks/${task.id}/complete`,
         );
 
-        if (res.status === 200) {
-          // Verify new task due date is exactly 7 days later (same weekday)
-          const [nextTask] = await ctx.db`
+        assertEquals(res.status, 200);
+
+        const [nextTask] = await ctx.db`
           SELECT id, due_date
           FROM todos.tasks
           WHERE title = 'Integration Test Weekly Task'
-          AND id != ${taskId}
+          AND id != ${task.id}
           ORDER BY created_at DESC
           LIMIT 1
         `;
 
-          if (nextTask) {
-            const nextDate = new Date(nextTask.due_date);
-            assertEquals(nextDate.getDay(), dayOfWeek);
-          }
+        if (nextTask) {
+          const nextDate = new Date(nextTask.due_date);
+          assertEquals(nextDate.getDay(), dayOfWeek);
         }
       },
     );
@@ -129,49 +129,48 @@ Deno.test({
     await t.step(
       "completing completion-based task uses completion date",
       async () => {
-        const taskId = testId("completion-recur");
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Completion Task",
+          priority: 3,
+        });
+        assertEquals(createRes.status, 201);
+        const task = await createRes.json();
 
+        const ruleId = crypto.randomUUID();
         await ctx.db`
-        INSERT INTO todos.tasks (id, title, created_at, updated_at)
-        VALUES (${taskId}, 'Integration Test Completion Task', NOW(), NOW())
-      `;
+          INSERT INTO todos.recurrence_rules (
+            id, task_id, schedule_type, days_after_completion, created_at
+          )
+          VALUES (
+            ${ruleId}, ${task.id}, 'completion', 7, NOW()
+          )
+        `;
 
-        await ctx.db`
-        INSERT INTO todos.recurrence_rules (
-          id, task_id, schedule_type, days_after_completion, created_at, updated_at
-        )
-        VALUES (
-          ${testId("rule")}, ${taskId}, 'completion', 7, NOW(), NOW()
-        )
-      `;
-
-        // Complete the task
         const res = await apiCall(
           ctx.app,
           "POST",
-          `/api/tasks/${taskId}/complete`,
+          `/api/tasks/${task.id}/complete`,
         );
 
-        if (res.status === 200) {
-          // New task should be due 7 days from now
-          const [nextTask] = await ctx.db`
+        assertEquals(res.status, 200);
+
+        const [nextTask] = await ctx.db`
           SELECT id, due_date
           FROM todos.tasks
           WHERE title = 'Integration Test Completion Task'
-          AND id != ${taskId}
+          AND id != ${task.id}
           ORDER BY created_at DESC
           LIMIT 1
         `;
 
-          if (nextTask) {
-            const expectedDate = new Date();
-            expectedDate.setDate(expectedDate.getDate() + 7);
+        if (nextTask) {
+          const expectedDate = new Date();
+          expectedDate.setDate(expectedDate.getDate() + 7);
 
-            assertEquals(
-              nextTask.due_date.toISOString().split("T")[0],
-              expectedDate.toISOString().split("T")[0],
-            );
-          }
+          assertEquals(
+            nextTask.due_date.toISOString().split("T")[0],
+            expectedDate.toISOString().split("T")[0],
+          );
         }
       },
     );
@@ -179,25 +178,22 @@ Deno.test({
     await t.step(
       "task without recurrence does not create next occurrence",
       async () => {
-        const taskId = testId("no-recur");
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test No Recurrence",
+          priority: 3,
+        });
+        assertEquals(createRes.status, 201);
+        const task = await createRes.json();
 
-        await ctx.db`
-        INSERT INTO todos.tasks (id, title, created_at, updated_at)
-        VALUES (${taskId}, 'Integration Test No Recurrence', NOW(), NOW())
-      `;
+        await apiCall(ctx.app, "POST", `/api/tasks/${task.id}/complete`);
 
-        // Complete the task
-        await apiCall(ctx.app, "POST", `/api/tasks/${taskId}/complete`);
-
-        // Count tasks with this title
         const [{ count }] = await ctx.db`
-        SELECT COUNT(*) as count
-        FROM todos.tasks
-        WHERE title = 'Integration Test No Recurrence'
-      `;
+          SELECT COUNT(*)::int as count
+          FROM todos.tasks
+          WHERE title = 'Integration Test No Recurrence'
+        `;
 
-        // Should only be the original task
-        assertEquals(parseInt(count), 1);
+        assertEquals(count, 1);
       },
     );
 

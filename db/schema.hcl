@@ -42,6 +42,11 @@ table "projects" {
     default = sql("gen_random_uuid()")
   }
 
+  column "user_id" {
+    type = uuid
+    null = false
+  }
+
   column "name" {
     type = text
     null = false
@@ -57,6 +62,16 @@ table "projects" {
     null = true
   }
 
+  column "context_id" {
+    type = uuid
+    null = true
+  }
+
+  column "parent_project_id" {
+    type = uuid
+    null = true
+  }
+
   column "created_at" {
     type    = timestamptz
     null    = false
@@ -65,6 +80,57 @@ table "projects" {
 
   primary_key {
     columns = [column.id]
+  }
+
+  foreign_key "fk_context" {
+    columns     = [column.context_id]
+    ref_columns = [table.contexts.column.id]
+    on_delete   = SET_NULL
+  }
+
+  foreign_key "fk_parent_project" {
+    columns     = [column.parent_project_id]
+    ref_columns = [table.projects.column.id]
+    on_delete   = SET_NULL
+  }
+
+  index "idx_projects_user_id" {
+    columns = [column.user_id]
+  }
+
+  index "idx_projects_context_id" {
+    columns = [column.context_id]
+  }
+
+  index "idx_projects_parent_project_id" {
+    columns = [column.parent_project_id]
+  }
+
+  # RLS: restrict all operations to the authenticated user
+  row_level_security {
+    enabled = true
+    forced  = true
+  }
+
+  policy "projects_user_select" {
+    for   = "SELECT"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
+  }
+
+  policy "projects_user_insert" {
+    for   = "INSERT"
+    check = "(user_id = current_setting('app.user_id')::uuid)"
+  }
+
+  policy "projects_user_update" {
+    for   = "UPDATE"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
+    check = "(user_id = current_setting('app.user_id')::uuid)"
+  }
+
+  policy "projects_user_delete" {
+    for   = "DELETE"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
   }
 }
 
@@ -75,6 +141,11 @@ table "contexts" {
     type    = uuid
     null    = false
     default = sql("gen_random_uuid()")
+  }
+
+  column "user_id" {
+    type = uuid
+    null = false
   }
 
   column "name" {
@@ -95,6 +166,37 @@ table "contexts" {
 
   primary_key {
     columns = [column.id]
+  }
+
+  index "idx_contexts_user_id" {
+    columns = [column.user_id]
+  }
+
+  # RLS: restrict all operations to the authenticated user
+  row_level_security {
+    enabled = true
+    forced  = true
+  }
+
+  policy "contexts_user_select" {
+    for   = "SELECT"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
+  }
+
+  policy "contexts_user_insert" {
+    for   = "INSERT"
+    check = "(user_id = current_setting('app.user_id')::uuid)"
+  }
+
+  policy "contexts_user_update" {
+    for   = "UPDATE"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
+    check = "(user_id = current_setting('app.user_id')::uuid)"
+  }
+
+  policy "contexts_user_delete" {
+    for   = "DELETE"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
   }
 }
 
@@ -149,6 +251,33 @@ table "context_time_windows" {
   check "valid_time_range" {
     expr = "start_time < end_time"
   }
+
+  # RLS: restrict via parent context ownership
+  row_level_security {
+    enabled = true
+    forced  = true
+  }
+
+  policy "ctw_user_select" {
+    for   = "SELECT"
+    using = "(EXISTS (SELECT 1 FROM contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid))"
+  }
+
+  policy "ctw_user_insert" {
+    for   = "INSERT"
+    check = "(EXISTS (SELECT 1 FROM contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid))"
+  }
+
+  policy "ctw_user_update" {
+    for   = "UPDATE"
+    using = "(EXISTS (SELECT 1 FROM contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid))"
+    check = "(EXISTS (SELECT 1 FROM contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid))"
+  }
+
+  policy "ctw_user_delete" {
+    for   = "DELETE"
+    using = "(EXISTS (SELECT 1 FROM contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid))"
+  }
 }
 
 table "tasks" {
@@ -158,6 +287,11 @@ table "tasks" {
     type    = uuid
     null    = false
     default = sql("gen_random_uuid()")
+  }
+
+  column "user_id" {
+    type = uuid
+    null = false
   }
 
   column "title" {
@@ -244,6 +378,10 @@ table "tasks" {
     columns = [column.completed_at]
   }
 
+  index "idx_tasks_user_id" {
+    columns = [column.user_id]
+  }
+
   index "idx_tasks_deleted_at" {
     columns = [column.deleted_at]
   }
@@ -251,39 +389,32 @@ table "tasks" {
   check "valid_priority" {
     expr = "priority >= 1 AND priority <= 4"
   }
-}
 
-table "task_contexts" {
-  schema = schema.todos
-
-  column "task_id" {
-    type = uuid
-    null = false
+  # RLS: restrict all operations to the authenticated user
+  row_level_security {
+    enabled = true
+    forced  = true
   }
 
-  column "context_id" {
-    type = uuid
-    null = false
+  policy "tasks_user_select" {
+    for   = "SELECT"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
   }
 
-  primary_key {
-    columns = [column.task_id, column.context_id]
+  policy "tasks_user_insert" {
+    for   = "INSERT"
+    check = "(user_id = current_setting('app.user_id')::uuid)"
   }
 
-  foreign_key "fk_task" {
-    columns     = [column.task_id]
-    ref_columns = [table.tasks.column.id]
-    on_delete   = CASCADE
+  policy "tasks_user_update" {
+    for   = "UPDATE"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
+    check = "(user_id = current_setting('app.user_id')::uuid)"
   }
 
-  foreign_key "fk_context" {
-    columns     = [column.context_id]
-    ref_columns = [table.contexts.column.id]
-    on_delete   = CASCADE
-  }
-
-  index "idx_task_contexts_context_id" {
-    columns = [column.context_id]
+  policy "tasks_user_delete" {
+    for   = "DELETE"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
   }
 }
 
@@ -395,6 +526,33 @@ table "recurrence_rules" {
   check "completion_requires_days" {
     expr = "schedule_type::text != 'completion' OR days_after_completion IS NOT NULL"
   }
+
+  # RLS: restrict via parent task ownership
+  row_level_security {
+    enabled = true
+    forced  = true
+  }
+
+  policy "recurrence_user_select" {
+    for   = "SELECT"
+    using = "(EXISTS (SELECT 1 FROM tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid))"
+  }
+
+  policy "recurrence_user_insert" {
+    for   = "INSERT"
+    check = "(EXISTS (SELECT 1 FROM tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid))"
+  }
+
+  policy "recurrence_user_update" {
+    for   = "UPDATE"
+    using = "(EXISTS (SELECT 1 FROM tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid))"
+    check = "(EXISTS (SELECT 1 FROM tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid))"
+  }
+
+  policy "recurrence_user_delete" {
+    for   = "DELETE"
+    using = "(EXISTS (SELECT 1 FROM tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid))"
+  }
 }
 
 table "saved_filters" {
@@ -404,6 +562,11 @@ table "saved_filters" {
     type    = uuid
     null    = false
     default = sql("gen_random_uuid()")
+  }
+
+  column "user_id" {
+    type = uuid
+    null = false
   }
 
   column "name" {
@@ -426,6 +589,37 @@ table "saved_filters" {
   primary_key {
     columns = [column.id]
   }
+
+  index "idx_saved_filters_user_id" {
+    columns = [column.user_id]
+  }
+
+  # RLS: restrict all operations to the authenticated user
+  row_level_security {
+    enabled = true
+    forced  = true
+  }
+
+  policy "saved_filters_user_select" {
+    for   = "SELECT"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
+  }
+
+  policy "saved_filters_user_insert" {
+    for   = "INSERT"
+    check = "(user_id = current_setting('app.user_id')::uuid)"
+  }
+
+  policy "saved_filters_user_update" {
+    for   = "UPDATE"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
+    check = "(user_id = current_setting('app.user_id')::uuid)"
+  }
+
+  policy "saved_filters_user_delete" {
+    for   = "DELETE"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
+  }
 }
 
 table "task_history" {
@@ -435,6 +629,11 @@ table "task_history" {
     type    = uuid
     null    = false
     default = sql("gen_random_uuid()")
+  }
+
+  column "user_id" {
+    type = uuid
+    null = false
   }
 
   column "task_id" {
@@ -473,7 +672,38 @@ table "task_history" {
     columns = [column.task_id]
   }
 
+  index "idx_task_history_user_id" {
+    columns = [column.user_id]
+  }
+
   index "idx_task_history_created_at" {
     columns = [column.created_at]
+  }
+
+  # RLS: restrict all operations to the authenticated user
+  row_level_security {
+    enabled = true
+    forced  = true
+  }
+
+  policy "task_history_user_select" {
+    for   = "SELECT"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
+  }
+
+  policy "task_history_user_insert" {
+    for   = "INSERT"
+    check = "(user_id = current_setting('app.user_id')::uuid)"
+  }
+
+  policy "task_history_user_update" {
+    for   = "UPDATE"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
+    check = "(user_id = current_setting('app.user_id')::uuid)"
+  }
+
+  policy "task_history_user_delete" {
+    for   = "DELETE"
+    using = "(user_id = current_setting('app.user_id')::uuid)"
   }
 }

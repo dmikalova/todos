@@ -1,5 +1,5 @@
-// Integration tests for Next page with deferred tasks
-// Tests: scoring, defer timing, context filtering
+// Integration tests for Next endpoint and project-based context filtering
+// Tests: eligible tasks returned, deferred excluded, project filter, inbox excluded from context
 
 import { assertEquals, assertExists } from "@std/assert";
 import {
@@ -7,253 +7,264 @@ import {
   setupTestContext,
   teardownTestContext,
   type TestContext,
-  testId,
 } from "./setup.ts";
 
 let ctx: TestContext;
 
 Deno.test({
-  name: "Next Page Integration Tests",
+  name: "Next Endpoint Integration Tests",
   async fn(t) {
     ctx = await setupTestContext();
 
-    // Create test context for filtering
-    const workContextId = testId("work-ctx");
-
-    await ctx.db`
-      INSERT INTO todos.contexts (id, name, created_at, updated_at)
-      VALUES (${workContextId}, 'Test Context Next', NOW(), NOW())
-    `;
-
-    // Add time windows (9-17 weekdays)
-    for (let day = 1; day <= 5; day++) {
-      await ctx.db`
-        INSERT INTO todos.context_time_windows (
-          id, context_id, day_of_week, start_time, end_time, created_at, updated_at
-        )
-        VALUES (
-          ${testId("window")}, ${workContextId}, ${day},
-          '09:00:00', '17:00:00', NOW(), NOW()
-        )
-      `;
-    }
-
-    await t.step("GET /api/next returns up to 2 tasks", async () => {
-      // Create several tasks
-      for (let i = 1; i <= 5; i++) {
-        const taskId = testId(`next-task-${i}`);
-        await ctx.db`
-          INSERT INTO todos.tasks (id, title, created_at, updated_at)
-          VALUES (${taskId}, ${`Integration Test Next ${i}`}, NOW(), NOW())
-        `;
-      }
-
-      const res = await apiCall(ctx.app, "GET", "/api/next");
-
-      if (res.status === 200) {
-        const body = await res.json();
-        // Should return at most 2 tasks
-        assertEquals(body.tasks.length <= 2, true);
-      }
-    });
-
-    await t.step("deferred task is excluded before defer time", async () => {
-      const deferredTaskId = testId("deferred-task");
-      const futureTime = new Date();
-      futureTime.setHours(futureTime.getHours() + 2);
-
-      await ctx.db`
-        INSERT INTO todos.tasks (id, title, defer_until, created_at, updated_at)
-        VALUES (
-          ${deferredTaskId},
-          'Integration Test Deferred Task',
-          ${futureTime.toISOString()},
-          NOW(), NOW()
-        )
-      `;
-
-      const res = await apiCall(ctx.app, "GET", "/api/next");
-
-      if (res.status === 200) {
-        const body = await res.json();
-        const titles = body.tasks.map((t: { title: string }) => t.title);
-
-        // Deferred task should NOT appear in Next
-        assertEquals(titles.includes("Integration Test Deferred Task"), false);
-      }
-    });
-
-    await t.step(
-      "deferred task is included after defer time passes",
-      async () => {
-        const expiredDeferTaskId = testId("expired-defer-task");
-        const pastTime = new Date();
-        pastTime.setHours(pastTime.getHours() - 1);
-
-        await ctx.db`
-        INSERT INTO todos.tasks (id, title, defer_until, created_at, updated_at)
-        VALUES (
-          ${expiredDeferTaskId},
-          'Integration Test Expired Defer',
-          ${pastTime.toISOString()},
-          NOW(), NOW()
-        )
-      `;
-
-        const res = await apiCall(ctx.app, "GET", "/api/next");
-
-        if (res.status === 200) {
-          const body = await res.json();
-          // Task with expired defer should be eligible for Next
-          // It may or may not appear depending on scoring, but it's eligible
-          // Just verify we got results
-          assertExists(body.tasks);
-        }
-      },
-    );
-
-    await t.step("POST /api/tasks/:id/defer sets defer_until", async () => {
-      const taskId = testId("defer-test");
-
-      await ctx.db`
-        INSERT INTO todos.tasks (id, title, created_at, updated_at)
-        VALUES (${taskId}, 'Integration Test Defer Action', NOW(), NOW())
-      `;
-
-      // Defer for 2 hours
-      const res = await apiCall(ctx.app, "POST", `/api/tasks/${taskId}/defer`, {
-        hours: 2,
+    await t.step("GET /api/next returns eligible tasks", async () => {
+      // Create tasks via API (sets user_id from session)
+      await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test Next Eligible 1",
+        priority: 3,
+      });
+      await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test Next Eligible 2",
+        priority: 2,
       });
 
-      if (res.status === 200) {
-        // Verify defer_until is set
-        const [task] = await ctx.db`
-          SELECT defer_until FROM todos.tasks WHERE id = ${taskId}
-        `;
+      const res = await apiCall(ctx.app, "GET", "/api/next");
+      assertEquals(res.status, 200);
+      const body = await res.json();
 
-        assertExists(task.defer_until);
-
-        // Should be approximately 2 hours from now
-        const deferTime = new Date(task.defer_until);
-        const now = new Date();
-        const diffHours = (deferTime.getTime() - now.getTime()) /
-          (1000 * 60 * 60);
-
-        assertEquals(diffHours > 1.9 && diffHours < 2.1, true);
-      }
+      assertExists(body.tasks);
+      assertEquals(body.tasks.length >= 2, true);
     });
 
-    await t.step("DELETE /api/tasks/:id/defer clears defer_until", async () => {
-      const taskId = testId("clear-defer");
-      const futureTime = new Date();
-      futureTime.setHours(futureTime.getHours() + 4);
+    await t.step("GET /api/next excludes completed tasks", async () => {
+      const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test Next Completed",
+        priority: 2,
+      });
+      assertEquals(createRes.status, 201);
+      const task = await createRes.json();
 
-      await ctx.db`
-        INSERT INTO todos.tasks (id, title, defer_until, created_at, updated_at)
-        VALUES (
-          ${taskId},
-          'Integration Test Clear Defer',
-          ${futureTime.toISOString()},
-          NOW(), NOW()
-        )
-      `;
+      // Complete the task
+      await apiCall(ctx.app, "POST", `/api/tasks/${task.id}/complete`);
 
-      // Clear defer
-      const res = await apiCall(
-        ctx.app,
-        "DELETE",
-        `/api/tasks/${taskId}/defer`,
+      const res = await apiCall(ctx.app, "GET", "/api/next");
+      assertEquals(res.status, 200);
+      const body = await res.json();
+
+      const titles = body.tasks.map((t: { title: string }) => t.title);
+      assertEquals(
+        titles.includes("Integration Test Next Completed"),
+        false,
       );
+    });
 
-      if (res.status === 200) {
-        const [task] = await ctx.db`
-          SELECT defer_until FROM todos.tasks WHERE id = ${taskId}
-        `;
+    await t.step("GET /api/next excludes deferred tasks", async () => {
+      const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test Next Deferred",
+        priority: 2,
+      });
+      assertEquals(createRes.status, 201);
+      const task = await createRes.json();
 
-        // defer_until should be null
-        assertEquals(task.defer_until, null);
-      }
+      // Defer the task
+      await apiCall(ctx.app, "POST", `/api/tasks/${task.id}/defer`, {
+        preset: "tomorrow",
+      });
+
+      const res = await apiCall(ctx.app, "GET", "/api/next");
+      assertEquals(res.status, 200);
+      const body = await res.json();
+
+      const titles = body.tasks.map((t: { title: string }) => t.title);
+      assertEquals(
+        titles.includes("Integration Test Next Deferred"),
+        false,
+      );
     });
 
     await t.step(
-      "context filter in Next respects current context",
+      "GET /api/next?projectId filters by project",
       async () => {
-        // Create task with work context
-        const workTaskId = testId("next-work-task");
+        // Create a project
+        const projRes = await apiCall(ctx.app, "POST", "/api/projects", {
+          name: "Test Project Next Filter",
+        });
+        assertEquals(projRes.status, 201);
+        const project = await projRes.json();
 
-        await ctx.db`
-        INSERT INTO todos.tasks (id, title, created_at, updated_at)
-        VALUES (${workTaskId}, 'Integration Test Next Work', NOW(), NOW())
-      `;
+        // Create task in project
+        const taskRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Next In Project",
+          priority: 2,
+          projectId: project.id,
+        });
+        assertEquals(taskRes.status, 201);
 
-        await ctx.db`
-        INSERT INTO todos.task_contexts (task_id, context_id)
-        VALUES (${workTaskId}, ${workContextId})
-      `;
+        // Create task without project
+        await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Next No Project",
+          priority: 2,
+        });
 
-        // Get Next with work context override
+        // Filter by projectId
         const res = await apiCall(
           ctx.app,
           "GET",
-          `/api/next?context_id=${workContextId}`,
+          `/api/next?projectId=${project.id}`,
         );
+        assertEquals(res.status, 200);
+        const body = await res.json();
 
-        if (res.status === 200) {
-          const body = await res.json();
-          // If any tasks were returned, verify context-compatible ones
-          if (body.tasks.length > 0) {
-            // Each task should either have the work context or no context
-            for (const task of body.tasks) {
-              if (task.context_ids && task.context_ids.length > 0) {
-                assertEquals(task.context_ids.includes(workContextId), true);
-              }
-            }
-          }
+        // All returned tasks should belong to the project
+        for (const task of body.tasks) {
+          assertEquals(task.project_id, project.id);
         }
+        // Should include our project task
+        const titles = body.tasks.map((t: { title: string }) => t.title);
+        assertEquals(
+          titles.includes("Integration Test Next In Project"),
+          true,
+        );
       },
     );
 
-    await t.step("overdue tasks get priority in Next", async () => {
-      // Create an overdue task
-      const overdueTaskId = testId("overdue-task");
+    await t.step("GET /api/next sorts by due date ascending", async () => {
+      // Create a new project to isolate tasks
+      const projRes = await apiCall(ctx.app, "POST", "/api/projects", {
+        name: "Test Project Next Sort",
+      });
+      assertEquals(projRes.status, 201);
+      const project = await projRes.json();
+
+      const today = new Date();
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
 
-      await ctx.db`
-        INSERT INTO todos.tasks (id, title, due_date, created_at, updated_at)
-        VALUES (
-          ${overdueTaskId},
-          'Integration Test Overdue Priority',
-          ${yesterday.toISOString()},
-          NOW(), NOW()
-        )
-      `;
+      // Create task due today first
+      await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test Next Due Later",
+        priority: 2,
+        projectId: project.id,
+        dueDate: today.toISOString().split("T")[0],
+      });
 
-      // Create a task due next week
-      const futureTaskId = testId("future-task");
-      const nextWeek = new Date();
-      nextWeek.setDate(nextWeek.getDate() + 7);
+      // Create task due yesterday second
+      await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test Next Due Sooner",
+        priority: 2,
+        projectId: project.id,
+        dueDate: yesterday.toISOString().split("T")[0],
+      });
 
-      await ctx.db`
-        INSERT INTO todos.tasks (id, title, due_date, created_at, updated_at)
-        VALUES (
-          ${futureTaskId},
-          'Integration Test Future Task',
-          ${nextWeek.toISOString()},
-          NOW(), NOW()
-        )
-      `;
+      // Filter by project to only see our test tasks
+      const res = await apiCall(
+        ctx.app,
+        "GET",
+        `/api/next?projectId=${project.id}`,
+      );
+      assertEquals(res.status, 200);
+      const body = await res.json();
 
-      const res = await apiCall(ctx.app, "GET", "/api/next");
-
-      if (res.status === 200) {
-        const body = await res.json();
-
-        // If we get both tasks, overdue should score higher
-        // Just verify we have results
-        assertExists(body.tasks);
-      }
+      // Due sooner should come before due later
+      const titles = body.tasks.map((t: { title: string }) => t.title);
+      const soonerIdx = titles.indexOf("Integration Test Next Due Sooner");
+      const laterIdx = titles.indexOf("Integration Test Next Due Later");
+      assertEquals(soonerIdx < laterIdx, true);
     });
+
+    await t.step("GET /api/next excludes future-dated tasks", async () => {
+      const projRes = await apiCall(ctx.app, "POST", "/api/projects", {
+        name: "Test Project Next Future",
+      });
+      assertEquals(projRes.status, 201);
+      const project = await projRes.json();
+
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // Create a task due tomorrow
+      await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test Next Future Task",
+        priority: 2,
+        projectId: project.id,
+        dueDate: tomorrow.toISOString().split("T")[0],
+      });
+
+      // Create a task with no due date (should still appear)
+      await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test Next No Date Task",
+        priority: 2,
+        projectId: project.id,
+      });
+
+      const res = await apiCall(
+        ctx.app,
+        "GET",
+        `/api/next?projectId=${project.id}`,
+      );
+      assertEquals(res.status, 200);
+      const body = await res.json();
+
+      const titles = body.tasks.map((t: { title: string }) => t.title);
+      assertEquals(
+        titles.includes("Integration Test Next Future Task"),
+        false,
+      );
+      assertEquals(
+        titles.includes("Integration Test Next No Date Task"),
+        true,
+      );
+    });
+
+    await t.step(
+      "POST /api/tasks/:id/defer defers task with preset",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Defer Action",
+          priority: 3,
+        });
+        assertEquals(createRes.status, 201);
+        const task = await createRes.json();
+
+        const deferRes = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/tasks/${task.id}/defer`,
+          { preset: "tomorrow" },
+        );
+
+        assertEquals(deferRes.status, 200);
+        const deferred = await deferRes.json();
+        assertExists(deferred.deferred_until);
+      },
+    );
+
+    await t.step(
+      "DELETE /api/tasks/:id/defer clears deferred_until",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Clear Defer",
+          priority: 3,
+        });
+        assertEquals(createRes.status, 201);
+        const task = await createRes.json();
+
+        // Defer first
+        await apiCall(ctx.app, "POST", `/api/tasks/${task.id}/defer`, {
+          preset: "next_week",
+        });
+
+        // Clear defer
+        const clearRes = await apiCall(
+          ctx.app,
+          "DELETE",
+          `/api/tasks/${task.id}/defer`,
+        );
+
+        assertEquals(clearRes.status, 200);
+        const cleared = await clearRes.json();
+        assertEquals(cleared.deferred_until, null);
+      },
+    );
 
     await teardownTestContext(ctx);
   },

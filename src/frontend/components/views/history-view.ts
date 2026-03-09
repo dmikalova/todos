@@ -1,4 +1,4 @@
-// History view
+// History view with infinite scroll
 
 import { css, html } from "lit";
 import { customElement } from "lit/decorators.js";
@@ -59,13 +59,68 @@ export class HistoryView extends StoreElement {
       padding: 32px;
       color: var(--md-sys-color-outline);
     }
+
+    .sentinel {
+      height: 1px;
+    }
+
+    .loading-indicator {
+      display: flex;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--md-sys-color-surface-container);
+      border-top-color: var(--md-sys-color-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
   `;
+
+  private observer: IntersectionObserver | null = null;
+
+  override connectedCallback() {
+    super.connectedCallback();
+    this.observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          store.fetchMoreHistory();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+  }
+
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    this.observer?.disconnect();
+    this.observer = null;
+  }
+
+  override updated() {
+    const sentinel = this.renderRoot.querySelector(".sentinel");
+    if (sentinel && this.observer) {
+      this.observer.disconnect();
+      this.observer.observe(sentinel);
+    }
+  }
 
   private handleItemClick(taskId: string) {
     store.editTaskById(taskId);
   }
 
   override render() {
+    const hasMore = store.history.length < store.historyTotal;
+
     return html`
       <div class="history-list">
         ${store.history.length === 0
@@ -90,7 +145,18 @@ export class HistoryView extends StoreElement {
                   </div>
                 </div>
               `,
-          )}
+          )} ${hasMore
+          ? html`
+            <div class="sentinel"></div>
+            ${store.historyLoading
+              ? html`
+                <div class="loading-indicator">
+                  <div class="spinner"></div>
+                </div>
+              `
+              : null}
+          `
+          : null}
       </div>
     `;
   }

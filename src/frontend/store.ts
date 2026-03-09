@@ -223,7 +223,8 @@ class Store {
       .map((p) => p.id);
     return this._tasks.filter(
       (t) =>
-        t.project_id && projectIds.includes(t.project_id) &&
+        t.project_id &&
+        projectIds.includes(t.project_id) &&
         (this._taskFilter.completed === "true"
           ? t.completed_at
           : !t.completed_at),
@@ -815,8 +816,8 @@ class Store {
   resolveProjectContext(project: Project): string | null {
     if (project.context_id) return project.context_id;
     if (!project.parent_project_id) return null;
-    const parent = this._projects.find((p) =>
-      p.id === project.parent_project_id
+    const parent = this._projects.find(
+      (p) => p.id === project.parent_project_id,
     );
     if (!parent) return null;
     return this.resolveProjectContext(parent);
@@ -829,7 +830,9 @@ class Store {
   ): boolean {
     if (now.getDay() !== window.dayOfWeek) return false;
     const hhmm = `${String(now.getHours()).padStart(2, "0")}:${
-      String(now.getMinutes()).padStart(2, "0")
+      String(
+        now.getMinutes(),
+      ).padStart(2, "0")
     }`;
     return hhmm >= window.startTime && hhmm < window.endTime;
   }

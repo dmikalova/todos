@@ -62,12 +62,9 @@ Deno.test({
         const task = await createRes.json();
 
         // Try to move it to another user's project
-        const res = await apiCall(
-          ctx.app,
-          "PATCH",
-          `/api/tasks/${task.id}`,
-          { projectId: otherProjectId },
-        );
+        const res = await apiCall(ctx.app, "PATCH", `/api/tasks/${task.id}`, {
+          projectId: otherProjectId,
+        });
 
         assertEquals(res.status, 404);
       },
@@ -138,20 +135,17 @@ Deno.test({
       },
     );
 
-    await t.step(
-      "Non-existent resource ID returns 404",
-      async () => {
-        const fakeId = "00000000-0000-0000-0000-999999999999";
+    await t.step("Non-existent resource ID returns 404", async () => {
+      const fakeId = "00000000-0000-0000-0000-999999999999";
 
-        const res = await apiCall(ctx.app, "POST", "/api/tasks", {
-          title: "Integration Test 404 Task",
-          priority: 3,
-          projectId: fakeId,
-        });
+      const res = await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test 404 Task",
+        priority: 3,
+        projectId: fakeId,
+      });
 
-        assertEquals(res.status, 404);
-      },
-    );
+      assertEquals(res.status, 404);
+    });
 
     // Clean up other user's data (not handled by standard cleanup which only cleans test user)
     await ctx.db`DELETE FROM todos.tasks WHERE id = ${otherTaskId}`;

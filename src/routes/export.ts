@@ -88,12 +88,15 @@ exportRoutes.get("/", async (c) => {
 
   const { format, includeCompleted, includeDeleted, projectId } = result.data;
 
-  const data = await withDb(async (sql: SqlQuery) => {
-    // Export projects
-    const projects = await sql<Project[]>`SELECT * FROM projects ORDER BY name`;
+  const data = await withDb(
+    async (sql: SqlQuery) => {
+      // Export projects
+      const projects = await sql<
+        Project[]
+      >`SELECT * FROM projects ORDER BY name`;
 
-    // Export contexts with time windows
-    const contexts = await sql<(Context & { time_windows: TimeWindow[] })[]>`
+      // Export contexts with time windows
+      const contexts = await sql<(Context & { time_windows: TimeWindow[] })[]>`
       SELECT c.*,
         COALESCE(
           JSON_AGG(
@@ -111,55 +114,57 @@ exportRoutes.get("/", async (c) => {
       ORDER BY c.name
     `;
 
-    // Build task query conditions
-    let tasks: Task[];
+      // Build task query conditions
+      let tasks: Task[];
 
-    if (includeDeleted && includeCompleted) {
-      tasks = await sql<Task[]>`SELECT * FROM tasks ORDER BY created_at`;
-    } else if (includeCompleted) {
-      tasks = await sql<
-        Task[]
-      >`SELECT * FROM tasks WHERE deleted_at IS NULL ORDER BY created_at`;
-    } else if (includeDeleted) {
-      tasks = await sql<
-        Task[]
-      >`SELECT * FROM tasks WHERE completed_at IS NULL ORDER BY created_at`;
-    } else {
-      tasks = await sql<Task[]>`
+      if (includeDeleted && includeCompleted) {
+        tasks = await sql<Task[]>`SELECT * FROM tasks ORDER BY created_at`;
+      } else if (includeCompleted) {
+        tasks = await sql<
+          Task[]
+        >`SELECT * FROM tasks WHERE deleted_at IS NULL ORDER BY created_at`;
+      } else if (includeDeleted) {
+        tasks = await sql<
+          Task[]
+        >`SELECT * FROM tasks WHERE completed_at IS NULL ORDER BY created_at`;
+      } else {
+        tasks = await sql<Task[]>`
         SELECT * FROM tasks
         WHERE deleted_at IS NULL AND completed_at IS NULL
         ORDER BY created_at
       `;
-    }
+      }
 
-    // Apply optional filters
-    if (projectId) {
-      tasks = tasks.filter((t) => t.project_id === projectId);
-    }
+      // Apply optional filters
+      if (projectId) {
+        tasks = tasks.filter((t) => t.project_id === projectId);
+      }
 
-    // Get recurrence rules
-    const recurrenceRules = await sql<
-      RecurrenceRule[]
-    >`SELECT * FROM recurrence_rules`;
-    const recurrenceMap = new Map<string, RecurrenceRule>();
-    for (const rule of recurrenceRules) {
-      recurrenceMap.set(rule.task_id, rule);
-    }
+      // Get recurrence rules
+      const recurrenceRules = await sql<
+        RecurrenceRule[]
+      >`SELECT * FROM recurrence_rules`;
+      const recurrenceMap = new Map<string, RecurrenceRule>();
+      for (const rule of recurrenceRules) {
+        recurrenceMap.set(rule.task_id, rule);
+      }
 
-    // Combine task data
-    const enrichedTasks = tasks.map((task) => ({
-      ...task,
-      recurrence: recurrenceMap.get(task.id) || null,
-    }));
+      // Combine task data
+      const enrichedTasks = tasks.map((task) => ({
+        ...task,
+        recurrence: recurrenceMap.get(task.id) || null,
+      }));
 
-    return {
-      exportedAt: new Date().toISOString(),
-      version: "1.0",
-      projects,
-      contexts,
-      tasks: enrichedTasks,
-    } as ExportData;
-  }, { userId: session.userId });
+      return {
+        exportedAt: new Date().toISOString(),
+        version: "1.0",
+        projects,
+        contexts,
+        tasks: enrichedTasks,
+      } as ExportData;
+    },
+    { userId: session.userId },
+  );
 
   if (format === "csv") {
     // Convert to CSV format (tasks only for CSV)
@@ -187,13 +192,16 @@ exportRoutes.get("/tasks", async (c) => {
   const query = c.req.query();
   const format = query.format || "json";
 
-  const tasks = await withDb(async (sql: SqlQuery) => {
-    return await sql<Task[]>`
+  const tasks = await withDb(
+    async (sql: SqlQuery) => {
+      return await sql<Task[]>`
       SELECT * FROM tasks
       WHERE deleted_at IS NULL
       ORDER BY created_at
     `;
-  }, { userId: session.userId });
+    },
+    { userId: session.userId },
+  );
 
   if (format === "csv") {
     const csv = tasksToCSV(tasks);
@@ -211,9 +219,12 @@ exportRoutes.get("/tasks", async (c) => {
 // GET /api/export/projects - Export just projects
 exportRoutes.get("/projects", async (c) => {
   const session = c.get("session") as SessionData;
-  const projects = await withDb(async (sql: SqlQuery) => {
-    return await sql<Project[]>`SELECT * FROM projects ORDER BY name`;
-  }, { userId: session.userId });
+  const projects = await withDb(
+    async (sql: SqlQuery) => {
+      return await sql<Project[]>`SELECT * FROM projects ORDER BY name`;
+    },
+    { userId: session.userId },
+  );
 
   return c.json({ projects, exportedAt: new Date().toISOString() });
 });
@@ -221,8 +232,9 @@ exportRoutes.get("/projects", async (c) => {
 // GET /api/export/contexts - Export just contexts
 exportRoutes.get("/contexts", async (c) => {
   const session = c.get("session") as SessionData;
-  const contexts = await withDb(async (sql: SqlQuery) => {
-    return await sql<Context[]>`
+  const contexts = await withDb(
+    async (sql: SqlQuery) => {
+      return await sql<Context[]>`
       SELECT c.*,
         COALESCE(
           JSON_AGG(
@@ -239,7 +251,9 @@ exportRoutes.get("/contexts", async (c) => {
       GROUP BY c.id
       ORDER BY c.name
     `;
-  }, { userId: session.userId });
+    },
+    { userId: session.userId },
+  );
 
   return c.json({ contexts, exportedAt: new Date().toISOString() });
 });

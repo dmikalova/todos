@@ -89,25 +89,26 @@ recurrence.post("/", async (c) => {
     );
   }
 
-  const rule = await withTransaction(async (tx) => {
-    // Check task exists
-    const [task] = await tx<
-      Task[]
-    >`SELECT id FROM tasks WHERE id = ${data.taskId}`;
-    if (!task) {
-      return { error: "Task not found" };
-    }
+  const rule = await withTransaction(
+    async (tx) => {
+      // Check task exists
+      const [task] = await tx<
+        Task[]
+      >`SELECT id FROM tasks WHERE id = ${data.taskId}`;
+      if (!task) {
+        return { error: "Task not found" };
+      }
 
-    // Check no existing rule
-    const [existing] = await tx<RecurrenceRule[]>`
+      // Check no existing rule
+      const [existing] = await tx<RecurrenceRule[]>`
       SELECT id FROM recurrence_rules WHERE task_id = ${data.taskId}
     `;
-    if (existing) {
-      return { error: "Task already has a recurrence rule" };
-    }
+      if (existing) {
+        return { error: "Task already has a recurrence rule" };
+      }
 
-    // Create rule
-    const [created] = await tx<RecurrenceRule[]>`
+      // Create rule
+      const [created] = await tx<RecurrenceRule[]>`
       INSERT INTO recurrence_rules (
         task_id, schedule_type, frequency, interval,
         days_of_week, day_of_month, month_of_year, days_after_completion
@@ -125,8 +126,10 @@ recurrence.post("/", async (c) => {
       RETURNING *
     `;
 
-    return { rule: created };
-  }, { userId: session.userId });
+      return { rule: created };
+    },
+    { userId: session.userId },
+  );
 
   if ("error" in rule) {
     const status = rule.error === "Task not found" ? 404 : 400;
@@ -148,12 +151,15 @@ recurrence.get("/:taskId", async (c) => {
     return c.json({ error: "Invalid task ID format" }, 400);
   }
 
-  const rule = await withDb(async (sql: SqlQuery) => {
-    const [result] = await sql<RecurrenceRule[]>`
+  const rule = await withDb(
+    async (sql: SqlQuery) => {
+      const [result] = await sql<RecurrenceRule[]>`
       SELECT * FROM recurrence_rules WHERE task_id = ${taskId}
     `;
-    return result || null;
-  }, { userId: session.userId });
+      return result || null;
+    },
+    { userId: session.userId },
+  );
 
   if (!rule) {
     return c.json({ error: "No recurrence rule for this task" }, 404);
@@ -178,41 +184,42 @@ recurrence.patch("/:taskId", async (c) => {
 
   const updates = result.data;
 
-  const rule = await withTransaction(async (tx) => {
-    const [existing] = await tx<RecurrenceRule[]>`
+  const rule = await withTransaction(
+    async (tx) => {
+      const [existing] = await tx<RecurrenceRule[]>`
       SELECT * FROM recurrence_rules WHERE task_id = ${taskId}
     `;
-    if (!existing) {
-      return { error: "No recurrence rule for this task" };
-    }
+      if (!existing) {
+        return { error: "No recurrence rule for this task" };
+      }
 
-    // Merge with existing for validation
-    const merged = {
-      schedule_type: updates.scheduleType || existing.schedule_type,
-      frequency: updates.frequency !== undefined
-        ? updates.frequency
-        : existing.frequency,
-      interval: updates.interval ?? existing.interval,
-      days_of_week: updates.daysOfWeek !== undefined
-        ? updates.daysOfWeek
-        : existing.days_of_week,
-      day_of_month: updates.dayOfMonth !== undefined
-        ? updates.dayOfMonth
-        : existing.day_of_month,
-      month_of_year: updates.monthOfYear !== undefined
-        ? updates.monthOfYear
-        : existing.month_of_year,
-      days_after_completion: updates.daysAfterCompletion !== undefined
-        ? updates.daysAfterCompletion
-        : existing.days_after_completion,
-    };
+      // Merge with existing for validation
+      const merged = {
+        schedule_type: updates.scheduleType || existing.schedule_type,
+        frequency: updates.frequency !== undefined
+          ? updates.frequency
+          : existing.frequency,
+        interval: updates.interval ?? existing.interval,
+        days_of_week: updates.daysOfWeek !== undefined
+          ? updates.daysOfWeek
+          : existing.days_of_week,
+        day_of_month: updates.dayOfMonth !== undefined
+          ? updates.dayOfMonth
+          : existing.day_of_month,
+        month_of_year: updates.monthOfYear !== undefined
+          ? updates.monthOfYear
+          : existing.month_of_year,
+        days_after_completion: updates.daysAfterCompletion !== undefined
+          ? updates.daysAfterCompletion
+          : existing.days_after_completion,
+      };
 
-    const validation = validateRecurrenceRule(merged);
-    if (!validation.valid) {
-      return { error: "Invalid recurrence rule", details: validation.errors };
-    }
+      const validation = validateRecurrenceRule(merged);
+      if (!validation.valid) {
+        return { error: "Invalid recurrence rule", details: validation.errors };
+      }
 
-    const [updated] = await tx<RecurrenceRule[]>`
+      const [updated] = await tx<RecurrenceRule[]>`
       UPDATE recurrence_rules SET
         schedule_type = ${merged.schedule_type},
         frequency = ${merged.frequency},
@@ -225,8 +232,10 @@ recurrence.patch("/:taskId", async (c) => {
       RETURNING *
     `;
 
-    return { rule: updated };
-  }, { userId: session.userId });
+      return { rule: updated };
+    },
+    { userId: session.userId },
+  );
 
   if ("error" in rule) {
     const status = rule.error === "No recurrence rule for this task"
@@ -243,17 +252,20 @@ recurrence.delete("/:taskId", async (c) => {
   const session = c.get("session") as SessionData;
   const taskId = c.req.param("taskId");
 
-  const deleted = await withDb(async (sql: SqlQuery) => {
-    const [existing] = await sql<RecurrenceRule[]>`
+  const deleted = await withDb(
+    async (sql: SqlQuery) => {
+      const [existing] = await sql<RecurrenceRule[]>`
       SELECT id FROM recurrence_rules WHERE task_id = ${taskId}
     `;
-    if (!existing) {
-      return null;
-    }
+      if (!existing) {
+        return null;
+      }
 
-    await sql`DELETE FROM recurrence_rules WHERE task_id = ${taskId}`;
-    return true;
-  }, { userId: session.userId });
+      await sql`DELETE FROM recurrence_rules WHERE task_id = ${taskId}`;
+      return true;
+    },
+    { userId: session.userId },
+  );
 
   if (!deleted) {
     return c.json({ error: "No recurrence rule for this task" }, 404);
@@ -267,44 +279,45 @@ recurrence.post("/:taskId/complete", async (c) => {
   const session = c.get("session") as SessionData;
   const taskId = c.req.param("taskId");
 
-  const result = await withTransaction(async (tx) => {
-    // Get task and recurrence rule
-    const [task] = await tx<Task[]>`SELECT * FROM tasks WHERE id = ${taskId}`;
-    if (!task) {
-      return { error: "Task not found", status: 404 };
-    }
+  const result = await withTransaction(
+    async (tx) => {
+      // Get task and recurrence rule
+      const [task] = await tx<Task[]>`SELECT * FROM tasks WHERE id = ${taskId}`;
+      if (!task) {
+        return { error: "Task not found", status: 404 };
+      }
 
-    const [rule] = await tx<RecurrenceRule[]>`
+      const [rule] = await tx<RecurrenceRule[]>`
       SELECT * FROM recurrence_rules WHERE task_id = ${taskId}
     `;
-    if (!rule) {
-      return { error: "Task has no recurrence rule", status: 400 };
-    }
+      if (!rule) {
+        return { error: "Task has no recurrence rule", status: 400 };
+      }
 
-    if (task.completed_at) {
-      return { error: "Task already completed", status: 400 };
-    }
+      if (task.completed_at) {
+        return { error: "Task already completed", status: 400 };
+      }
 
-    const completionDate = new Date();
+      const completionDate = new Date();
 
-    // Complete current task
-    await tx`
+      // Complete current task
+      await tx`
       UPDATE tasks SET completed_at = ${completionDate}, updated_at = NOW()
       WHERE id = ${taskId}
     `;
 
-    await logTaskActionTx(tx, {
-      taskId,
-      userId: session.userId,
-      action: "completed",
-      details: { title: task.title, recurring: true },
-    });
+      await logTaskActionTx(tx, {
+        taskId,
+        userId: session.userId,
+        action: "completed",
+        details: { title: task.title, recurring: true },
+      });
 
-    // Calculate next occurrence
-    const nextDueDate = calculateNextOccurrence(rule, completionDate);
+      // Calculate next occurrence
+      const nextDueDate = calculateNextOccurrence(rule, completionDate);
 
-    // Create next task instance
-    const [newTask] = await tx<Task[]>`
+      // Create next task instance
+      const [newTask] = await tx<Task[]>`
       INSERT INTO tasks (user_id, title, description, project_id, priority, due_date, must_do)
       VALUES (
         ${session.userId},
@@ -318,8 +331,8 @@ recurrence.post("/:taskId/complete", async (c) => {
       RETURNING *
     `;
 
-    // Copy recurrence rule to new task
-    await tx`
+      // Copy recurrence rule to new task
+      await tx`
       INSERT INTO recurrence_rules (
         task_id, schedule_type, frequency, interval,
         days_of_week, day_of_month, month_of_year, days_after_completion
@@ -336,23 +349,25 @@ recurrence.post("/:taskId/complete", async (c) => {
       )
     `;
 
-    await logTaskActionTx(tx, {
-      taskId: newTask.id,
-      userId: session.userId,
-      action: "created",
-      details: {
-        title: newTask.title,
-        recurring: true,
-        previousTaskId: taskId,
-        dueDate: nextDueDate.toISOString(),
-      },
-    });
+      await logTaskActionTx(tx, {
+        taskId: newTask.id,
+        userId: session.userId,
+        action: "created",
+        details: {
+          title: newTask.title,
+          recurring: true,
+          previousTaskId: taskId,
+          dueDate: nextDueDate.toISOString(),
+        },
+      });
 
-    return {
-      completedTask: { ...task, completed_at: completionDate },
-      nextTask: newTask,
-    };
-  }, { userId: session.userId });
+      return {
+        completedTask: { ...task, completed_at: completionDate },
+        nextTask: newTask,
+      };
+    },
+    { userId: session.userId },
+  );
 
   if ("error" in result) {
     return c.json({ error: result.error }, result.status as 400 | 404 | 500);

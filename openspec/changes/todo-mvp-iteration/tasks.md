@@ -14,11 +14,11 @@
 - [x] 2.1 Add `user_id` UUID NOT NULL column to all tables (projects, contexts,
       context_time_windows, tasks, recurrence_rules, saved_filters,
       task_history)
-- [ ] 2.2 Backfill existing test data with a constant test user ID
-- [ ] 2.3 Enable RLS on all tables
-- [ ] 2.4 Create RLS policies on each table: SELECT/INSERT/UPDATE/DELETE
+- [x] 2.2 Backfill existing test data with a constant test user ID
+- [x] 2.3 Enable RLS on all tables
+- [x] 2.4 Create RLS policies on each table: SELECT/INSERT/UPDATE/DELETE
       restricted to `user_id = current_setting('app.user_id')::uuid`
-- [ ] 2.5 Verify INSERT policy enforces `user_id` matches session (prevent
+- [x] 2.5 Verify INSERT policy enforces `user_id` matches session (prevent
       spoofing user_id in INSERT)
 
 ## 3. Backend — Request-Scoped User ID
@@ -116,45 +116,45 @@
 
 ## 13. Unit Tests
 
-- [ ] 13.1 Add window evaluation edge cases to `context_matching_test.ts`
+- [x] 13.1 Add window evaluation edge cases to `context_matching_test.ts`
       (multi-day windows, inheritance: nearest ancestor wins, direct beats
       ancestor, no ancestor context)
-- [ ] 13.2 Create `next_pipeline_test.ts` — test `getActiveContextIds`,
+- [x] 13.2 Create `next_pipeline_test.ts` — test `getActiveContextIds`,
       `getNextProjects` (including inherited context), `sortNextTasks`, and
       inbox exclusion
-- [ ] 13.3 Create `project_task_count_test.ts` — test open-only count and
+- [x] 13.3 Create `project_task_count_test.ts` — test open-only count and
       zero-count when all done
-- [ ] 13.4 Create `task_loading_test.ts` — test initial load params and infinite
+- [x] 13.4 Create `task_loading_test.ts` — test initial load params and infinite
       scroll offset advancement
-- [ ] 13.5 Create `store_test.ts` — test `inboxTasks`, `inboxCount`,
+- [x] 13.5 Create `store_test.ts` — test `inboxTasks`, `inboxCount`,
       `projectTasks`, `dueTasks`, and `currentPageTitle` computed properties
 
 ## 14. Integration Tests
 
-- [ ] 14.1 Add/update `context_test.ts` — POST creates with windows, PATCH
+- [x] 14.1 Add/update `context_test.ts` — POST creates with windows, PATCH
       replaces windows, DELETE cascades, GET returns windows
-- [ ] 14.2 Add/update `project_test.ts` — POST with `contextId`, PATCH updates
+- [x] 14.2 Add/update `project_test.ts` — POST with `contextId`, PATCH updates
       `contextId`, `task_count` excludes completed, nested `parentProjectId`
-- [ ] 14.3 Update `task_test.ts` — remove context round-trip tests, add
+- [x] 14.3 Update `task_test.ts` — remove context round-trip tests, add
       `completed` filter and `limit`/`offset` pagination tests
-- [ ] 14.4 Update `next_test.ts` — tasks from projects with active context
+- [x] 14.4 Update `next_test.ts` — tasks from projects with active context
       returned, inactive context excluded, inbox tasks excluded
-- [ ] 14.5 Add ownership validation integration tests — verify 403 for foreign
+- [x] 14.5 Add ownership validation integration tests — verify 403 for foreign
       `contextId`, `projectId`, and `parentProjectId` on relevant routes
-- [ ] 14.6 Add RLS integration tests — verify cross-user SELECT/UPDATE/DELETE
+- [x] 14.6 Add RLS integration tests — verify cross-user SELECT/UPDATE/DELETE
       returns zero rows when `app.user_id` differs
 
 ## 15. Frontend Component Tests
 
-- [ ] 15.1 Add sidebar component tests — verify all rendered labels are
+- [x] 15.1 Add sidebar component tests — verify all rendered labels are
       lowercase and sourced from constants
-- [ ] 15.2 Add context selector component tests — pre-populates on edit, submits
+- [x] 15.2 Add context selector component tests — pre-populates on edit, submits
       correct ID
-- [ ] 15.3 Add history view infinite scroll tests — scroll triggers load, stops
+- [x] 15.3 Add history view infinite scroll tests — scroll triggers load, stops
       when exhausted
 
 ## 16. Coverage & Verification
 
-- [ ] 16.1 Run `deno test --coverage` and verify all `src/` files reach 100%
+- [x] 16.1 Run `deno test --coverage` and verify all `src/` files reach 100%
       line and branch coverage
-- [ ] 16.2 Fix any coverage gaps found
+- [x] 16.2 Fix any coverage gaps found

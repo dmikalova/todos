@@ -2,9 +2,8 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { withDb } from "../db/index.ts";
+import { type SqlQuery, withDb } from "../db/index.ts";
 import type { AppEnv, SessionData } from "../types.ts";
-import { type SqlQuery } from "../db/index.ts";
 
 export const next = new Hono<AppEnv>();
 
@@ -45,27 +44,34 @@ next.get("/", async (c) => {
 
   const { projectId, count } = result.data;
 
-  const tasks = await withDb(async (sql: SqlQuery) => {
-    const eligibleTasks = await sql<Task[]>`
-      SELECT *
-      FROM tasks
-      WHERE completed_at IS NULL
-        AND deleted_at IS NULL
-        AND (deferred_until IS NULL OR deferred_until <= NOW())
-        AND (due_date IS NULL OR due_date <= CURRENT_DATE)
-        ${projectId ? sql`AND project_id = ${projectId}` : sql``}
+  const tasks = await withDb(
+    async (sql: SqlQuery) => {
+      const eligibleTasks = await sql<Task[]>`
+      SELECT t.*,
+        r.frequency as recurrence_type,
+        r.interval as recurrence_interval,
+        r.days_of_week as recurrence_days
+      FROM tasks t
+      LEFT JOIN recurrence_rules r ON r.task_id = t.id
+      WHERE t.completed_at IS NULL
+        AND t.deleted_at IS NULL
+        AND (t.deferred_until IS NULL OR t.deferred_until <= NOW())
+        AND (t.due_date IS NULL OR t.due_date <= CURRENT_DATE)
+        ${projectId ? sql`AND t.project_id = ${projectId}` : sql``}
       ORDER BY
-        CASE WHEN due_date IS NOT NULL THEN 0 ELSE 1 END,
-        due_date ASC NULLS LAST,
-        created_at ASC
+        CASE WHEN t.due_date IS NOT NULL THEN 0 ELSE 1 END,
+        t.due_date ASC NULLS LAST,
+        t.created_at ASC
       LIMIT ${count}
     `;
 
-    return {
-      tasks: eligibleTasks,
-      totalEligible: eligibleTasks.length,
-    };
-  }, { userId: session.userId });
+      return {
+        tasks: eligibleTasks,
+        totalEligible: eligibleTasks.length,
+      };
+    },
+    { userId: session.userId },
+  );
 
   return c.json(tasks);
 });

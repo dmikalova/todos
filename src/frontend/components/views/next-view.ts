@@ -242,8 +242,10 @@ export class NextView extends StoreElement {
     const task = store.currentTask;
 
     return html`
-      <div class="task-card" @click="${() =>
-        store.setShowTaskForm(true, task)}">
+      <div
+        class="task-card"
+        @click="${() => store.setShowTaskForm(true, task)}"
+      >
         <div class="task-header">
           <div>
             <h2 class="task-title">${task.title}</h2>

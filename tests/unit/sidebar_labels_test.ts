@@ -33,16 +33,8 @@ Deno.test("NAV_LABELS - contains all expected navigation items", () => {
 
 Deno.test("NAV_LABELS - values are non-empty strings", () => {
   for (const [key, value] of Object.entries(NAV_LABELS)) {
-    assertEquals(
-      typeof value,
-      "string",
-      `NAV_LABELS.${key} must be a string`,
-    );
-    assertEquals(
-      value.length > 0,
-      true,
-      `NAV_LABELS.${key} must not be empty`,
-    );
+    assertEquals(typeof value, "string", `NAV_LABELS.${key} must be a string`);
+    assertEquals(value.length > 0, true, `NAV_LABELS.${key} must not be empty`);
   }
 });
 

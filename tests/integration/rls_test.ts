@@ -95,11 +95,7 @@ Deno.test({
     await t.step(
       "GET /api/tasks/:id returns 404 for other user's task",
       async () => {
-        const res = await apiCall(
-          ctx.app,
-          "GET",
-          `/api/tasks/${otherTaskId}`,
-        );
+        const res = await apiCall(ctx.app, "GET", `/api/tasks/${otherTaskId}`);
         assertEquals(res.status, 404);
       },
     );

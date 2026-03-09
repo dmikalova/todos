@@ -51,10 +51,7 @@ Deno.test({
       const body = await res.json();
 
       const titles = body.tasks.map((t: { title: string }) => t.title);
-      assertEquals(
-        titles.includes("Integration Test Next Completed"),
-        false,
-      );
+      assertEquals(titles.includes("Integration Test Next Completed"), false);
     });
 
     await t.step("GET /api/next excludes deferred tasks", async () => {
@@ -75,57 +72,48 @@ Deno.test({
       const body = await res.json();
 
       const titles = body.tasks.map((t: { title: string }) => t.title);
-      assertEquals(
-        titles.includes("Integration Test Next Deferred"),
-        false,
-      );
+      assertEquals(titles.includes("Integration Test Next Deferred"), false);
     });
 
-    await t.step(
-      "GET /api/next?projectId filters by project",
-      async () => {
-        // Create a project
-        const projRes = await apiCall(ctx.app, "POST", "/api/projects", {
-          name: "Test Project Next Filter",
-        });
-        assertEquals(projRes.status, 201);
-        const project = await projRes.json();
+    await t.step("GET /api/next?projectId filters by project", async () => {
+      // Create a project
+      const projRes = await apiCall(ctx.app, "POST", "/api/projects", {
+        name: "Test Project Next Filter",
+      });
+      assertEquals(projRes.status, 201);
+      const project = await projRes.json();
 
-        // Create task in project
-        const taskRes = await apiCall(ctx.app, "POST", "/api/tasks", {
-          title: "Integration Test Next In Project",
-          priority: 2,
-          projectId: project.id,
-        });
-        assertEquals(taskRes.status, 201);
+      // Create task in project
+      const taskRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test Next In Project",
+        priority: 2,
+        projectId: project.id,
+      });
+      assertEquals(taskRes.status, 201);
 
-        // Create task without project
-        await apiCall(ctx.app, "POST", "/api/tasks", {
-          title: "Integration Test Next No Project",
-          priority: 2,
-        });
+      // Create task without project
+      await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test Next No Project",
+        priority: 2,
+      });
 
-        // Filter by projectId
-        const res = await apiCall(
-          ctx.app,
-          "GET",
-          `/api/next?projectId=${project.id}`,
-        );
-        assertEquals(res.status, 200);
-        const body = await res.json();
+      // Filter by projectId
+      const res = await apiCall(
+        ctx.app,
+        "GET",
+        `/api/next?projectId=${project.id}`,
+      );
+      assertEquals(res.status, 200);
+      const body = await res.json();
 
-        // All returned tasks should belong to the project
-        for (const task of body.tasks) {
-          assertEquals(task.project_id, project.id);
-        }
-        // Should include our project task
-        const titles = body.tasks.map((t: { title: string }) => t.title);
-        assertEquals(
-          titles.includes("Integration Test Next In Project"),
-          true,
-        );
-      },
-    );
+      // All returned tasks should belong to the project
+      for (const task of body.tasks) {
+        assertEquals(task.project_id, project.id);
+      }
+      // Should include our project task
+      const titles = body.tasks.map((t: { title: string }) => t.title);
+      assertEquals(titles.includes("Integration Test Next In Project"), true);
+    });
 
     await t.step("GET /api/next sorts by due date ascending", async () => {
       // Create a new project to isolate tasks
@@ -205,14 +193,8 @@ Deno.test({
       const body = await res.json();
 
       const titles = body.tasks.map((t: { title: string }) => t.title);
-      assertEquals(
-        titles.includes("Integration Test Next Future Task"),
-        false,
-      );
-      assertEquals(
-        titles.includes("Integration Test Next No Date Task"),
-        true,
-      );
+      assertEquals(titles.includes("Integration Test Next Future Task"), false);
+      assertEquals(titles.includes("Integration Test Next No Date Task"), true);
     });
 
     await t.step(

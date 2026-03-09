@@ -51,8 +51,8 @@ Deno.test({
         assertEquals(res.status, 200);
         const body = await res.json();
 
-        const testCtx = body.find((c: { id: string }) =>
-          c.id === createdContextId
+        const testCtx = body.find(
+          (c: { id: string }) => c.id === createdContextId,
         );
         assertExists(testCtx);
         assertEquals(testCtx.name, "Test Context Work");
@@ -68,9 +68,7 @@ Deno.test({
         `/api/contexts/${createdContextId}`,
         {
           name: "Test Context Updated",
-          timeWindows: [
-            { dayOfWeek: 3, startTime: "10:00", endTime: "16:00" },
-          ],
+          timeWindows: [{ dayOfWeek: 3, startTime: "10:00", endTime: "16:00" }],
         },
       );
 

@@ -257,8 +257,11 @@ export class ProjectForm extends LitElement {
                 : null}
             </div>
             <div style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-cancel" @click="${this
-                .close}">
+              <button
+                type="button"
+                class="btn btn-cancel"
+                @click="${this.close}"
+              >
                 Cancel
               </button>
               <button type="submit" class="btn btn-save">Save</button>

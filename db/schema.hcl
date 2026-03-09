@@ -106,32 +106,6 @@ table "projects" {
     columns = [column.parent_project_id]
   }
 
-  # RLS: restrict all operations to the authenticated user
-  row_level_security {
-    enabled = true
-    forced  = true
-  }
-
-  policy "projects_user_select" {
-    for   = "SELECT"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "projects_user_insert" {
-    for   = "INSERT"
-    check = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "projects_user_update" {
-    for   = "UPDATE"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-    check = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "projects_user_delete" {
-    for   = "DELETE"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-  }
 }
 
 table "contexts" {
@@ -172,32 +146,6 @@ table "contexts" {
     columns = [column.user_id]
   }
 
-  # RLS: restrict all operations to the authenticated user
-  row_level_security {
-    enabled = true
-    forced  = true
-  }
-
-  policy "contexts_user_select" {
-    for   = "SELECT"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "contexts_user_insert" {
-    for   = "INSERT"
-    check = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "contexts_user_update" {
-    for   = "UPDATE"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-    check = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "contexts_user_delete" {
-    for   = "DELETE"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-  }
 }
 
 table "context_time_windows" {
@@ -252,32 +200,6 @@ table "context_time_windows" {
     expr = "start_time < end_time"
   }
 
-  # RLS: restrict via parent context ownership
-  row_level_security {
-    enabled = true
-    forced  = true
-  }
-
-  policy "ctw_user_select" {
-    for   = "SELECT"
-    using = "(EXISTS (SELECT 1 FROM contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid))"
-  }
-
-  policy "ctw_user_insert" {
-    for   = "INSERT"
-    check = "(EXISTS (SELECT 1 FROM contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid))"
-  }
-
-  policy "ctw_user_update" {
-    for   = "UPDATE"
-    using = "(EXISTS (SELECT 1 FROM contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid))"
-    check = "(EXISTS (SELECT 1 FROM contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid))"
-  }
-
-  policy "ctw_user_delete" {
-    for   = "DELETE"
-    using = "(EXISTS (SELECT 1 FROM contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid))"
-  }
 }
 
 table "tasks" {
@@ -390,32 +312,6 @@ table "tasks" {
     expr = "priority >= 1 AND priority <= 4"
   }
 
-  # RLS: restrict all operations to the authenticated user
-  row_level_security {
-    enabled = true
-    forced  = true
-  }
-
-  policy "tasks_user_select" {
-    for   = "SELECT"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "tasks_user_insert" {
-    for   = "INSERT"
-    check = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "tasks_user_update" {
-    for   = "UPDATE"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-    check = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "tasks_user_delete" {
-    for   = "DELETE"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-  }
 }
 
 table "recurrence_rules" {
@@ -527,32 +423,6 @@ table "recurrence_rules" {
     expr = "schedule_type::text != 'completion' OR days_after_completion IS NOT NULL"
   }
 
-  # RLS: restrict via parent task ownership
-  row_level_security {
-    enabled = true
-    forced  = true
-  }
-
-  policy "recurrence_user_select" {
-    for   = "SELECT"
-    using = "(EXISTS (SELECT 1 FROM tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid))"
-  }
-
-  policy "recurrence_user_insert" {
-    for   = "INSERT"
-    check = "(EXISTS (SELECT 1 FROM tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid))"
-  }
-
-  policy "recurrence_user_update" {
-    for   = "UPDATE"
-    using = "(EXISTS (SELECT 1 FROM tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid))"
-    check = "(EXISTS (SELECT 1 FROM tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid))"
-  }
-
-  policy "recurrence_user_delete" {
-    for   = "DELETE"
-    using = "(EXISTS (SELECT 1 FROM tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid))"
-  }
 }
 
 table "saved_filters" {
@@ -594,32 +464,6 @@ table "saved_filters" {
     columns = [column.user_id]
   }
 
-  # RLS: restrict all operations to the authenticated user
-  row_level_security {
-    enabled = true
-    forced  = true
-  }
-
-  policy "saved_filters_user_select" {
-    for   = "SELECT"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "saved_filters_user_insert" {
-    for   = "INSERT"
-    check = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "saved_filters_user_update" {
-    for   = "UPDATE"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-    check = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "saved_filters_user_delete" {
-    for   = "DELETE"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-  }
 }
 
 table "task_history" {
@@ -680,30 +524,4 @@ table "task_history" {
     columns = [column.created_at]
   }
 
-  # RLS: restrict all operations to the authenticated user
-  row_level_security {
-    enabled = true
-    forced  = true
-  }
-
-  policy "task_history_user_select" {
-    for   = "SELECT"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "task_history_user_insert" {
-    for   = "INSERT"
-    check = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "task_history_user_update" {
-    for   = "UPDATE"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-    check = "(user_id = current_setting('app.user_id')::uuid)"
-  }
-
-  policy "task_history_user_delete" {
-    for   = "DELETE"
-    using = "(user_id = current_setting('app.user_id')::uuid)"
-  }
 }

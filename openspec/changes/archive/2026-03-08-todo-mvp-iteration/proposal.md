@@ -10,7 +10,7 @@ conventions, reducing polish and trust.
 - Project task count displays only open (incomplete) tasks — done tasks are
   excluded from the count
 - Task loading is bounded: all open tasks load fully; closed/done tasks load as
-  a capped history (limit: 1000, ordered by completion date descending)
+  a capped history (limit: 100, ordered by completion date descending)
 - Contexts are named, reusable labels (e.g., "morning", "evening", "free time")
   shared across projects
 - Windows are recurring schedules on a context (e.g., Mon–Fri 9–12), evaluated

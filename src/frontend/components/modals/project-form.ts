@@ -148,6 +148,7 @@ export class ProjectForm extends LitElement {
     name: "",
     color: "#4caf50",
     context_id: null as string | null,
+    parent_project_id: null as string | null,
   };
 
   override connectedCallback() {
@@ -157,6 +158,7 @@ export class ProjectForm extends LitElement {
         name: store.editingProject.name,
         color: store.editingProject.color || "#4caf50",
         context_id: store.editingProject.context_id || null,
+        parent_project_id: store.editingProject.parent_project_id || null,
       };
     }
   }
@@ -165,12 +167,55 @@ export class ProjectForm extends LitElement {
     store.setShowProjectForm(false);
   }
 
+  private _getAvailableParents() {
+    const editingId = store.editingProject?.id;
+    if (!editingId) {
+      // New project — all projects are valid parents
+      return store.projects;
+    }
+    // Exclude self and descendants
+    const excludeIds = new Set([
+      editingId,
+      ...store.getDescendantIds(editingId),
+    ]);
+    return store.projects.filter((p) => !excludeIds.has(p.id));
+  }
+
+  private _getInheritedContextLabel(): string {
+    // For editing: check if parent chain has a context
+    if (store.editingProject) {
+      const inheritedId = store.resolveProjectContext({
+        ...store.editingProject,
+        context_id: null, // pretend no direct context to find inherited
+      });
+      if (inheritedId) {
+        const name = store.getContextName(inheritedId);
+        return `inherited: ${name}`;
+      }
+    }
+    // For new projects: check if selected parent has context
+    if (this.form.parent_project_id) {
+      const parent = store.projects.find(
+        (p) => p.id === this.form.parent_project_id,
+      );
+      if (parent) {
+        const inheritedId = store.resolveProjectContext(parent);
+        if (inheritedId) {
+          const name = store.getContextName(inheritedId);
+          return `inherited: ${name}`;
+        }
+      }
+    }
+    return "None";
+  }
+
   private async handleSubmit(e: Event) {
     e.preventDefault();
     await store.saveProject({
       name: this.form.name,
       color: this.form.color,
       contextId: this.form.context_id || undefined,
+      parentProjectId: this.form.parent_project_id,
     } as Record<string, unknown>);
   }
 
@@ -224,7 +269,6 @@ export class ProjectForm extends LitElement {
           <div class="form-group">
             <label>Context</label>
             <select
-              .value="${String(this.form.context_id || "")}"
               @change="${(e: Event) => (this.form = {
                 ...this.form,
                 context_id: (e.target as HTMLSelectElement).value
@@ -232,11 +276,45 @@ export class ProjectForm extends LitElement {
                   : null,
               })}"
             >
-              <option value="">None</option>
+              <option value="" ?selected="${!this.form.context_id}">
+                ${this._getInheritedContextLabel()}
+              </option>
               ${store.contexts.map(
                 (c) =>
                   html`
-                    <option value="${c.id}">${c.name}</option>
+                    <option
+                      value="${c.id}"
+                      ?selected="${c.id === this.form.context_id}"
+                    >
+                      ${c.name}
+                    </option>
+                  `,
+              )}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Parent Project</label>
+            <select
+              @change="${(e: Event) => (this.form = {
+                ...this.form,
+                parent_project_id: (e.target as HTMLSelectElement).value
+                  ? (e.target as HTMLSelectElement).value
+                  : null,
+              })}"
+            >
+              <option value="" ?selected="${!this.form.parent_project_id}">
+                None
+              </option>
+              ${this._getAvailableParents().map(
+                (p) =>
+                  html`
+                    <option
+                      value="${p.id}"
+                      ?selected="${p.id === this.form.parent_project_id}"
+                    >
+                      ${p.name}
+                    </option>
                   `,
               )}
             </select>

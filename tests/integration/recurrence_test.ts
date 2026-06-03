@@ -467,6 +467,324 @@ Deno.test({
       assertEquals(second.status, 400);
     });
 
+    // -----------------------------------------------------------------------
+    // Validation and error path tests
+    // -----------------------------------------------------------------------
+
+    await t.step(
+      "POST /api/recurrence returns 400 for invalid body",
+      async () => {
+        const res = await apiCall(ctx.app, "POST", "/api/recurrence", {
+          // missing taskId, scheduleType
+          frequency: "daily",
+        });
+        assertEquals(res.status, 400);
+        const body = await res.json();
+        assertEquals(body.error, "Validation error");
+      },
+    );
+
+    await t.step(
+      "POST /api/recurrence returns 400 for invalid rule logic",
+      async () => {
+        const taskRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Invalid Rule Logic",
+          priority: 3,
+        });
+        const task = await taskRes.json();
+
+        // Fixed schedule without frequency
+        const res = await apiCall(ctx.app, "POST", "/api/recurrence", {
+          taskId: task.id,
+          scheduleType: "fixed",
+          // missing frequency
+        });
+        assertEquals(res.status, 400);
+        const body = await res.json();
+        assertEquals(body.error, "Invalid recurrence rule");
+      },
+    );
+
+    await t.step(
+      "POST /api/recurrence returns 404 for non-existent task",
+      async () => {
+        const res = await apiCall(ctx.app, "POST", "/api/recurrence", {
+          taskId: "00000000-0000-0000-0000-000000000099",
+          scheduleType: "fixed",
+          frequency: "daily",
+          interval: 1,
+        });
+        assertEquals(res.status, 404);
+        const body = await res.json();
+        assertEquals(body.error, "Task not found");
+      },
+    );
+
+    await t.step(
+      "GET /api/recurrence/:taskId returns 400 for invalid UUID",
+      async () => {
+        const res = await apiCall(ctx.app, "GET", "/api/recurrence/not-a-uuid");
+        assertEquals(res.status, 400);
+        const body = await res.json();
+        assertEquals(body.error, "Invalid task ID format");
+      },
+    );
+
+    await t.step(
+      "PATCH /api/recurrence/:taskId returns 404 for task without rule",
+      async () => {
+        const taskRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test PATCH No Rule",
+          priority: 3,
+        });
+        const task = await taskRes.json();
+
+        const res = await apiCall(
+          ctx.app,
+          "PATCH",
+          `/api/recurrence/${task.id}`,
+          { frequency: "weekly" },
+        );
+        assertEquals(res.status, 404);
+      },
+    );
+
+    await t.step(
+      "PATCH /api/recurrence/:taskId returns 400 for invalid body",
+      async () => {
+        const taskRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test PATCH Invalid",
+          priority: 3,
+        });
+        const task = await taskRes.json();
+
+        await apiCall(ctx.app, "POST", "/api/recurrence", {
+          taskId: task.id,
+          scheduleType: "fixed",
+          frequency: "daily",
+          interval: 1,
+        });
+
+        const res = await apiCall(
+          ctx.app,
+          "PATCH",
+          `/api/recurrence/${task.id}`,
+          { interval: -5 }, // invalid: min 1
+        );
+        assertEquals(res.status, 400);
+      },
+    );
+
+    await t.step(
+      "PATCH /api/recurrence/:taskId returns 400 for invalid merged rule",
+      async () => {
+        const taskRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test PATCH Invalid Merge",
+          priority: 3,
+        });
+        const task = await taskRes.json();
+
+        await apiCall(ctx.app, "POST", "/api/recurrence", {
+          taskId: task.id,
+          scheduleType: "fixed",
+          frequency: "daily",
+          interval: 1,
+        });
+
+        // Change to completion-based without providing daysAfterCompletion
+        const res = await apiCall(
+          ctx.app,
+          "PATCH",
+          `/api/recurrence/${task.id}`,
+          { scheduleType: "completion" },
+        );
+        assertEquals(res.status, 400);
+      },
+    );
+
+    await t.step(
+      "PATCH /api/recurrence/:taskId updates dayOfMonth, monthOfYear, and daysAfterCompletion",
+      async () => {
+        // Create a yearly recurrence to test dayOfMonth + monthOfYear merge
+        const taskRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test PATCH Merge Fields",
+          priority: 3,
+        });
+        const task = await taskRes.json();
+
+        await apiCall(ctx.app, "POST", "/api/recurrence", {
+          taskId: task.id,
+          scheduleType: "fixed",
+          frequency: "yearly",
+          interval: 1,
+          dayOfMonth: 15,
+          monthOfYear: 6,
+        });
+
+        // Update dayOfMonth and monthOfYear (exercises the merge ternaries)
+        const res = await apiCall(
+          ctx.app,
+          "PATCH",
+          `/api/recurrence/${task.id}`,
+          { dayOfMonth: 25, monthOfYear: 12 },
+        );
+        assertEquals(res.status, 200);
+        const updated = await res.json();
+        assertEquals(updated.day_of_month, 25);
+        assertEquals(updated.month_of_year, 12);
+
+        // Now switch to completion-based to test daysAfterCompletion merge
+        const taskRes2 = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test PATCH Completion Merge",
+          priority: 3,
+        });
+        const task2 = await taskRes2.json();
+
+        await apiCall(ctx.app, "POST", "/api/recurrence", {
+          taskId: task2.id,
+          scheduleType: "completion",
+          frequency: "daily",
+          interval: 1,
+          daysAfterCompletion: 3,
+        });
+
+        // Update daysAfterCompletion
+        const res2 = await apiCall(
+          ctx.app,
+          "PATCH",
+          `/api/recurrence/${task2.id}`,
+          { daysAfterCompletion: 7 },
+        );
+        assertEquals(res2.status, 200);
+        const updated2 = await res2.json();
+        assertEquals(updated2.days_after_completion, 7);
+      },
+    );
+
+    await t.step(
+      "DELETE /api/recurrence/:taskId returns 404 for task without rule",
+      async () => {
+        const taskRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test DELETE No Rule",
+          priority: 3,
+        });
+        const task = await taskRes.json();
+
+        const res = await apiCall(
+          ctx.app,
+          "DELETE",
+          `/api/recurrence/${task.id}`,
+        );
+        assertEquals(res.status, 404);
+      },
+    );
+
+    // -----------------------------------------------------------------------
+    // Recurrence-specific completion endpoint
+    // -----------------------------------------------------------------------
+
+    await t.step(
+      "POST /api/recurrence/:taskId/complete completes and creates next instance",
+      async () => {
+        const today = new Date().toISOString().split("T")[0];
+        const taskRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Recurrence Complete",
+          priority: 3,
+          dueDate: today,
+        });
+        assertEquals(taskRes.status, 201);
+        const task = await taskRes.json();
+
+        await apiCall(ctx.app, "POST", "/api/recurrence", {
+          taskId: task.id,
+          scheduleType: "fixed",
+          frequency: "daily",
+          interval: 1,
+        });
+
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/recurrence/${task.id}/complete`,
+        );
+        assertEquals(res.status, 200);
+        const body = await res.json();
+
+        assertExists(body.completedTask);
+        assertExists(body.completedTask.completed_at);
+        assertExists(body.nextTask);
+        assertEquals(
+          body.nextTask.title,
+          "Integration Test Recurrence Complete",
+        );
+      },
+    );
+
+    await t.step(
+      "POST /api/recurrence/:taskId/complete returns 404 for non-existent task",
+      async () => {
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          "/api/recurrence/00000000-0000-0000-0000-000000000099/complete",
+        );
+        assertEquals(res.status, 404);
+        const body = await res.json();
+        assertEquals(body.error, "Task not found");
+      },
+    );
+
+    await t.step(
+      "POST /api/recurrence/:taskId/complete returns 400 for task without rule",
+      async () => {
+        const taskRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Complete No Rule",
+          priority: 3,
+        });
+        const task = await taskRes.json();
+
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/recurrence/${task.id}/complete`,
+        );
+        assertEquals(res.status, 400);
+        const body = await res.json();
+        assertEquals(body.error, "Task has no recurrence rule");
+      },
+    );
+
+    await t.step(
+      "POST /api/recurrence/:taskId/complete returns 400 for already completed task",
+      async () => {
+        const taskRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Complete Already Done",
+          priority: 3,
+        });
+        const task = await taskRes.json();
+
+        await apiCall(ctx.app, "POST", "/api/recurrence", {
+          taskId: task.id,
+          scheduleType: "fixed",
+          frequency: "daily",
+          interval: 1,
+        });
+
+        // Complete via regular endpoint first
+        await apiCall(ctx.app, "POST", `/api/tasks/${task.id}/complete`);
+
+        // Try to complete via recurrence endpoint
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/recurrence/${task.id}/complete`,
+        );
+        assertEquals(res.status, 400);
+        const body = await res.json();
+        assertEquals(body.error, "Task already completed");
+      },
+    );
+
     await teardownTestContext(ctx);
   },
   sanitizeOps: false,

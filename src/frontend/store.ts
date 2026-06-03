@@ -58,6 +58,11 @@ export interface HistoryEntry {
   created_at: string;
 }
 
+export interface ProjectTreeEntry {
+  project: Project;
+  depth: number;
+}
+
 export interface Toast {
   id: number;
   message: string;
@@ -98,6 +103,7 @@ class Store {
   private _editingContext: Context | null = null;
   private _toasts: Toast[] = [];
   private _taskFilter = { completed: "false" };
+  private _collapsedProjectIds: Set<string> = new Set();
 
   // Listeners for reactivity
   private listeners: Set<Listener> = new Set();
@@ -171,6 +177,114 @@ class Store {
   }
   get taskFilter() {
     return this._taskFilter;
+  }
+
+  get collapsedProjectIds(): Set<string> {
+    return this._collapsedProjectIds;
+  }
+
+  // Computed: depth-annotated flat list of projects ordered as a tree.
+  // Siblings sorted alphabetically by name. Children of collapsed parents excluded.
+  get projectTree(): ProjectTreeEntry[] {
+    const entries: ProjectTreeEntry[] = [];
+    const childrenMap = new Map<string | null, Project[]>();
+
+    // Group projects by parent
+    for (const project of this._projects) {
+      const parentId = project.parent_project_id ?? null;
+      if (!childrenMap.has(parentId)) {
+        childrenMap.set(parentId, []);
+      }
+      childrenMap.get(parentId)!.push(project);
+    }
+
+    // Sort each group alphabetically by name
+    for (const children of childrenMap.values()) {
+      children.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    // DFS traversal to build flat list
+    const visit = (parentId: string | null, depth: number) => {
+      const children = childrenMap.get(parentId);
+      if (!children) return;
+      for (const project of children) {
+        entries.push({ project, depth });
+        if (!this._collapsedProjectIds.has(project.id)) {
+          visit(project.id, depth + 1);
+        }
+      }
+    };
+
+    visit(null, 0);
+    return entries;
+  }
+
+  // Returns all recursive descendant project IDs for a given project
+  getDescendantIds(projectId: string): string[] {
+    const descendants: string[] = [];
+    const childrenMap = new Map<string | null, Project[]>();
+
+    for (const project of this._projects) {
+      const parentId = project.parent_project_id ?? null;
+      if (!childrenMap.has(parentId)) {
+        childrenMap.set(parentId, []);
+      }
+      childrenMap.get(parentId)!.push(project);
+    }
+
+    const collect = (id: string) => {
+      const children = childrenMap.get(id);
+      if (!children) return;
+      for (const child of children) {
+        descendants.push(child.id);
+        collect(child.id);
+      }
+    };
+
+    collect(projectId);
+    return descendants;
+  }
+
+  // Check if a project has any children
+  hasChildren(projectId: string): boolean {
+    return this._projects.some((p) => p.parent_project_id === projectId);
+  }
+
+  // Toggle collapse state for a project
+  toggleCollapse(projectId: string) {
+    if (this._collapsedProjectIds.has(projectId)) {
+      this._collapsedProjectIds.delete(projectId);
+    } else {
+      this._collapsedProjectIds.add(projectId);
+    }
+    this._persistCollapsedState();
+    this.notify();
+  }
+
+  // Persist collapsed state to localStorage
+  private _persistCollapsedState() {
+    try {
+      const ids = Array.from(this._collapsedProjectIds);
+      globalThis.localStorage?.setItem(
+        "todos:collapsedProjects",
+        JSON.stringify(ids),
+      );
+    } catch {
+      // localStorage may not be available
+    }
+  }
+
+  // Restore collapsed state from localStorage
+  restoreCollapsedState() {
+    try {
+      const raw = globalThis.localStorage?.getItem("todos:collapsedProjects");
+      if (raw) {
+        const ids: string[] = JSON.parse(raw);
+        this._collapsedProjectIds = new Set(ids);
+      }
+    } catch {
+      // localStorage may not be available or data may be corrupt
+    }
   }
 
   // Computed values
@@ -381,6 +495,7 @@ class Store {
   async fetchAll() {
     this._loading = true;
     this.notify();
+    this.restoreCollapsedState();
     try {
       const [nextResult, tasks, projects, contexts, historyResult] =
         await Promise.all([

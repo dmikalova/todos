@@ -351,6 +351,383 @@ Deno.test({
       },
     );
 
+    await t.step("GET /api/tasks?projectId filters by project", async () => {
+      const res = await apiCall(
+        ctx.app,
+        "GET",
+        `/api/tasks?projectId=${projectId}`,
+      );
+      assertEquals(res.status, 200);
+      const tasks = await res.json();
+      for (const task of tasks) {
+        assertEquals(task.project_id, projectId);
+      }
+    });
+
+    await t.step(
+      "GET /api/tasks?deleted=true returns deleted tasks",
+      async () => {
+        const res = await apiCall(ctx.app, "GET", "/api/tasks?deleted=true");
+        assertEquals(res.status, 200);
+        const tasks = await res.json();
+        for (const task of tasks) {
+          assertExists(task.deleted_at);
+        }
+      },
+    );
+
+    await t.step(
+      "GET /api/tasks?deleted=false returns non-deleted tasks",
+      async () => {
+        const res = await apiCall(ctx.app, "GET", "/api/tasks?deleted=false");
+        assertEquals(res.status, 200);
+        const tasks = await res.json();
+        for (const task of tasks) {
+          assertEquals(task.deleted_at, null);
+        }
+      },
+    );
+
+    await t.step(
+      "GET /api/tasks?dueBefore and dueAfter filter by date",
+      async () => {
+        const res = await apiCall(
+          ctx.app,
+          "GET",
+          "/api/tasks?dueBefore=2026-06-01&dueAfter=2026-01-01",
+        );
+        assertEquals(res.status, 200);
+        const tasks = await res.json();
+        // Just check we get a valid response
+        assertEquals(Array.isArray(tasks), true);
+      },
+    );
+
+    await t.step(
+      "GET /api/tasks returns 400 for invalid query params",
+      async () => {
+        const res = await apiCall(
+          ctx.app,
+          "GET",
+          "/api/tasks?completed=invalid",
+        );
+        assertEquals(res.status, 400);
+        const body = await res.json();
+        assertEquals(body.error, "Validation error");
+      },
+    );
+
+    // -----------------------------------------------------------------------
+    // Error path tests
+    // -----------------------------------------------------------------------
+
+    await t.step(
+      "GET /api/tasks/:id returns 404 for non-existent task",
+      async () => {
+        const res = await apiCall(
+          ctx.app,
+          "GET",
+          "/api/tasks/00000000-0000-0000-0000-000000000099",
+        );
+        assertEquals(res.status, 404);
+        const body = await res.json();
+        assertEquals(body.error, "Task not found");
+      },
+    );
+
+    await t.step(
+      "PATCH /api/tasks/:id returns 404 for non-existent task",
+      async () => {
+        const res = await apiCall(
+          ctx.app,
+          "PATCH",
+          "/api/tasks/00000000-0000-0000-0000-000000000099",
+          { title: "Ghost" },
+        );
+        assertEquals(res.status, 404);
+        const body = await res.json();
+        assertEquals(body.error, "Task not found");
+      },
+    );
+
+    await t.step(
+      "DELETE /api/tasks/:id returns 404 for non-existent task",
+      async () => {
+        const res = await apiCall(
+          ctx.app,
+          "DELETE",
+          "/api/tasks/00000000-0000-0000-0000-000000000099",
+        );
+        assertEquals(res.status, 404);
+        const body = await res.json();
+        assertEquals(body.error, "Task not found");
+      },
+    );
+
+    await t.step(
+      "POST /api/tasks/:id/complete returns 404 for non-existent task",
+      async () => {
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          "/api/tasks/00000000-0000-0000-0000-000000000099/complete",
+        );
+        assertEquals(res.status, 404);
+      },
+    );
+
+    await t.step(
+      "POST /api/tasks/:id/complete returns 400 for already completed task",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Already Complete",
+          priority: 3,
+        });
+        const task = await createRes.json();
+
+        await apiCall(ctx.app, "POST", `/api/tasks/${task.id}/complete`);
+
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/tasks/${task.id}/complete`,
+        );
+        assertEquals(res.status, 400);
+        const body = await res.json();
+        assertEquals(body.error, "Task already completed");
+      },
+    );
+
+    await t.step(
+      "DELETE /api/tasks/:id/complete returns 404 for non-existent task",
+      async () => {
+        const res = await apiCall(
+          ctx.app,
+          "DELETE",
+          "/api/tasks/00000000-0000-0000-0000-000000000099/complete",
+        );
+        assertEquals(res.status, 404);
+      },
+    );
+
+    await t.step(
+      "DELETE /api/tasks/:id/complete returns 400 for task not completed",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Not Complete Undo",
+          priority: 3,
+        });
+        const task = await createRes.json();
+
+        const res = await apiCall(
+          ctx.app,
+          "DELETE",
+          `/api/tasks/${task.id}/complete`,
+        );
+        assertEquals(res.status, 400);
+        const body = await res.json();
+        assertEquals(body.error, "Task is not completed");
+      },
+    );
+
+    // -----------------------------------------------------------------------
+    // Defer presets and error paths
+    // -----------------------------------------------------------------------
+
+    await t.step(
+      "POST /api/tasks/:id/defer with later_today preset",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Defer Later Today",
+          priority: 3,
+        });
+        const task = await createRes.json();
+
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/tasks/${task.id}/defer`,
+          { preset: "later_today" },
+        );
+        assertEquals(res.status, 200);
+        const body = await res.json();
+        assertExists(body.deferred_until);
+      },
+    );
+
+    await t.step("POST /api/tasks/:id/defer with weekend preset", async () => {
+      const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test Defer Weekend",
+        priority: 3,
+      });
+      const task = await createRes.json();
+
+      const res = await apiCall(
+        ctx.app,
+        "POST",
+        `/api/tasks/${task.id}/defer`,
+        { preset: "weekend" },
+      );
+      assertEquals(res.status, 200);
+      const body = await res.json();
+      assertExists(body.deferred_until);
+    });
+
+    await t.step(
+      "POST /api/tasks/:id/defer with next_week preset",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Defer Next Week",
+          priority: 3,
+        });
+        const task = await createRes.json();
+
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/tasks/${task.id}/defer`,
+          { preset: "next_week" },
+        );
+        assertEquals(res.status, 200);
+        const body = await res.json();
+        assertExists(body.deferred_until);
+      },
+    );
+
+    await t.step(
+      "POST /api/tasks/:id/defer with explicit until datetime",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Defer Until",
+          priority: 3,
+        });
+        const task = await createRes.json();
+
+        const future = new Date();
+        future.setDate(future.getDate() + 3);
+
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/tasks/${task.id}/defer`,
+          { until: future.toISOString() },
+        );
+        assertEquals(res.status, 200);
+        const body = await res.json();
+        assertExists(body.deferred_until);
+      },
+    );
+
+    await t.step(
+      "POST /api/tasks/:id/defer returns 400 without until or preset",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Defer No Params",
+          priority: 3,
+        });
+        const task = await createRes.json();
+
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/tasks/${task.id}/defer`,
+          {},
+        );
+        assertEquals(res.status, 400);
+        const body = await res.json();
+        assertEquals(body.error, "Either 'until' or 'preset' is required");
+      },
+    );
+
+    await t.step(
+      "POST /api/tasks/:id/defer returns 400 for must-do task",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Defer Must Do",
+          priority: 1,
+          mustDo: true,
+        });
+        const task = await createRes.json();
+
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/tasks/${task.id}/defer`,
+          { preset: "tomorrow" },
+        );
+        assertEquals(res.status, 400);
+        const body = await res.json();
+        assertEquals(body.error, "Cannot defer must-do tasks");
+      },
+    );
+
+    await t.step(
+      "POST /api/tasks/:id/defer returns 404 for non-existent task",
+      async () => {
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          "/api/tasks/00000000-0000-0000-0000-000000000099/defer",
+          { preset: "tomorrow" },
+        );
+        assertEquals(res.status, 404);
+      },
+    );
+
+    await t.step(
+      "DELETE /api/tasks/:id/defer returns 404 for non-existent task",
+      async () => {
+        const res = await apiCall(
+          ctx.app,
+          "DELETE",
+          "/api/tasks/00000000-0000-0000-0000-000000000099/defer",
+        );
+        assertEquals(res.status, 404);
+      },
+    );
+
+    await t.step(
+      "POST /api/tasks/:id/defer returns 400 for invalid body",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Defer Invalid",
+          priority: 3,
+        });
+        const task = await createRes.json();
+
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/tasks/${task.id}/defer`,
+          { until: "not-a-datetime", preset: "invalid_preset" },
+        );
+        assertEquals(res.status, 400);
+        const body = await res.json();
+        assertEquals(body.error, "Validation error");
+      },
+    );
+
+    await t.step(
+      "PATCH /api/tasks/:id returns 400 for invalid body",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Update Invalid",
+          priority: 3,
+        });
+        const task = await createRes.json();
+
+        const res = await apiCall(
+          ctx.app,
+          "PATCH",
+          `/api/tasks/${task.id}`,
+          { priority: 999 }, // invalid: max is 5
+        );
+        assertEquals(res.status, 400);
+        const body = await res.json();
+        assertEquals(body.error, "Validation error");
+      },
+    );
+
     await teardownTestContext(ctx);
   },
   sanitizeOps: false,

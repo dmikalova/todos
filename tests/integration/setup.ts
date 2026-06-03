@@ -56,6 +56,7 @@ async function cleanTestData(db: ReturnType<typeof postgres>): Promise<void> {
   await db`DELETE FROM todos.recurrence_rules WHERE task_id IN (SELECT id FROM todos.tasks WHERE title LIKE 'Integration Test%')`;
   await db`DELETE FROM todos.task_history WHERE task_id IN (SELECT id FROM todos.tasks WHERE title LIKE 'Integration Test%')`;
   await db`DELETE FROM todos.tasks WHERE title LIKE 'Integration Test%'`;
+  await db`DELETE FROM todos.saved_filters WHERE name LIKE 'Test Filter%'`;
   await db`DELETE FROM todos.context_time_windows WHERE context_id IN (SELECT id FROM todos.contexts WHERE name LIKE 'Test Context%' OR name LIKE 'RLS %' OR name LIKE 'Other User%')`;
   await db`DELETE FROM todos.contexts WHERE name LIKE 'Test Context%' OR name LIKE 'RLS %' OR name LIKE 'Other User%'`;
   await db`DELETE FROM todos.projects WHERE name LIKE 'Test Project%' OR name LIKE 'RLS %' OR name LIKE 'Other User%' OR name LIKE 'Integration Test%'`;

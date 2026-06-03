@@ -3,8 +3,8 @@
 ## Purpose
 
 Define recurring time-based windows on contexts. Windows determine when a
-context is "active" based on day-of-week and local time ranges, driving the
-Next view pipeline.
+context is "active" based on day-of-week and local time ranges, driving the Next
+view pipeline.
 
 ## Requirements
 

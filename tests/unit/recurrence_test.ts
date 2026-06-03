@@ -4,6 +4,7 @@ import { assertEquals, assertThrows } from "@std/assert";
 import {
   calculateNextOccurrence,
   type RecurrenceRule,
+  validateRecurrenceRule,
 } from "../../src/services/recurrence.ts";
 
 // Helper to create a basic rule
@@ -246,4 +247,164 @@ Deno.test("fixed schedule - throws without frequency", () => {
     Error,
     "frequency is required",
   );
+});
+
+Deno.test("fixed schedule - throws for unknown frequency", () => {
+  const rule = createRule({
+    schedule_type: "fixed",
+    frequency: "bimonthly" as never,
+  });
+  const from = new Date("2026-02-21");
+  assertThrows(
+    () => calculateNextOccurrence(rule, from),
+    Error,
+    "Unknown frequency",
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Weekly recurrence - wrap around to next interval week
+// ---------------------------------------------------------------------------
+
+Deno.test(
+  "weekly recurrence - no matching day this week, wraps to next",
+  () => {
+    // From Friday (5), looking for Mon (1) only
+    const rule = createRule({
+      frequency: "weekly",
+      interval: 1,
+      days_of_week: [1], // Monday only
+    });
+    const from = new Date("2026-02-20T12:00:00"); // Friday
+    const next = calculateNextOccurrence(rule, from);
+    // Next Monday is Feb 23
+    assertEquals(next.toISOString().split("T")[0], "2026-02-23");
+  },
+);
+
+Deno.test("weekly recurrence - wrap with interval > 1", () => {
+  // From Friday (5), looking for Mon (1) with interval 2
+  const rule = createRule({
+    frequency: "weekly",
+    interval: 2,
+    days_of_week: [1], // Monday only
+  });
+  const from = new Date("2026-02-20T12:00:00"); // Friday
+  const next = calculateNextOccurrence(rule, from);
+  // Skip one week: next Monday + 7 = Mar 2
+  assertEquals(next.toISOString().split("T")[0], "2026-03-02");
+});
+
+// ---------------------------------------------------------------------------
+// Yearly recurrence - month_of_year only (no day_of_month)
+// ---------------------------------------------------------------------------
+
+Deno.test("yearly recurrence - month only, preserves day from fromDate", () => {
+  const rule = createRule({
+    frequency: "yearly",
+    interval: 1,
+    month_of_year: 6,
+    // no day_of_month
+  });
+  const from = new Date("2026-06-15T12:00:00");
+  const next = calculateNextOccurrence(rule, from);
+  assertEquals(next.toISOString().split("T")[0], "2027-06-15");
+});
+
+// ---------------------------------------------------------------------------
+// validateRecurrenceRule Tests
+// ---------------------------------------------------------------------------
+
+Deno.test("validateRecurrenceRule - valid fixed daily rule", () => {
+  const result = validateRecurrenceRule({
+    schedule_type: "fixed",
+    frequency: "daily",
+    interval: 1,
+  });
+  assertEquals(result.valid, true);
+  assertEquals(result.errors.length, 0);
+});
+
+Deno.test("validateRecurrenceRule - missing schedule_type", () => {
+  const result = validateRecurrenceRule({
+    frequency: "daily",
+    interval: 1,
+  });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.includes("schedule_type is required"), true);
+});
+
+Deno.test("validateRecurrenceRule - fixed without frequency", () => {
+  const result = validateRecurrenceRule({
+    schedule_type: "fixed",
+    interval: 1,
+  });
+  assertEquals(result.valid, false);
+  assertEquals(
+    result.errors.includes("frequency is required for fixed schedules"),
+    true,
+  );
+});
+
+Deno.test("validateRecurrenceRule - weekly with invalid day_of_week", () => {
+  const result = validateRecurrenceRule({
+    schedule_type: "fixed",
+    frequency: "weekly",
+    interval: 1,
+    days_of_week: [0, 7], // 7 is invalid
+  });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.length > 0, true);
+});
+
+Deno.test("validateRecurrenceRule - monthly with invalid day_of_month", () => {
+  const result = validateRecurrenceRule({
+    schedule_type: "fixed",
+    frequency: "monthly",
+    interval: 1,
+    day_of_month: 32,
+  });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.length > 0, true);
+});
+
+Deno.test("validateRecurrenceRule - yearly with invalid month_of_year", () => {
+  const result = validateRecurrenceRule({
+    schedule_type: "fixed",
+    frequency: "yearly",
+    interval: 1,
+    month_of_year: 13,
+  });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.length > 0, true);
+});
+
+Deno.test(
+  "validateRecurrenceRule - completion without days_after_completion",
+  () => {
+    const result = validateRecurrenceRule({
+      schedule_type: "completion",
+    });
+    assertEquals(result.valid, false);
+    assertEquals(result.errors.length > 0, true);
+  },
+);
+
+Deno.test("validateRecurrenceRule - invalid interval", () => {
+  const result = validateRecurrenceRule({
+    schedule_type: "fixed",
+    frequency: "daily",
+    interval: 0,
+  });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.includes("interval must be >= 1"), true);
+});
+
+Deno.test("validateRecurrenceRule - valid completion rule", () => {
+  const result = validateRecurrenceRule({
+    schedule_type: "completion",
+    days_after_completion: 7,
+  });
+  assertEquals(result.valid, true);
+  assertEquals(result.errors.length, 0);
 });

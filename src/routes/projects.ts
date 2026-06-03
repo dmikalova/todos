@@ -58,23 +58,26 @@ projects.post("/", async (c) => {
 
   const { name, description, color, contextId, parentProjectId } = result.data;
 
-  const project = await withTransaction(async (tx) => {
-    if (contextId) {
-      await assertOwnership(tx, "contexts", contextId, session.userId);
-    }
-    if (parentProjectId) {
-      await assertOwnership(tx, "projects", parentProjectId, session.userId);
-    }
+  const project = await withTransaction(
+    async (tx) => {
+      if (contextId) {
+        await assertOwnership(tx, "contexts", contextId, session.userId);
+      }
+      if (parentProjectId) {
+        await assertOwnership(tx, "projects", parentProjectId, session.userId);
+      }
 
-    const [created] = await tx<Project[]>`
+      const [created] = await tx<Project[]>`
       INSERT INTO projects (user_id, name, description, color, context_id, parent_project_id)
       VALUES (${session.userId}, ${name}, ${description || null}, ${
-      color || null
-    }, ${contextId || null}, ${parentProjectId || null})
+        color || null
+      }, ${contextId || null}, ${parentProjectId || null})
       RETURNING *
     `;
-    return created;
-  }, { userId: session.userId });
+      return created;
+    },
+    { userId: session.userId },
+  );
 
   return c.json(project, 201);
 });
@@ -83,16 +86,19 @@ projects.post("/", async (c) => {
 projects.get("/", async (c) => {
   const session = c.get("session") as SessionData;
 
-  const projectList = await withDb(async (sql: SqlQuery) => {
-    const result = await sql<ProjectWithCount[]>`
+  const projectList = await withDb(
+    async (sql: SqlQuery) => {
+      const result = await sql<ProjectWithCount[]>`
       SELECT p.*, COUNT(t.id)::int as task_count
       FROM projects p
       LEFT JOIN tasks t ON p.id = t.project_id AND t.deleted_at IS NULL AND t.completed_at IS NULL
       GROUP BY p.id
       ORDER BY p.name
     `;
-    return result;
-  }, { userId: session.userId });
+      return result;
+    },
+    { userId: session.userId },
+  );
 
   return c.json(projectList);
 });
@@ -101,14 +107,17 @@ projects.get("/", async (c) => {
 projects.get("/inbox", async (c) => {
   const session = c.get("session") as SessionData;
 
-  const tasks = await withDb(async (sql: SqlQuery) => {
-    const result = await sql`
+  const tasks = await withDb(
+    async (sql: SqlQuery) => {
+      const result = await sql`
       SELECT * FROM tasks
       WHERE project_id IS NULL AND deleted_at IS NULL
       ORDER BY created_at DESC
     `;
-    return result;
-  }, { userId: session.userId });
+      return result;
+    },
+    { userId: session.userId },
+  );
 
   return c.json({
     id: null,
@@ -123,16 +132,19 @@ projects.get("/:id", async (c) => {
   const session = c.get("session") as SessionData;
   const id = c.req.param("id");
 
-  const project = await withDb(async (sql: SqlQuery) => {
-    const [result] = await sql<ProjectWithCount[]>`
+  const project = await withDb(
+    async (sql: SqlQuery) => {
+      const [result] = await sql<ProjectWithCount[]>`
       SELECT p.*, COUNT(t.id)::int as task_count
       FROM projects p
       LEFT JOIN tasks t ON p.id = t.project_id AND t.deleted_at IS NULL AND t.completed_at IS NULL
       WHERE p.id = ${id}
       GROUP BY p.id
     `;
-    return result || null;
-  }, { userId: session.userId });
+      return result || null;
+    },
+    { userId: session.userId },
+  );
 
   if (!project) {
     return c.json({ error: "Project not found" }, 404);
@@ -157,46 +169,106 @@ projects.patch("/:id", async (c) => {
 
   const updates = result.data;
 
-  const project = await withTransaction(async (tx) => {
-    if (updates.contextId) {
-      await assertOwnership(tx, "contexts", updates.contextId, session.userId);
+  // Prevent circular parent references
+  if (
+    updates.parentProjectId !== undefined &&
+    updates.parentProjectId !== null
+  ) {
+    if (updates.parentProjectId === id) {
+      return c.json({ error: "A project cannot be its own parent" }, 400);
     }
-    if (updates.parentProjectId) {
-      await assertOwnership(
-        tx,
-        "projects",
-        updates.parentProjectId,
-        session.userId,
+
+    // Check if the proposed parent is a descendant of this project
+    const isDescendant = await withDb(
+      async (sql: SqlQuery) => {
+        // Walk down from 'id' to find all descendants
+        const allProjects = await sql<
+          Project[]
+        >`SELECT id, parent_project_id FROM projects`;
+        const childrenMap = new Map<string, string[]>();
+        for (const p of allProjects) {
+          const parentId = p.parent_project_id ?? "";
+          if (!childrenMap.has(parentId)) childrenMap.set(parentId, []);
+          childrenMap.get(parentId)!.push(p.id);
+        }
+
+        const visited = new Set<string>();
+        const stack = [id];
+        while (stack.length > 0) {
+          const current = stack.pop()!;
+          const children = childrenMap.get(current);
+          if (!children) continue;
+          for (const childId of children) {
+            if (childId === updates.parentProjectId) return true;
+            if (!visited.has(childId)) {
+              visited.add(childId);
+              stack.push(childId);
+            }
+          }
+        }
+        return false;
+      },
+      { userId: session.userId },
+    );
+
+    if (isDescendant) {
+      return c.json(
+        { error: "Cannot set parent to a descendant project" },
+        400,
       );
     }
+  }
 
-    const [existing] = await tx<
-      Project[]
-    >`SELECT * FROM projects WHERE id = ${id}`;
-    if (!existing) return null;
+  const project = await withTransaction(
+    async (tx) => {
+      if (updates.contextId) {
+        await assertOwnership(
+          tx,
+          "contexts",
+          updates.contextId,
+          session.userId,
+        );
+      }
+      if (updates.parentProjectId) {
+        await assertOwnership(
+          tx,
+          "projects",
+          updates.parentProjectId,
+          session.userId,
+        );
+      }
 
-    const [updated] = await tx<Project[]>`
+      const [existing] = await tx<
+        Project[]
+      >`SELECT * FROM projects WHERE id = ${id}`;
+      if (!existing) return null;
+
+      const [updated] = await tx<Project[]>`
       UPDATE projects SET
         name = COALESCE(${updates.name ?? null}, name),
         description = ${
-      updates.description !== undefined
-        ? updates.description
-        : existing.description
-    },
+        updates.description !== undefined
+          ? updates.description
+          : existing.description
+      },
         color = ${updates.color !== undefined ? updates.color : existing.color},
         context_id = ${
-      updates.contextId !== undefined ? updates.contextId : existing.context_id
-    },
+        updates.contextId !== undefined
+          ? updates.contextId
+          : existing.context_id
+      },
         parent_project_id = ${
-      updates.parentProjectId !== undefined
-        ? updates.parentProjectId
-        : existing.parent_project_id
-    }
+        updates.parentProjectId !== undefined
+          ? updates.parentProjectId
+          : existing.parent_project_id
+      }
       WHERE id = ${id}
       RETURNING *
     `;
-    return updated;
-  }, { userId: session.userId });
+      return updated;
+    },
+    { userId: session.userId },
+  );
 
   if (!project) {
     return c.json({ error: "Project not found" }, 404);
@@ -210,23 +282,26 @@ projects.delete("/:id", async (c) => {
   const session = c.get("session") as SessionData;
   const id = c.req.param("id");
 
-  const deleted = await withTransaction(async (tx) => {
-    const [existing] = await tx<
-      Project[]
-    >`SELECT * FROM projects WHERE id = ${id}`;
-    if (!existing) return null;
+  const deleted = await withTransaction(
+    async (tx) => {
+      const [existing] = await tx<
+        Project[]
+      >`SELECT * FROM projects WHERE id = ${id}`;
+      if (!existing) return null;
 
-    // Move tasks to Inbox (set project_id to NULL)
-    await tx`UPDATE tasks SET project_id = NULL WHERE project_id = ${id}`;
+      // Move tasks to Inbox (set project_id to NULL)
+      await tx`UPDATE tasks SET project_id = NULL WHERE project_id = ${id}`;
 
-    // Re-parent child projects to Inbox (clear parent)
-    await tx`UPDATE projects SET parent_project_id = NULL WHERE parent_project_id = ${id}`;
+      // Re-parent child projects to Inbox (clear parent)
+      await tx`UPDATE projects SET parent_project_id = NULL WHERE parent_project_id = ${id}`;
 
-    // Delete project
-    await tx`DELETE FROM projects WHERE id = ${id}`;
+      // Delete project
+      await tx`DELETE FROM projects WHERE id = ${id}`;
 
-    return existing;
-  }, { userId: session.userId });
+      return existing;
+    },
+    { userId: session.userId },
+  );
 
   if (!deleted) {
     return c.json({ error: "Project not found" }, 404);

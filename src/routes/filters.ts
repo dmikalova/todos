@@ -2,9 +2,8 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { withDb } from "../db/index.ts";
+import { type SqlQuery, withDb } from "../db/index.ts";
 import type { AppEnv, SessionData } from "../types.ts";
-import { type SqlQuery } from "../db/index.ts";
 
 export const filters = new Hono<AppEnv>();
 
@@ -36,7 +35,7 @@ interface SavedFilter {
   id: string;
   user_id: string;
   name: string;
-  criteria: Record<string, unknown>;
+  filter: Record<string, unknown>;
   created_at: Date;
 }
 
@@ -55,14 +54,17 @@ filters.post("/", async (c) => {
 
   const { name, criteria } = result.data;
 
-  const filter = await withDb(async (sql: SqlQuery) => {
-    const [created] = await sql<SavedFilter[]>`
-      INSERT INTO saved_filters (user_id, name, criteria)
+  const filter = await withDb(
+    async (sql: SqlQuery) => {
+      const [created] = await sql<SavedFilter[]>`
+      INSERT INTO saved_filters (user_id, name, filter)
       VALUES (${session.userId}, ${name}, ${sql.json(criteria)})
       RETURNING *
     `;
-    return created;
-  }, { userId: session.userId });
+      return created;
+    },
+    { userId: session.userId },
+  );
 
   return c.json(filter, 201);
 });
@@ -71,14 +73,17 @@ filters.post("/", async (c) => {
 filters.get("/", async (c) => {
   const session = c.get("session") as SessionData;
 
-  const filterList = await withDb(async (sql: SqlQuery) => {
-    const result = await sql<SavedFilter[]>`
+  const filterList = await withDb(
+    async (sql: SqlQuery) => {
+      const result = await sql<SavedFilter[]>`
       SELECT * FROM saved_filters
       WHERE user_id = ${session.userId}
       ORDER BY name
     `;
-    return result;
-  }, { userId: session.userId });
+      return result;
+    },
+    { userId: session.userId },
+  );
 
   return c.json(filterList);
 });
@@ -88,13 +93,16 @@ filters.get("/:id", async (c) => {
   const session = c.get("session") as SessionData;
   const id = c.req.param("id");
 
-  const filter = await withDb(async (sql: SqlQuery) => {
-    const [result] = await sql<SavedFilter[]>`
+  const filter = await withDb(
+    async (sql: SqlQuery) => {
+      const [result] = await sql<SavedFilter[]>`
       SELECT * FROM saved_filters
       WHERE id = ${id} AND user_id = ${session.userId}
     `;
-    return result || null;
-  }, { userId: session.userId });
+      return result || null;
+    },
+    { userId: session.userId },
+  );
 
   if (!filter) {
     return c.json({ error: "Filter not found" }, 404);
@@ -119,23 +127,26 @@ filters.patch("/:id", async (c) => {
 
   const updates = result.data;
 
-  const filter = await withDb(async (sql: SqlQuery) => {
-    const [existing] = await sql<SavedFilter[]>`
+  const filter = await withDb(
+    async (sql: SqlQuery) => {
+      const [existing] = await sql<SavedFilter[]>`
       SELECT * FROM saved_filters WHERE id = ${id} AND user_id = ${session.userId}
     `;
-    if (!existing) return null;
+      if (!existing) return null;
 
-    const [updated] = await sql<SavedFilter[]>`
+      const [updated] = await sql<SavedFilter[]>`
       UPDATE saved_filters SET
         name = COALESCE(${updates.name ?? null}, name),
-        criteria = COALESCE(${
-      updates.criteria ? sql.json(updates.criteria) : null
-    }, criteria)
+        filter = COALESCE(${
+        updates.criteria ? sql.json(updates.criteria) : null
+      }, filter)
       WHERE id = ${id}
       RETURNING *
     `;
-    return updated;
-  }, { userId: session.userId });
+      return updated;
+    },
+    { userId: session.userId },
+  );
 
   if (!filter) {
     return c.json({ error: "Filter not found" }, 404);
@@ -149,15 +160,18 @@ filters.delete("/:id", async (c) => {
   const session = c.get("session") as SessionData;
   const id = c.req.param("id");
 
-  const deleted = await withDb(async (sql: SqlQuery) => {
-    const [existing] = await sql<SavedFilter[]>`
+  const deleted = await withDb(
+    async (sql: SqlQuery) => {
+      const [existing] = await sql<SavedFilter[]>`
       SELECT * FROM saved_filters WHERE id = ${id} AND user_id = ${session.userId}
     `;
-    if (!existing) return null;
+      if (!existing) return null;
 
-    await sql`DELETE FROM saved_filters WHERE id = ${id}`;
-    return existing;
-  }, { userId: session.userId });
+      await sql`DELETE FROM saved_filters WHERE id = ${id}`;
+      return existing;
+    },
+    { userId: session.userId },
+  );
 
   if (!deleted) {
     return c.json({ error: "Filter not found" }, 404);
@@ -171,70 +185,73 @@ filters.post("/:id/apply", async (c) => {
   const session = c.get("session") as SessionData;
   const id = c.req.param("id");
 
-  const result = await withDb(async (sql: SqlQuery) => {
-    const [filter] = await sql<SavedFilter[]>`
+  const result = await withDb(
+    async (sql: SqlQuery) => {
+      const [filter] = await sql<SavedFilter[]>`
       SELECT * FROM saved_filters WHERE id = ${id} AND user_id = ${session.userId}
     `;
-    if (!filter) return null;
+      if (!filter) return null;
 
-    const criteria = filter.criteria as {
-      contexts?: string[];
-      projects?: string[];
-      tags?: string[];
-      dueBefore?: string;
-      dueAfter?: string;
-      completed?: boolean;
-      hasRecurrence?: boolean;
-    };
+      const criteria = filter.filter as {
+        contexts?: string[];
+        projects?: string[];
+        tags?: string[];
+        dueBefore?: string;
+        dueAfter?: string;
+        completed?: boolean;
+        hasRecurrence?: boolean;
+      };
 
-    // Build dynamic query based on criteria
-    interface TaskRow {
-      id: string;
-      title: string;
-      due_date: Date | null;
-      completed_at: Date | null;
-      project_id: string | null;
-    }
+      // Build dynamic query based on criteria
+      interface TaskRow {
+        id: string;
+        title: string;
+        due_date: Date | null;
+        completed_at: Date | null;
+        project_id: string | null;
+      }
 
-    const taskRows = await sql<TaskRow[]>`
+      const taskRows = await sql<TaskRow[]>`
       SELECT t.*
       FROM tasks t
       WHERE t.deleted_at IS NULL
       ORDER BY t.due_date NULLS LAST, t.created_at DESC
     `;
 
-    // Copy to mutable array for filtering
-    let tasks: TaskRow[] = [...taskRows];
+      // Copy to mutable array for filtering
+      let tasks: TaskRow[] = [...taskRows];
 
-    // Apply filters in memory
-    if (criteria.projects && criteria.projects.length > 0) {
-      tasks = tasks.filter((t) =>
-        criteria.projects!.includes(t.project_id || "")
-      );
-    }
+      // Apply filters in memory
+      if (criteria.projects && criteria.projects.length > 0) {
+        tasks = tasks.filter((t) =>
+          criteria.projects!.includes(t.project_id || "")
+        );
+      }
 
-    if (criteria.completed !== undefined) {
-      tasks = tasks.filter(
-        (t) => (t.completed_at !== null) === criteria.completed,
-      );
-    }
+      if (criteria.completed !== undefined) {
+        tasks = tasks.filter(
+          (t) => (t.completed_at !== null) === criteria.completed,
+        );
+      }
 
-    if (criteria.dueBefore) {
-      const before = new Date(criteria.dueBefore);
-      tasks = tasks.filter((t) => {
-        return t.due_date && new Date(t.due_date) <= before;
-      });
-    }
+      if (criteria.dueBefore) {
+        const before = new Date(criteria.dueBefore);
+        tasks = tasks.filter((t) => {
+          return t.due_date && new Date(t.due_date) <= before;
+        });
+      }
 
-    if (criteria.dueAfter) {
-      const after = new Date(criteria.dueAfter);
-      tasks = tasks.filter((t) => {
-        return t.due_date && new Date(t.due_date) >= after;
-      });
-    }
+      if (criteria.dueAfter) {
+        const after = new Date(criteria.dueAfter);
+        tasks = tasks.filter((t) => {
+          return t.due_date && new Date(t.due_date) >= after;
+        });
+      }
 
-    return { filter, tasks };
-  }, { userId: session.userId });
+      return { filter, tasks };
+    },
+    { userId: session.userId },
+  );
 
   if (!result) {
     return c.json({ error: "Filter not found" }, 404);

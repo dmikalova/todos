@@ -248,6 +248,16 @@ Deno.test({
       },
     );
 
+    await t.step(
+      "GET /api/next returns 400 for invalid query params",
+      async () => {
+        const res = await apiCall(ctx.app, "GET", "/api/next?count=999");
+        assertEquals(res.status, 400);
+        const body = await res.json();
+        assertEquals(body.error, "Validation error");
+      },
+    );
+
     await teardownTestContext(ctx);
   },
   sanitizeOps: false,

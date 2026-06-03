@@ -172,8 +172,8 @@ CREATE POLICY task_history_user_delete ON todos.task_history FOR DELETE
 -- ============================================================================
 -- Grants for non-superuser app role (superusers bypass RLS)
 -- ============================================================================
-GRANT USAGE ON SCHEMA todos TO todos_app;
-GRANT ALL ON ALL TABLES IN SCHEMA todos TO todos_app;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA todos TO todos_app;
+GRANT USAGE ON SCHEMA todos TO "todos-role";
+GRANT ALL ON ALL TABLES IN SCHEMA todos TO "todos-role";
+GRANT ALL ON ALL SEQUENCES IN SCHEMA todos TO "todos-role";
 
 COMMIT;

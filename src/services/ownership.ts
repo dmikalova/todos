@@ -5,19 +5,12 @@ import { HTTPException } from "hono/http-exception";
 import type { SqlQuery } from "../db/index.ts";
 
 // Only these tables support ownership checks
-const OWNED_TABLES = new Set([
-  "projects",
-  "contexts",
-  "tasks",
-  "saved_filters",
-]);
+const OWNED_TABLES = new Set(["projects", "contexts"]);
 
 // Singular label for error messages
 const TABLE_LABELS: Record<string, string> = {
   projects: "Project",
   contexts: "Context",
-  tasks: "Task",
-  saved_filters: "Filter",
 };
 
 /**
@@ -48,16 +41,6 @@ export async function assertOwnership(
       rows = await sql<
         { user_id: string }[]
       >`SELECT user_id FROM contexts WHERE id = ${id}`;
-      break;
-    case "tasks":
-      rows = await sql<
-        { user_id: string }[]
-      >`SELECT user_id FROM tasks WHERE id = ${id}`;
-      break;
-    case "saved_filters":
-      rows = await sql<
-        { user_id: string }[]
-      >`SELECT user_id FROM saved_filters WHERE id = ${id}`;
       break;
     default:
       throw new Error(`assertOwnership: unsupported table "${table}"`);

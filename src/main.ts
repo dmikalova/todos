@@ -1,6 +1,7 @@
 // Todos - Main Entry Point
 // This file bootstraps the application
 
+import "./secrets.ts";
 import { app } from "./app.ts";
 import { closeConnection } from "./db/index.ts";
 

@@ -98,6 +98,11 @@ table "projects" {
     columns = [column.user_id]
   }
 
+  index "idx_projects_user_id_name" {
+    columns = [column.user_id, column.name]
+    unique  = true
+  }
+
   index "idx_projects_context_id" {
     columns = [column.context_id]
   }
@@ -310,6 +315,10 @@ table "tasks" {
 
   check "valid_priority" {
     expr = "priority >= 1 AND priority <= 4"
+  }
+
+  check "valid_title_length" {
+    expr = "length(title) <= 500"
   }
 
 }

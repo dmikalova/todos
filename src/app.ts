@@ -23,14 +23,25 @@ import type { AppEnv } from "./types.ts";
 let frontendBundle: string | null = null;
 let frontendSourceMap: string | null = null;
 
-async function bundleFrontend(): Promise<void> {
-  const isDev = Deno.env.get("DENO_ENV") === "development";
+// Exported for testing - allows setting bundle state without running esbuild
+export function _setBundleState(
+  bundle: string | null,
+  sourceMap: string | null,
+): void {
+  frontendBundle = bundle;
+  frontendSourceMap = sourceMap;
+}
+
+export async function bundleFrontend(
+  isDev = Deno.env.get("DENO_ENV") === "development",
+): Promise<void> {
   console.log("Bundling frontend...");
 
   const result = await esbuild.build({
     entryPoints: ["./src/frontend/app.ts"],
     bundle: true,
     format: "esm",
+    outfile: "app.js",
     write: false,
     minify: !isDev,
     sourcemap: isDev,
@@ -44,12 +55,12 @@ async function bundleFrontend(): Promise<void> {
     },
   });
 
-  frontendBundle = new TextDecoder().decode(result.outputFiles[0].contents);
-  if (isDev && result.outputFiles[1]) {
-    frontendSourceMap = new TextDecoder().decode(
-      result.outputFiles[1].contents,
-    );
-  }
+  const jsFile = result.outputFiles.find((f) => f.path.endsWith(".js"))!;
+  const mapFile = result.outputFiles.find((f) => f.path.endsWith(".js.map"));
+  frontendBundle = new TextDecoder().decode(jsFile.contents);
+  frontendSourceMap = mapFile
+    ? new TextDecoder().decode(mapFile.contents)
+    : null;
 
   console.log(
     `Frontend bundled: ${Math.round(frontendBundle.length / 1024)}KB`,
@@ -87,8 +98,7 @@ app.route("/api/import", importRoutes);
 
 // Current user profile
 app.get("/api/me", (c) => {
-  const session = c.get("session");
-  if (!session) return c.json({ error: "Unauthorized" }, 401);
+  const session = c.get("session")!;
   return c.json({
     email: session.email,
     name: session.name,
@@ -102,10 +112,7 @@ app.get("/api/me", (c) => {
 app.use("/assets/*", serveStatic({ root: "./dist" }));
 
 // Serve bundled frontend JS (from memory, bundled at startup)
-app.get("/app.js", (c) => {
-  if (!frontendBundle) {
-    return c.json({ error: "Frontend not bundled" }, 500);
-  }
+app.get("/app.js", (_c) => {
   return new Response(frontendBundle, {
     headers: { "Content-Type": "application/javascript" },
   });
@@ -154,9 +161,7 @@ app.get("/theme.css", async (c) => {
 });
 
 // Serve frontend
-async function serveIndex(
-  c: Context,
-): Promise<Response> {
+async function serveIndex(c: Context): Promise<Response> {
   // Try dist first (production build), then src/public (legacy)
   for (const path of ["./dist/index.html", "./src/public/index.html"]) {
     try {

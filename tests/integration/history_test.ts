@@ -2,6 +2,9 @@
 // Tests: paginated history, task-specific history, stats, action filtering
 
 import { assertEquals, assertExists } from "@std/assert";
+import { withTransaction } from "../../src/db/client.ts";
+import type { SqlQuery } from "../../src/db/client.ts";
+import { logTaskActionTx } from "../../src/services/history.ts";
 import {
   apiCall,
   setupTestContext,
@@ -143,6 +146,21 @@ Deno.test({
       },
     );
 
+    await t.step(
+      "GET /api/history with combined taskId+action filters",
+      async () => {
+        const res = await apiCall(
+          ctx.app,
+          "GET",
+          `/api/history?taskId=${taskId}&action=completed`,
+        );
+        assertEquals(res.status, 200);
+        const body = await res.json();
+        assertExists(body.entries);
+        assertExists(body.pagination);
+      },
+    );
+
     await t.step("GET /api/history/stats returns stats", async () => {
       const res = await apiCall(ctx.app, "GET", "/api/history/stats?days=30");
       assertEquals(res.status, 200);
@@ -180,6 +198,34 @@ Deno.test({
       const res2 = await apiCall(ctx.app, "GET", "/api/history/stats?days=365");
       assertEquals(res2.status, 200);
     });
+
+    await t.step(
+      "logTaskActionTx works without details (uses {} fallback)",
+      async () => {
+        await withTransaction(async (sql: SqlQuery) => {
+          await logTaskActionTx(sql, {
+            taskId: taskId,
+            userId: "00000000-0000-0000-0000-000000000001",
+            action: "updated",
+            // No details field — triggers the || {} branch
+          });
+        }, { userId: "00000000-0000-0000-0000-000000000001" });
+
+        // Verify it was logged
+        const res = await apiCall(
+          ctx.app,
+          "GET",
+          `/api/history/task/${taskId}`,
+        );
+        assertEquals(res.status, 200);
+        const body = await res.json();
+        // Should have an entry with empty object details
+        const emptyDetailsEntry = body.entries.find(
+          (e: { details: string }) => e.details === "{}",
+        );
+        assertExists(emptyDetailsEntry);
+      },
+    );
 
     await teardownTestContext(ctx);
   },

@@ -1,7 +1,6 @@
 // Integration test configuration
 // Provides database and API clients for integration tests
 
-import { assertEquals } from "@std/assert";
 import postgres from "postgres";
 import { app } from "../../src/app.ts";
 
@@ -95,27 +94,4 @@ export function apiCall(
 ): Promise<Response> {
   const req = mockAuthRequest(method, path, body);
   return Promise.resolve(testApp.fetch(req));
-}
-
-// Helper to assert API response
-export async function assertApiResponse(
-  response: Response,
-  expectedStatus: number,
-  expectedBody?: unknown,
-): Promise<void> {
-  assertEquals(response.status, expectedStatus);
-
-  if (expectedBody) {
-    const body = await response.json();
-    assertEquals(body, expectedBody);
-  }
-}
-
-// Generate unique test IDs
-export function testId(prefix: string): string {
-  return `test-${prefix}-${Date.now()}-${
-    Math.random()
-      .toString(36)
-      .substr(2, 9)
-  }`;
 }

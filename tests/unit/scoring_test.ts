@@ -332,3 +332,59 @@ Deno.test("getNextTasks - filters by context", () => {
   assertEquals(ids.includes("any"), true);
   assertEquals(ids.includes("home"), false);
 });
+
+Deno.test("getNextTasks - returns all tasks when no limit specified", () => {
+  const now = new Date("2026-02-21");
+  const tasks = [
+    createTask({ id: "1" }),
+    createTask({ id: "2" }),
+    createTask({ id: "3" }),
+    createTask({ id: "4" }),
+    createTask({ id: "5" }),
+  ];
+
+  const results = getNextTasks(tasks, { now });
+
+  assertEquals(results.length, 5);
+});
+
+Deno.test("getNextTasks - uses current date when now is not provided", () => {
+  const tasks = [
+    createTask({ id: "1" }),
+    createTask({ id: "2" }),
+  ];
+
+  // Call without `now` to hit the ?? new Date() fallback
+  const results = getNextTasks(tasks);
+
+  assertEquals(results.length, 2);
+});
+
+Deno.test(
+  "scoreTask - uses current date when now option is not provided",
+  () => {
+    const task = createTask({ due_date: null, created_at: new Date() });
+
+    // Call without now - should use Date.now() internally
+    const result = scoreTask(task, { randomValue: 0 });
+
+    // Age should be ~0 since created_at is now
+    assertEquals(result.scoreBreakdown.age, 0);
+    assertEquals(result.scoreBreakdown.dueUrgency, SCORING.NO_DUE_DATE_WEIGHT);
+  },
+);
+
+Deno.test(
+  "isTaskEligible - uses current date when now option is not provided",
+  () => {
+    // A task deferred far in the future should not be eligible
+    const futureTask = createTask({
+      deferred_until: new Date(Date.now() + 86400000 * 30),
+    });
+    assertEquals(isTaskEligible(futureTask), false);
+
+    // A task with no deferrals and not completed should be eligible
+    const openTask = createTask({});
+    assertEquals(isTaskEligible(openTask), true);
+  },
+);

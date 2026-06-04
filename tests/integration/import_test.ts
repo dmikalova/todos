@@ -48,10 +48,10 @@ Deno.test({
     });
 
     await t.step(
-      "merge mode skip duplicate tasks fails for null project_id",
+      "merge mode skips duplicate task with null project_id",
       async () => {
-        // Known bug: postgres.js can't determine type of null parameter in
-        // (project_id = $1 OR (project_id IS NULL AND $1 IS NULL))
+        // Task "Integration Test Imported Task 1" was imported earlier with no project.
+        // Now the null project_id duplicate check uses IS NULL directly (no param type issue).
         const res = await apiCall(
           ctx.app,
           "POST",
@@ -61,8 +61,9 @@ Deno.test({
           },
         );
         const body = await res.json();
-        assertEquals(body.success, false);
-        assertEquals(body.errors.length > 0, true);
+        assertEquals(body.success, true);
+        assertEquals(body.skipped.tasks, 1);
+        assertEquals(body.imported.tasks, 0);
       },
     );
 
@@ -146,20 +147,121 @@ Deno.test({
     );
 
     await t.step(
-      "POST /api/import with bad FK reference fails transaction",
+      "POST /api/import with bad FK reference catches per-item error",
       async () => {
-        // A non-existent project_id FK causes the entire transaction to fail
+        // A non-existent project_id FK fails within its savepoint,
+        // but the transaction continues for other items
         const res = await apiCall(ctx.app, "POST", "/api/import?mode=merge", {
           tasks: [
             {
               title: "Integration Test Task With Bad Project Ref",
               project_id: "00000000-0000-4000-8000-ffffffffffff",
             },
+            {
+              title: "Integration Test Task Without Project Ref",
+            },
           ],
         });
         const body = await res.json();
-        // Transaction fails completely - success is false
-        assertEquals(body.success, false);
+        // Transaction succeeds overall but has errors (207 partial)
+        assertEquals(body.success, true);
+        assertEquals(body.imported.tasks, 1);
+        assertEquals(body.errors.length, 1);
+        assertEquals(body.errors[0].includes("Bad Project Ref"), true);
+        assertEquals(res.status, 207);
+      },
+    );
+
+    await t.step(
+      "POST /api/import context with invalid time range catches per-item error",
+      async () => {
+        // start_time > end_time violates the CHECK constraint in context_time_windows
+        const res = await apiCall(ctx.app, "POST", "/api/import?mode=merge", {
+          contexts: [
+            {
+              name: "Integration Test Context Bad Time",
+              time_windows: [
+                { day_of_week: 1, start_time: "23:00", end_time: "01:00" },
+              ],
+            },
+          ],
+        });
+        const body = await res.json();
+        assertEquals(body.success, true);
+        assertEquals(body.errors.length, 1);
+        assertEquals(body.errors[0].includes("Bad Time"), true);
+        assertEquals(res.status, 207);
+      },
+    );
+
+    await t.step(
+      "POST /api/import skips duplicate task with project reference",
+      async () => {
+        // First import a task with a project
+        const projectId = "00000000-0000-4000-8000-000000000088";
+        await apiCall(ctx.app, "POST", "/api/import?mode=merge", {
+          projects: [{ id: projectId, name: "Dedup Test Project" }],
+          tasks: [{ title: "Dedup Task With Project", project_id: projectId }],
+        });
+        // Re-import the same task with skipDuplicates — should skip
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          "/api/import?mode=merge&skipDuplicates=true",
+          {
+            projects: [{ id: projectId, name: "Dedup Test Project" }],
+            tasks: [
+              { title: "Dedup Task With Project", project_id: projectId },
+            ],
+          },
+        );
+        const body = await res.json();
+        assertEquals(body.success, true);
+        assertEquals(body.skipped.tasks, 1);
+        assertEquals(body.imported.tasks, 0);
+      },
+    );
+
+    await t.step(
+      "POST /api/import task with recurrence without day_of_week",
+      async () => {
+        const res = await apiCall(ctx.app, "POST", "/api/import?mode=merge", {
+          tasks: [
+            {
+              title: "Integration Test Recurrence No Day",
+              recurrence: {
+                schedule_type: "fixed",
+                frequency: "daily",
+                interval: 1,
+              },
+            },
+          ],
+        });
+        const body = await res.json();
+        assertEquals(body.success, true);
+        assertEquals(body.imported.tasks, 1);
+      },
+    );
+
+    await t.step(
+      "POST /api/import duplicate project name triggers catch block",
+      async () => {
+        // Import a project, then re-import without skipDuplicates
+        // The unique constraint on (user_id, name) will cause a violation
+        await apiCall(ctx.app, "POST", "/api/import?mode=merge", {
+          projects: [{ name: "Unique Constraint Project" }],
+        });
+        const res = await apiCall(ctx.app, "POST", "/api/import?mode=merge", {
+          projects: [{ name: "Unique Constraint Project" }],
+        });
+        const body = await res.json();
+        assertEquals(body.success, true);
+        assertEquals(body.errors.length, 1);
+        assertEquals(
+          body.errors[0].includes("Unique Constraint Project"),
+          true,
+        );
+        assertEquals(res.status, 207);
       },
     );
 

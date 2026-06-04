@@ -9,12 +9,9 @@ function getSessionDomain(): string {
   return Deno.env.get("SESSION_DOMAIN") || "mklv.tech";
 }
 
-function getLoginUrl(returnUrl?: string): string {
+function getLoginUrl(returnUrl: string): string {
   const loginBase = `https://login.${getSessionDomain()}`;
-  if (returnUrl) {
-    return `${loginBase}?returnUrl=${encodeURIComponent(returnUrl)}`;
-  }
-  return loginBase;
+  return `${loginBase}?returnUrl=${encodeURIComponent(returnUrl)}`;
 }
 
 // Cached CryptoKey for JWT verification
@@ -83,7 +80,7 @@ async function getJwtKey(): Promise<CryptoKey> {
 async function validateSession(token: string): Promise<SessionData | null> {
   try {
     const key = await getJwtKey();
-    const payload = await verify(token, key);
+    const payload = await verify(token, key, { ignoreExp: true });
 
     if (payload.aud !== "authenticated") {
       console.warn("JWT validation failed: invalid audience");

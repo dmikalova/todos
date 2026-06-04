@@ -96,10 +96,10 @@ history.get("/", async (c) => {
         ORDER BY th.created_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `;
-      const [countResult] = await sql<{ count: string }[]>`
+      const [{ count }] = await sql<{ count: string }[]>`
         SELECT COUNT(*)::text as count FROM task_history WHERE task_id = ${taskId}
       `;
-      total = parseInt(countResult?.count || "0", 10);
+      total = parseInt(count, 10);
     } else if (action && !taskId && !startDate && !endDate) {
       // Simple filter by action
       entries = await sql<HistoryEntryWithTask[]>`
@@ -110,10 +110,10 @@ history.get("/", async (c) => {
         ORDER BY th.created_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `;
-      const [countResult] = await sql<{ count: string }[]>`
+      const [{ count }] = await sql<{ count: string }[]>`
         SELECT COUNT(*)::text as count FROM task_history WHERE action = ${action}
       `;
-      total = parseInt(countResult?.count || "0", 10);
+      total = parseInt(count, 10);
     } else {
       // No filters or complex filters - return all (paginated)
       entries = await sql<HistoryEntryWithTask[]>`
@@ -123,10 +123,10 @@ history.get("/", async (c) => {
         ORDER BY th.created_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `;
-      const [countResult] = await sql<{ count: string }[]>`
+      const [{ count }] = await sql<{ count: string }[]>`
         SELECT COUNT(*)::text as count FROM task_history
       `;
-      total = parseInt(countResult?.count || "0", 10);
+      total = parseInt(count, 10);
     }
 
     return { entries, total };
@@ -193,7 +193,7 @@ history.get("/stats", async (c) => {
     `;
 
     // Total tasks completed
-    const [completedCount] = await sql<{ count: string }[]>`
+    const [{ count: completedCount }] = await sql<{ count: string }[]>`
       SELECT COUNT(*)::text as count
       FROM task_history
       WHERE action = 'completed' AND created_at >= ${since.toISOString()}
@@ -209,7 +209,7 @@ history.get("/stats", async (c) => {
         date: d.date,
         count: parseInt(d.count, 10),
       })),
-      tasksCompleted: parseInt(completedCount?.count || "0", 10),
+      tasksCompleted: parseInt(completedCount, 10),
     };
   }, { userId: session.userId });
 

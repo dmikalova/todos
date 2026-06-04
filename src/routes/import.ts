@@ -136,27 +136,29 @@ importRoutes.post("/", async (c) => {
         if (data.projects) {
           for (const project of data.projects) {
             try {
-              if (options.skipDuplicates && options.mode === "merge") {
-                // Check for existing project with same name
-                const [existing] = await tx<{ id: string }[]>`
-                SELECT id FROM projects WHERE name = ${project.name}
-              `;
-                if (existing) {
-                  projectIdMap.set(project.id || project.name, existing.id);
-                  result.skipped.projects++;
-                  continue;
+              await tx.savepoint(async (sp) => {
+                if (options.skipDuplicates && options.mode === "merge") {
+                  // Check for existing project with same name
+                  const [existing] = await sp<{ id: string }[]>`
+                  SELECT id FROM projects WHERE name = ${project.name}
+                `;
+                  if (existing) {
+                    projectIdMap.set(project.id || project.name, existing.id);
+                    result.skipped.projects++;
+                    return;
+                  }
                 }
-              }
 
-              const [created] = await tx<{ id: string }[]>`
-              INSERT INTO projects (user_id, name, description)
-              VALUES (${session.userId}, ${project.name}, ${
-                project.description || null
-              })
-              RETURNING id
-            `;
-              projectIdMap.set(project.id || project.name, created.id);
-              result.imported.projects++;
+                const [created] = await sp<{ id: string }[]>`
+                INSERT INTO projects (user_id, name, description)
+                VALUES (${session.userId}, ${project.name}, ${
+                  project.description || null
+                })
+                RETURNING id
+              `;
+                projectIdMap.set(project.id || project.name, created.id);
+                result.imported.projects++;
+              });
             } catch (err) {
               result.errors.push(
                 `Failed to import project "${project.name}": ${err}`,
@@ -169,37 +171,37 @@ importRoutes.post("/", async (c) => {
         if (data.contexts) {
           for (const context of data.contexts) {
             try {
-              if (options.skipDuplicates && options.mode === "merge") {
-                const [existing] = await tx<{ id: string }[]>`
-                SELECT id FROM contexts WHERE name = ${context.name}
-              `;
-                if (existing) {
-                  contextIdMap.set(context.id || context.name, existing.id);
-                  result.skipped.contexts++;
-                  continue;
-                }
-              }
-
-              const [created] = await tx<{ id: string }[]>`
-              INSERT INTO contexts (user_id, name, description)
-              VALUES (${session.userId}, ${context.name}, ${
-                context.description || null
-              })
-              RETURNING id
-            `;
-              contextIdMap.set(context.id || context.name, created.id);
-
-              // Insert time windows
-              if (context.time_windows && context.time_windows.length > 0) {
-                for (const tw of context.time_windows) {
-                  await tx`
-                  INSERT INTO context_time_windows (context_id, day_of_week, start_time, end_time)
-                  VALUES (${created.id}, ${tw.day_of_week}, ${tw.start_time}, ${tw.end_time})
+              await tx.savepoint(async (sp) => {
+                if (options.skipDuplicates && options.mode === "merge") {
+                  const [existing] = await sp<{ id: string }[]>`
+                  SELECT id FROM contexts WHERE name = ${context.name}
                 `;
+                  if (existing) {
+                    contextIdMap.set(context.id || context.name, existing.id);
+                    result.skipped.contexts++;
+                    return;
+                  }
                 }
-              }
 
-              result.imported.contexts++;
+                const [created] = await sp<{ id: string }[]>`
+                INSERT INTO contexts (user_id, name)
+                VALUES (${session.userId}, ${context.name})
+                RETURNING id
+              `;
+                contextIdMap.set(context.id || context.name, created.id);
+
+                // Insert time windows
+                if (context.time_windows && context.time_windows.length > 0) {
+                  for (const tw of context.time_windows) {
+                    await sp`
+                    INSERT INTO context_time_windows (context_id, day_of_week, start_time, end_time)
+                    VALUES (${created.id}, ${tw.day_of_week}, ${tw.start_time}, ${tw.end_time})
+                  `;
+                  }
+                }
+
+                result.imported.contexts++;
+              });
             } catch (err) {
               result.errors.push(
                 `Failed to import context "${context.name}": ${err}`,
@@ -217,52 +219,64 @@ importRoutes.post("/", async (c) => {
                 ? projectIdMap.get(task.project_id) || task.project_id
                 : null;
 
-              // Check for duplicate (by title and project)
-              if (options.skipDuplicates && options.mode === "merge") {
-                const [existing] = await tx<{ id: string }[]>`
-                SELECT id FROM tasks
-                WHERE title = ${task.title}
-                  AND (project_id = ${resolvedProjectId} OR (project_id IS NULL AND ${resolvedProjectId} IS NULL))
-                  AND deleted_at IS NULL
-              `;
-                if (existing) {
-                  result.skipped.tasks++;
-                  continue;
+              await tx.savepoint(async (sp) => {
+                // Check for duplicate (by title and project)
+                if (options.skipDuplicates && options.mode === "merge") {
+                  const [existing] = resolvedProjectId
+                    ? await sp<{ id: string }[]>`
+                      SELECT id FROM tasks
+                      WHERE title = ${task.title}
+                        AND project_id = ${resolvedProjectId}
+                        AND deleted_at IS NULL
+                    `
+                    : await sp<{ id: string }[]>`
+                      SELECT id FROM tasks
+                      WHERE title = ${task.title}
+                        AND project_id IS NULL
+                        AND deleted_at IS NULL
+                    `;
+                  if (existing) {
+                    result.skipped.tasks++;
+                    return;
+                  }
                 }
-              }
 
-              const [created] = await tx<{ id: string }[]>`
-              INSERT INTO tasks (user_id, title, description, due_date, project_id)
-              VALUES (
-                ${session.userId},
-                ${task.title},
-                ${task.description || null},
-                ${task.due_date || null},
-                ${resolvedProjectId}
-              )
-              RETURNING id
-            `;
-
-              // Add recurrence rule
-              if (task.recurrence) {
-                await tx`
-                INSERT INTO recurrence_rules (
-                  task_id, schedule_type, frequency, interval,
-                  day_of_week, day_of_month, month_of_year
-                )
+                const [created] = await sp<{ id: string }[]>`
+                INSERT INTO tasks (user_id, title, description, due_date, project_id)
                 VALUES (
-                  ${created.id},
-                  ${task.recurrence.schedule_type},
-                  ${task.recurrence.frequency},
-                  ${task.recurrence.interval},
-                  ${task.recurrence.day_of_week || null},
-                  ${task.recurrence.day_of_month || null},
-                  ${task.recurrence.month_of_year || null}
+                  ${session.userId},
+                  ${task.title},
+                  ${task.description || null},
+                  ${task.due_date || null},
+                  ${resolvedProjectId}
                 )
+                RETURNING id
               `;
-              }
 
-              result.imported.tasks++;
+                // Add recurrence rule
+                if (task.recurrence) {
+                  const daysOfWeek = task.recurrence.day_of_week != null
+                    ? [task.recurrence.day_of_week]
+                    : null;
+                  await sp`
+                  INSERT INTO recurrence_rules (
+                    task_id, schedule_type, frequency, interval,
+                    days_of_week, day_of_month, month_of_year
+                  )
+                  VALUES (
+                    ${created.id},
+                    ${task.recurrence.schedule_type},
+                    ${task.recurrence.frequency},
+                    ${task.recurrence.interval},
+                    ${daysOfWeek},
+                    ${task.recurrence.day_of_month || null},
+                    ${task.recurrence.month_of_year || null}
+                  )
+                `;
+                }
+
+                result.imported.tasks++;
+              });
             } catch (err) {
               result.errors.push(
                 `Failed to import task "${task.title}": ${err}`,
@@ -314,13 +328,15 @@ importRoutes.post("/tasks", async (c) => {
     async (tx) => {
       for (const task of tasks) {
         try {
-          await tx`
-          INSERT INTO tasks (user_id, title, description, due_date)
-          VALUES (${session.userId}, ${task.title}, ${
-            task.description || null
-          }, ${task.due_date || null})
-        `;
-          imported++;
+          await tx.savepoint(async (sp) => {
+            await sp`
+            INSERT INTO tasks (user_id, title, description, due_date)
+            VALUES (${session.userId}, ${task.title}, ${
+              task.description || null
+            }, ${task.due_date || null})
+          `;
+            imported++;
+          });
         } catch (err) {
           errors.push(`Failed to import "${task.title}": ${err}`);
         }

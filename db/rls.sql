@@ -172,8 +172,20 @@ CREATE POLICY task_history_user_delete ON todos.task_history FOR DELETE
 -- ============================================================================
 -- Grants for non-superuser app role (superusers bypass RLS)
 -- ============================================================================
-GRANT USAGE ON SCHEMA todos TO "todos-role";
-GRANT ALL ON ALL TABLES IN SCHEMA todos TO "todos-role";
-GRANT ALL ON ALL SEQUENCES IN SCHEMA todos TO "todos-role";
+DO $$
+BEGIN
+  -- Grant to production role if it exists
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'todos-role') THEN
+    EXECUTE 'GRANT USAGE ON SCHEMA todos TO "todos-role"';
+    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA todos TO "todos-role"';
+    EXECUTE 'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA todos TO "todos-role"';
+  END IF;
+  -- Grant to local dev role if it exists
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'todos_app') THEN
+    EXECUTE 'GRANT USAGE ON SCHEMA todos TO todos_app';
+    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA todos TO todos_app';
+    EXECUTE 'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA todos TO todos_app';
+  END IF;
+END $$;
 
 COMMIT;

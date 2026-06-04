@@ -30,7 +30,7 @@ export async function assertOwnership(
   }
 
   // Each table uses a parameterized query — table name is from allowlist, not user input
-  let rows: { user_id: string }[];
+  let rows: { user_id: string }[] = [];
   switch (table) {
     case "projects":
       rows = await sql<
@@ -42,11 +42,9 @@ export async function assertOwnership(
         { user_id: string }[]
       >`SELECT user_id FROM contexts WHERE id = ${id}`;
       break;
-    default:
-      throw new Error(`assertOwnership: unsupported table "${table}"`);
   }
 
-  const label = TABLE_LABELS[table] ?? table;
+  const label = TABLE_LABELS[table];
 
   if (rows.length === 0) {
     throw new HTTPException(404, { message: `${label} not found` });

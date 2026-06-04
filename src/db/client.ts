@@ -22,6 +22,8 @@ export interface SqlQuery {
   ): postgres.PendingQuery<T>;
   // JSON helper for serializing objects in queries
   json(value: unknown): postgres.Parameter<string>;
+  // Savepoint for partial rollback within a transaction
+  savepoint<T>(cb: (sql: SqlQuery) => T | Promise<T>): Promise<T>;
 }
 
 let sql: postgres.Sql | null = null;
@@ -55,17 +57,20 @@ export function getSchema(): string {
 
 export const SCHEMA = "todos";
 
+// Determines if SSL should be enabled based on the connection URL's sslmode parameter
+export function isSslEnabled(url: string): boolean {
+  const parsed = new URL(url);
+  const sslMode = parsed.searchParams.get("sslmode");
+  return sslMode !== "disable";
+}
+
 export function getConnection(): postgres.Sql {
   if (sql) {
     return sql;
   }
 
   const config = getConfig();
-
-  // Check if SSL should be disabled (for local development)
-  const url = new URL(config.url);
-  const sslMode = url.searchParams.get("sslmode");
-  const sslEnabled = sslMode !== "disable";
+  const sslEnabled = isSslEnabled(config.url);
 
   sql = postgres(config.url, {
     max: config.max,
@@ -101,7 +106,7 @@ export async function closeConnection(): Promise<void> {
 // Uses SqlQuery type which works for both Sql and TransactionSql
 // userId sets `app.user_id` for RLS policies within the transaction
 export async function withTransaction<T>(
-  fn: (sql: SqlQuery) => Promise<T>,
+  fn: (sql: SqlQuery) => T | Promise<T>,
   options?: { userId?: string; retries?: number },
 ): Promise<T> {
   const schema = getSchema();
@@ -160,7 +165,7 @@ export async function withTransaction<T>(
 
 // Simple query helper with retry logic
 export async function query<T>(
-  queryFn: (sql: SqlQuery) => Promise<T>,
+  queryFn: (sql: SqlQuery) => T | Promise<T>,
   options?: { userId?: string; retries?: number },
 ): Promise<T> {
   const schema = getSchema();

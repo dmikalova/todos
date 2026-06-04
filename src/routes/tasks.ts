@@ -9,6 +9,7 @@ import {
   calculateNextOccurrence,
   type RecurrenceRule,
 } from "../services/recurrence.ts";
+import { calculateDeferDate } from "../services/defer.ts";
 import type { AppEnv, SessionData } from "../types.ts";
 
 export const tasks = new Hono<AppEnv>();
@@ -486,32 +487,7 @@ tasks.post("/:id/defer", async (c) => {
   if (result.data.until) {
     deferUntil = new Date(result.data.until);
   } else if (result.data.preset) {
-    switch (result.data.preset) {
-      case "later_today":
-        deferUntil = new Date(now.getTime() + 4 * 60 * 60 * 1000);
-        break;
-      case "tomorrow":
-        deferUntil = new Date(now);
-        deferUntil.setDate(deferUntil.getDate() + 1);
-        deferUntil.setHours(9, 0, 0, 0);
-        break;
-      case "weekend": {
-        deferUntil = new Date(now);
-        const dayOfWeek = deferUntil.getDay();
-        const daysUntilSaturday = (6 - dayOfWeek + 7) % 7 || 7;
-        deferUntil.setDate(deferUntil.getDate() + daysUntilSaturday);
-        deferUntil.setHours(10, 0, 0, 0);
-        break;
-      }
-      case "next_week": {
-        deferUntil = new Date(now);
-        const currentDay = deferUntil.getDay();
-        const daysUntilMonday = (8 - currentDay) % 7 || 7;
-        deferUntil.setDate(deferUntil.getDate() + daysUntilMonday);
-        deferUntil.setHours(9, 0, 0, 0);
-        break;
-      }
-    }
+    deferUntil = calculateDeferDate(result.data.preset, now);
   } else {
     return c.json({ error: "Either 'until' or 'preset' is required" }, 400);
   }

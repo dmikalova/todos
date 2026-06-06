@@ -23,9 +23,9 @@ async function getDatabaseUrl(): Promise<string> {
     return envUrl;
   }
 
-  // Fetch session pooler URL from Secret Manager (required for Atlas prepared statements)
+  // Fetch app config JSON from Secret Manager
   console.log("Fetching DATABASE_URL_SESSION from Secret Manager...");
-  const secretName = `${APP_NAME}-database-url-session`;
+  const secretName = `${APP_NAME}-config`;
 
   const command = new Deno.Command("gcloud", {
     args: [
@@ -51,7 +51,17 @@ async function getDatabaseUrl(): Promise<string> {
     Deno.exit(1);
   }
 
-  return new TextDecoder().decode(stdout).trim();
+  const secrets = JSON.parse(new TextDecoder().decode(stdout));
+  const url = secrets.DATABASE_URL_SESSION;
+  if (!url) {
+    console.error(
+      "DATABASE_URL_SESSION not found in secret JSON. Available keys:",
+      Object.keys(secrets).join(", "),
+    );
+    Deno.exit(1);
+  }
+
+  return url;
 }
 
 async function runAtlas(

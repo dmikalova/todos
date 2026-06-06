@@ -210,6 +210,9 @@ export class TaskForm extends LitElement {
   private handleFieldInput = (e: Event) => {
     const input = e.target as HTMLInputElement;
     if (!input.id) return;
+    if (input.id === "task-title") {
+      input.setCustomValidity("");
+    }
     if (!input.validity.valid) {
       if (!this.invalidFields.has(input.id)) {
         this.invalidFields = new Set([...this.invalidFields, input.id]);
@@ -297,6 +300,14 @@ export class TaskForm extends LitElement {
 
   private async handleSubmit(e: Event) {
     e.preventDefault();
+    const titleEl = this.renderRoot.querySelector(
+      "#task-title",
+    ) as HTMLTextAreaElement | null;
+    if (!this.form.title.trim()) {
+      titleEl?.setCustomValidity("Title is required");
+      titleEl?.reportValidity();
+      return;
+    }
     await store.saveTask(
       {
         title: this.form.title,
@@ -360,6 +371,7 @@ export class TaskForm extends LitElement {
           <div class="form-group">
             <m3e-form-field
               variant="outlined"
+              float-label="always"
               hide-subscript="${ifDefined(this.hideSubscript("task-title"))}"
             >
               <label slot="label" for="task-title">Task</label>
@@ -371,7 +383,6 @@ export class TaskForm extends LitElement {
                   ...this.form,
                   title: (e.target as HTMLTextAreaElement).value,
                 })}"
-                required
                 placeholder="Task title"
               ></textarea>
             </m3e-form-field>

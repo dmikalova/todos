@@ -369,8 +369,8 @@ Deno.test({
         `;
 
         if (nextTask) {
-          const nextDate = new Date(nextTask.due_date);
-          assertEquals(nextDate.getDay(), dayOfWeek);
+          const nextDate = nextTask.due_date as Date;
+          assertEquals(nextDate.getUTCDay(), dayOfWeek);
         }
       },
     );

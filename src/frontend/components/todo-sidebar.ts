@@ -2,6 +2,8 @@
 
 import { css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import "npm:@m3e/web@2/icon";
+import "npm:@m3e/web@2/icon-button";
 import { StoreElement } from "../base.ts";
 import { NAV_LABELS, SECTION_LABELS } from "../labels.ts";
 import { store } from "../store.ts";
@@ -197,9 +199,8 @@ export class TodoSidebar extends StoreElement {
       color: var(--md-sys-color-primary);
     }
 
-    .nav-button svg {
-      width: 20px;
-      height: 20px;
+    .nav-button m3e-icon {
+      font-size: 20px;
       flex-shrink: 0;
     }
 
@@ -230,16 +231,8 @@ export class TodoSidebar extends StoreElement {
     }
 
     .section-add {
-      border: none;
-      background: transparent;
-      color: var(--md-sys-color-outline);
-      cursor: pointer;
-      padding: 4px;
-    }
-
-    .section-add:hover {
-      color: var(--md-sys-color-on-surface-variant);
-      background: var(--md-sys-color-surface-container-high);
+      --m3e-icon-button-state-layer-size: 28px;
+      --m3e-icon-button-icon-size: 16px;
     }
 
     .item-row {
@@ -253,23 +246,14 @@ export class TodoSidebar extends StoreElement {
     }
 
     .item-edit {
-      padding: 8px;
-      border: none;
-      background: transparent;
-      color: var(--md-sys-color-outline);
-      cursor: pointer;
       opacity: 0;
       transition: opacity 0.15s;
-      border-radius: var(--md-sys-shape-corner-small) 0;
+      --m3e-icon-button-state-layer-size: 28px;
+      --m3e-icon-button-icon-size: 16px;
     }
 
     .item-row:hover .item-edit {
       opacity: 1;
-    }
-
-    .item-edit:hover {
-      background: var(--md-sys-color-surface-container-high);
-      color: var(--md-sys-color-on-surface-variant);
     }
 
     .color-dot {
@@ -297,6 +281,10 @@ export class TodoSidebar extends StoreElement {
     .collapse-toggle:hover {
       color: var(--md-sys-color-on-surface-variant);
       background: var(--md-sys-color-surface-container-high);
+    }
+
+    .collapse-toggle m3e-icon {
+      font-size: 16px;
     }
 
     .collapse-toggle.collapsed {
@@ -380,14 +368,7 @@ export class TodoSidebar extends StoreElement {
               store.setSidebarOpen(false);
             }}"
           >
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
+            <m3e-icon name="add" variant="rounded"></m3e-icon>
             ${NAV_LABELS.addTask}
           </button>
 
@@ -398,14 +379,7 @@ export class TodoSidebar extends StoreElement {
               store.setSidebarOpen(false);
             }}"
           >
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
+            <m3e-icon name="search" variant="rounded"></m3e-icon>
             ${NAV_LABELS.search}
           </button>
 
@@ -413,14 +387,7 @@ export class TodoSidebar extends StoreElement {
             class="nav-button ${store.currentTab === "inbox" ? "active" : ""}"
             @click="${() => store.navigate("inbox")}"
           >
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-              />
-            </svg>
+            <m3e-icon name="inbox" variant="rounded"></m3e-icon>
             ${NAV_LABELS.inbox} ${store.inboxCount > 0
               ? html`
                 <span class="count">${store.inboxCount}</span>
@@ -432,14 +399,7 @@ export class TodoSidebar extends StoreElement {
             class="nav-button ${store.currentTab === "next" ? "active" : ""}"
             @click="${() => store.navigate("next")}"
           >
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
+            <m3e-icon name="chevron_right" variant="rounded"></m3e-icon>
             ${NAV_LABELS.next}
           </button>
         </div>
@@ -469,25 +429,12 @@ export class TodoSidebar extends StoreElement {
         <div class="section scrollable">
           <div class="section-header">
             <span class="section-title">${SECTION_LABELS.projects}</span>
-            <button
+            <m3e-icon-button
               class="section-add"
               @click="${() => store.setShowProjectForm(true)}"
             >
-              <svg
-                width="16"
-                height="16"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-            </button>
+              <m3e-icon name="add" variant="rounded"></m3e-icon>
+            </m3e-icon-button>
           </div>
           ${store.projectTree.map(
             ({ project, depth }) =>
@@ -520,20 +467,7 @@ export class TodoSidebar extends StoreElement {
                           store.toggleCollapse(project.id);
                         }}"
                       >
-                        <svg
-                          width="16"
-                          height="16"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
+                        <m3e-icon name="expand_more" variant="rounded"></m3e-icon>
                       </button>
                     `
                     : html`
@@ -556,28 +490,15 @@ export class TodoSidebar extends StoreElement {
                       `
                       : null}
                   </button>
-                  <button
+                  <m3e-icon-button
                     class="item-edit"
                     @click="${(e: Event) => {
                       e.stopPropagation();
                       store.setShowProjectForm(true, project);
                     }}"
                   >
-                    <svg
-                      width="16"
-                      height="16"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                      />
-                    </svg>
-                  </button>
+                    <m3e-icon name="edit" variant="rounded"></m3e-icon>
+                  </m3e-icon-button>
                 </div>
               `,
           )}
@@ -592,25 +513,12 @@ export class TodoSidebar extends StoreElement {
           <!-- Contexts -->
           <div class="section-header" style="margin-top: 16px;">
             <span class="section-title">${SECTION_LABELS.contexts}</span>
-            <button
+            <m3e-icon-button
               class="section-add"
               @click="${() => store.setShowContextForm(true)}"
             >
-              <svg
-                width="16"
-                height="16"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-            </button>
+              <m3e-icon name="add" variant="rounded"></m3e-icon>
+            </m3e-icon-button>
           </div>
           ${store.contexts.map(
             (context) =>
@@ -629,28 +537,15 @@ export class TodoSidebar extends StoreElement {
                     ></span>
                     ${context.name}
                   </button>
-                  <button
+                  <m3e-icon-button
                     class="item-edit"
                     @click="${(e: Event) => {
                       e.stopPropagation();
                       store.setShowContextForm(true, context);
                     }}"
                   >
-                    <svg
-                      width="16"
-                      height="16"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                      />
-                    </svg>
-                  </button>
+                    <m3e-icon name="edit" variant="rounded"></m3e-icon>
+                  </m3e-icon-button>
                 </div>
               `,
           )}
@@ -662,14 +557,7 @@ export class TodoSidebar extends StoreElement {
             class="nav-button ${store.currentTab === "history" ? "active" : ""}"
             @click="${() => store.navigate("history")}"
           >
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+            <m3e-icon name="history" variant="rounded"></m3e-icon>
             ${NAV_LABELS.history}
           </button>
           <button
@@ -678,20 +566,7 @@ export class TodoSidebar extends StoreElement {
               : ""}"
             @click="${() => store.navigate("settings")}"
           >
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              />
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
+            <m3e-icon name="settings" variant="rounded"></m3e-icon>
             ${NAV_LABELS.settings}
           </button>
         </div>

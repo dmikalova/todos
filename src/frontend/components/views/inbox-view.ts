@@ -13,21 +13,6 @@ export class InboxView extends StoreElement {
       display: block;
     }
 
-    .toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 24px;
-    }
-
-    .filter-select {
-      padding: 8px 12px;
-      border: 1px solid var(--md-sys-color-outline-variant);
-      background: var(--md-sys-color-surface);
-      color: var(--md-sys-color-on-surface);
-      font-size: 14px;
-    }
-
     .task-list {
       display: flex;
       flex-direction: column;
@@ -41,33 +26,8 @@ export class InboxView extends StoreElement {
     }
   `;
 
-  private handleFilterChange(e: Event) {
-    const value = (e.target as HTMLSelectElement).value;
-    store.setTaskFilter({ completed: value });
-  }
-
   override render() {
     return html`
-      <div class="toolbar">
-        <select class="filter-select" @change="${this.handleFilterChange}">
-          <option
-            value="false"
-            ?selected="${store.taskFilter.completed === "false"}"
-          >
-            Active
-          </option>
-          <option
-            value="true"
-            ?selected="${store.taskFilter.completed === "true"}"
-          >
-            Completed
-          </option>
-          <option value="" ?selected="${store.taskFilter.completed === ""}">
-            All
-          </option>
-        </select>
-      </div>
-
       <div class="task-list">
         ${store.inboxTasks.length === 0
           ? html`

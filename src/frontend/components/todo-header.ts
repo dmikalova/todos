@@ -2,6 +2,8 @@
 
 import { css, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import "npm:@m3e/web@2/icon";
+import "npm:@m3e/web@2/icon-button";
 import { StoreElement } from "../base.ts";
 import { store } from "../store.ts";
 
@@ -20,19 +22,6 @@ export class TodoHeader extends StoreElement {
       align-items: center;
     }
 
-    .menu-btn {
-      display: block;
-      border: none;
-      background: transparent;
-      color: var(--md-sys-color-on-surface-variant);
-      cursor: pointer;
-      padding: 8px;
-    }
-
-    .menu-btn:hover {
-      background: var(--md-sys-color-surface-container-high);
-    }
-
     @media (min-width: 1024px) {
       :host {
         display: none;
@@ -43,25 +32,11 @@ export class TodoHeader extends StoreElement {
   override render() {
     return html`
       <header>
-        <button
-          class="menu-btn"
+        <m3e-icon-button
           @click="${() => store.setSidebarOpen(!store.sidebarOpen)}"
         >
-          <svg
-            width="24"
-            height="24"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 6h16M4 12h16M4 18h16"
-            />
-          </svg>
-        </button>
+          <m3e-icon name="menu" variant="rounded"></m3e-icon>
+        </m3e-icon-button>
       </header>
     `;
   }

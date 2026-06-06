@@ -2,6 +2,7 @@
 
 import { css, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import "npm:@m3e/web@2/segmented-button";
 import { StoreElement } from "../base.ts";
 import { store } from "../store.ts";
 
@@ -59,6 +60,12 @@ export class TodoApp extends StoreElement {
       margin-bottom: 24px;
     }
 
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
     .breadcrumb {
       display: flex;
       align-items: center;
@@ -91,6 +98,18 @@ export class TodoApp extends StoreElement {
 
     h1.page-title.editable:hover {
       background: var(--md-sys-color-surface-container-high);
+    }
+
+    m3e-segmented-button.view-filter {
+      width: auto;
+    }
+
+    m3e-segmented-button.view-filter m3e-button-segment {
+      --m3e-segmented-button-icon-size: 0;
+      --m3e-segmented-button-spacing: 0;
+      --m3e-segmented-button-with-icon-padding-start: 0.75rem;
+      --m3e-segmented-button-padding-start: 0.75rem;
+      --m3e-segmented-button-padding-end: 0.75rem;
     }
 
     @media (min-width: 1024px) {
@@ -160,6 +179,14 @@ export class TodoApp extends StoreElement {
     }
   }
 
+  private get showFilter(): boolean {
+    return ["inbox", "project", "context"].includes(store.currentTab);
+  }
+
+  private handleFilterChange(value: string) {
+    store.setTaskFilter({ completed: value });
+  }
+
   private renderPageHeading() {
     const breadcrumb = store.currentBreadcrumb;
     const title = store.currentPageTitle;
@@ -174,13 +201,43 @@ export class TodoApp extends StoreElement {
             </div>
           `
           : null}
-        <h1
-          class="page-title ${editable ? "editable" : ""}"
-          @click="${editable ? this.handleTitleClick : null}"
-          title="${editable ? "Click to edit" : ""}"
-        >
-          ${title}
-        </h1>
+        <div class="title-row">
+          <h1
+            class="page-title ${editable ? "editable" : ""}"
+            @click="${editable ? this.handleTitleClick : null}"
+            title="${editable ? "Click to edit" : ""}"
+          >
+            ${title}
+          </h1>
+          ${this.showFilter
+            ? html`
+              <m3e-segmented-button
+                class="view-filter"
+                @change="${(e: Event) => {
+                  const segment = e.target as HTMLElement & { value: string };
+                  if (segment.value !== undefined) {
+                    this.handleFilterChange(
+                      segment.value,
+                    );
+                  }
+                }}"
+              >
+                <m3e-button-segment
+                  value="false"
+                  .checked="${store.taskFilter.completed === "false"}"
+                >next</m3e-button-segment>
+                <m3e-button-segment
+                  value="true"
+                  .checked="${store.taskFilter.completed === "true"}"
+                >done</m3e-button-segment>
+                <m3e-button-segment
+                  value=""
+                  .checked="${store.taskFilter.completed === ""}"
+                >all</m3e-button-segment>
+              </m3e-segmented-button>
+            `
+            : null}
+        </div>
       </div>
     `;
   }

@@ -2,6 +2,9 @@
 
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import "npm:@m3e/web@2/form-field";
+import "npm:@m3e/web@2/icon";
+import "npm:@m3e/web@2/icon-button";
 import { store, type Task } from "../../store.ts";
 
 @customElement("search-modal")
@@ -39,39 +42,26 @@ export class SearchModal extends LitElement {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 16px;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--md-sys-color-outline-variant);
     }
 
-    .search-icon {
+    .search-header m3e-icon {
       color: var(--md-sys-color-outline);
       flex-shrink: 0;
     }
 
-    input {
+    .search-header m3e-form-field {
       flex: 1;
-      border: none;
-      background: transparent;
+      --m3e-form-field-container-color: transparent;
+    }
+
+    .search-header input {
       font-size: 18px;
-      color: var(--md-sys-color-on-surface);
-      outline: none;
     }
 
-    input::placeholder {
-      color: var(--md-sys-color-outline);
-    }
-
-    .close-btn {
-      padding: 8px;
-      background: transparent;
-      border: none;
-      color: var(--md-sys-color-outline);
-      cursor: pointer;
-    }
-
-    .close-btn:hover {
-      background: var(--md-sys-color-surface-container);
-      color: var(--md-sys-color-on-surface);
+    .search-header m3e-icon-button {
+      flex-shrink: 0;
     }
 
     .results {
@@ -277,44 +267,19 @@ export class SearchModal extends LitElement {
       <div class="backdrop" @click="${this.close}"></div>
       <div class="modal">
         <div class="search-header">
-          <svg
-            class="search-icon"
-            width="20"
-            height="20"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          <m3e-icon name="search" variant="rounded"></m3e-icon>
+          <m3e-form-field variant="filled" hide-subscript="always">
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              .value="${this.query}"
+              @input="${this.handleInput}"
+              @ref="${(el: HTMLInputElement) => (this.inputRef = el)}"
             />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search tasks..."
-            .value="${this.query}"
-            @input="${this.handleInput}"
-            @ref="${(el: HTMLInputElement) => (this.inputRef = el)}"
-          />
-          <button class="close-btn" @click="${this.close}">
-            <svg
-              width="20"
-              height="20"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+          </m3e-form-field>
+          <m3e-icon-button @click="${this.close}">
+            <m3e-icon name="close" variant="rounded"></m3e-icon>
+          </m3e-icon-button>
         </div>
 
         <div class="results">

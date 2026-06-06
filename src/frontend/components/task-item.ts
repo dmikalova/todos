@@ -52,13 +52,13 @@ export class TaskItem extends LitElement {
     }
 
     .checkbox.p1 {
-      border-color: var(--priority-1-color);
+      border-color: var(--priority-1-border);
     }
     .checkbox.p2 {
-      border-color: var(--priority-2-color);
+      border-color: var(--priority-2-border);
     }
     .checkbox.p3 {
-      border-color: var(--priority-3-color);
+      border-color: var(--priority-3-border);
     }
 
     .check-icon {
@@ -110,20 +110,16 @@ export class TaskItem extends LitElement {
     }
 
     .priority-badge.p1 {
-      background: #ffebee;
-      color: var(--priority-1-color);
+      background: var(--priority-1-bg);
+      color: var(--priority-1-text);
     }
     .priority-badge.p2 {
-      background: #fff3e0;
-      color: var(--priority-2-color);
+      background: var(--priority-2-bg);
+      color: var(--priority-2-text);
     }
     .priority-badge.p3 {
-      background: #e3f2fd;
-      color: var(--priority-3-color);
-    }
-    .priority-badge.p4 {
-      background: var(--md-sys-color-surface-container);
-      color: var(--priority-4-color);
+      background: var(--priority-3-bg);
+      color: var(--priority-3-text);
     }
   `;
 

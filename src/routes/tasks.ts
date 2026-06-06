@@ -3,13 +3,13 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { type SqlQuery, withDb, withTransaction } from "../db/index.ts";
+import { calculateDeferDate } from "../services/defer.ts";
 import { logTaskActionTx } from "../services/history.ts";
 import { assertOwnership } from "../services/ownership.ts";
 import {
   calculateNextOccurrence,
   type RecurrenceRule,
 } from "../services/recurrence.ts";
-import { calculateDeferDate } from "../services/defer.ts";
 import type { AppEnv, SessionData } from "../types.ts";
 
 export const tasks = new Hono<AppEnv>();
@@ -18,9 +18,8 @@ export const tasks = new Hono<AppEnv>();
 
 const createTaskSchema = z.object({
   title: z.string().min(1).max(500),
-  description: z.string().max(5000).optional().nullable(),
   projectId: z.string().uuid().optional().nullable(),
-  priority: z.number().int().min(1).max(4).default(2),
+  priority: z.number().int().min(1).max(3).default(3),
   dueDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -31,9 +30,8 @@ const createTaskSchema = z.object({
 
 const updateTaskSchema = z.object({
   title: z.string().min(1).max(500).optional(),
-  description: z.string().max(5000).optional().nullable(),
   projectId: z.string().uuid().optional().nullable(),
-  priority: z.number().int().min(1).max(4).optional(),
+  priority: z.number().int().min(1).max(3).optional(),
   dueDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -64,7 +62,6 @@ interface Task {
   id: string;
   user_id: string;
   title: string;
-  description: string | null;
   project_id: string | null;
   priority: number;
   due_date: string | null;
@@ -89,8 +86,7 @@ tasks.post("/", async (c) => {
     );
   }
 
-  const { title, description, projectId, priority, dueDate, mustDo } =
-    result.data;
+  const { title, projectId, priority, dueDate, mustDo } = result.data;
 
   const task = await withTransaction(
     async (tx) => {
@@ -100,10 +96,10 @@ tasks.post("/", async (c) => {
       }
 
       const [created] = await tx<Task[]>`
-      INSERT INTO tasks (user_id, title, description, project_id, priority, due_date, must_do)
-      VALUES (${session.userId}, ${title}, ${description || null}, ${
-        projectId || null
-      }, ${priority}, ${dueDate || null}, ${mustDo})
+      INSERT INTO tasks (user_id, title, project_id, priority, due_date, must_do)
+      VALUES (${session.userId}, ${title}, ${projectId || null}, ${priority}, ${
+        dueDate || null
+      }, ${mustDo})
       RETURNING *
     `;
 
@@ -235,11 +231,6 @@ tasks.patch("/:id", async (c) => {
       const [updated] = await tx<Task[]>`
       UPDATE tasks SET
         title = COALESCE(${updates.title ?? null}, title),
-        description = ${
-        updates.description !== undefined
-          ? updates.description
-          : existing.description
-      },
         project_id = ${
         updates.projectId !== undefined
           ? updates.projectId
@@ -356,11 +347,10 @@ tasks.post("/:id/complete", async (c) => {
 
         // Create next task instance
         [newTask] = await tx<Task[]>`
-        INSERT INTO tasks (user_id, title, description, project_id, priority, due_date, must_do)
+        INSERT INTO tasks (user_id, title, project_id, priority, due_date, must_do)
         VALUES (
           ${session.userId},
           ${existing.title},
-          ${existing.description},
           ${existing.project_id},
           ${existing.priority},
           ${nextDueDate.toISOString().split("T")[0]},

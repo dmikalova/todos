@@ -2,11 +2,20 @@
 
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { ifDefined } from "lit/directives/if-defined.js";
+import "npm:@m3e/web@2/button";
+import "npm:@m3e/web@2/datepicker";
+import "npm:@m3e/web@2/form-field";
+import "npm:@m3e/web@2/icon";
+import "npm:@m3e/web@2/icon-button";
+import "npm:@m3e/web@2/option";
+import "npm:@m3e/web@2/segmented-button";
+import "npm:@m3e/web@2/select";
+import "npm:@m3e/web@2/textarea-autosize";
 import { store } from "../../store.ts";
 
 interface TaskFormData {
   title: string;
-  notes: string;
   priority: number;
   due_date: string;
   project_id: string | null;
@@ -19,125 +28,80 @@ interface TaskFormData {
 export class TaskForm extends LitElement {
   static override styles = css`
     :host {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
+      display: contents;
     }
 
-    .backdrop {
-      position: absolute;
+    dialog {
+      position: fixed;
       inset: 0;
+      margin: auto;
+      border: none;
+      padding: 24px;
+      width: min(48rem, calc(100vw - 48px));
+      max-height: min(90vh, calc(100dvh - 48px));
+      overflow-y: auto;
+      background: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-on-surface);
+      border-radius: var(--md-sys-shape-corner-extra-large);
+      box-shadow: var(--md-sys-elevation-level4);
+      outline: none;
+    }
+
+    dialog::backdrop {
       background: rgba(0, 0, 0, 0.5);
     }
 
-    .modal {
-      position: relative;
-      background: var(--md-sys-color-surface);
-      border-radius: var(--md-sys-shape-corner-extra-large);
-      box-shadow: var(--md-sys-elevation-level4);
-      width: 100%;
-      max-width: 32rem;
-      max-height: 90vh;
-      overflow-y: auto;
+    dialog h2 {
+      margin: 0 0 16px;
+      font-size: 24px;
+      font-weight: 400;
     }
 
-    .modal-content {
-      padding: 24px;
-    }
-
-    h2 {
-      font-size: 20px;
-      font-weight: 500;
-      margin: 0 0 24px;
-      color: var(--md-sys-color-on-surface);
+    form {
+      padding-top: 8px;
     }
 
     .form-group {
-      margin-bottom: 16px;
+      margin-bottom: 24px;
     }
 
-    label {
-      display: block;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--md-sys-color-on-surface-variant);
-      margin-bottom: 4px;
-    }
-
-    input[type="text"],
-    input[type="date"],
-    input[type="number"],
-    textarea,
-    select {
+    m3e-form-field {
       width: 100%;
-      padding: 12px;
-      border: 1px solid var(--md-sys-color-outline-variant);
-      border-radius: var(--md-sys-shape-corner-small);
-      background: var(--md-sys-color-surface);
-      color: var(--md-sys-color-on-surface);
-      font-size: 14px;
-      font-family: inherit;
     }
 
-    input:focus,
-    textarea:focus,
-    select:focus {
-      outline: 2px solid var(--md-sys-color-primary);
-      outline-offset: -1px;
+    m3e-form-field textarea {
+      padding-block: 0.5rem;
     }
 
-    textarea {
-      resize: vertical;
-      min-height: 80px;
+    m3e-datepicker {
+      --m3e-datepicker-actions-padding-inline: 0;
     }
 
-    .priority-buttons {
-      display: flex;
-      gap: 8px;
+    m3e-segmented-button {
+      width: 100%;
     }
 
-    .priority-btn {
+    m3e-button-segment {
       flex: 1;
-      padding: 8px;
-      border: 2px solid transparent;
-      border-radius: var(--md-sys-shape-corner-small);
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s;
+      text-align: center;
+      --m3e-segmented-button-icon-size: 0;
+      --m3e-segmented-button-spacing: 0;
+      --m3e-segmented-button-with-icon-padding-start: 1rem;
     }
 
-    .priority-btn.p1 {
-      background: #ffebee;
-      color: var(--priority-1-color);
+    m3e-segmented-button.priority m3e-button-segment {
+      --m3e-segmented-button-selected-container-color: var(
+        --md-sys-color-surface-container-high
+      );
     }
-    .priority-btn.p1.selected {
-      border-color: var(--priority-1-color);
+    m3e-segmented-button.priority .p1[checked] {
+      --m3e-segmented-button-selected-container-color: var(--priority-1-color);
     }
-    .priority-btn.p2 {
-      background: #fff3e0;
-      color: var(--priority-2-color);
+    m3e-segmented-button.priority .p2[checked] {
+      --m3e-segmented-button-selected-container-color: var(--priority-2-color);
     }
-    .priority-btn.p2.selected {
-      border-color: var(--priority-2-color);
-    }
-    .priority-btn.p3 {
-      background: #e3f2fd;
-      color: var(--priority-3-color);
-    }
-    .priority-btn.p3.selected {
-      border-color: var(--priority-3-color);
-    }
-    .priority-btn.p4 {
-      background: var(--md-sys-color-surface-container);
-      color: var(--priority-4-color);
-    }
-    .priority-btn.p4.selected {
-      border-color: var(--priority-4-color);
+    m3e-segmented-button.priority .p3[checked] {
+      --m3e-segmented-button-selected-container-color: var(--priority-3-color);
     }
 
     .recurrence-interval {
@@ -146,83 +110,39 @@ export class TaskForm extends LitElement {
       gap: 8px;
     }
 
-    .recurrence-interval input {
-      width: 80px;
+    .recurrence-interval m3e-form-field {
+      width: auto;
+      flex: 1;
+      --m3e-form-field-suffix-spacing: 1rem;
     }
 
     .day-buttons {
       display: flex;
-      gap: 4px;
-      flex-wrap: wrap;
     }
 
-    .day-btn {
-      padding: 8px 12px;
-      border: none;
-      border-radius: var(--md-sys-shape-corner-small);
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      background: var(--md-sys-color-surface-container);
-      color: var(--md-sys-color-on-surface-variant);
+    .day-buttons m3e-segmented-button {
+      width: 100%;
     }
 
-    .day-btn.selected {
-      background: var(--md-sys-color-primary);
-      color: var(--md-sys-color-on-primary);
+    .day-buttons m3e-button-segment {
+      flex: 1;
+      min-width: 0;
+      --m3e-segmented-button-padding-start: 0;
+      --m3e-segmented-button-padding-end: 0;
+      --m3e-segmented-button-with-icon-padding-start: 0;
     }
 
     .actions {
       display: flex;
       justify-content: space-between;
       margin-top: 24px;
-      padding-top: 16px;
-      border-top: 1px solid var(--md-sys-color-outline-variant);
-    }
-
-    .btn {
-      padding: 12px 24px;
-      border: none;
-      border-radius: var(--md-sys-shape-corner-small);
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .btn-save {
-      background: var(--md-sys-color-primary);
-      color: var(--md-sys-color-on-primary);
-    }
-
-    .btn-save:hover {
-      box-shadow: var(--md-sys-elevation-level2);
-    }
-
-    .btn-cancel {
-      background: transparent;
-      color: var(--md-sys-color-on-surface-variant);
-    }
-
-    .btn-cancel:hover {
-      background: var(--md-sys-color-surface-container);
-    }
-
-    .btn-delete {
-      background: transparent;
-      color: var(--md-sys-color-error);
-    }
-
-    .btn-delete:hover {
-      background: var(--md-sys-color-error-container);
     }
   `;
 
   @state()
   accessor form: TaskFormData = {
     title: "",
-    notes: "",
-    priority: 4,
+    priority: 3,
     due_date: "",
     project_id: null,
     recurrence_type: null,
@@ -230,13 +150,40 @@ export class TaskForm extends LitElement {
     recurrence_days: [],
   };
 
+  @state()
+  accessor invalidFields: Set<string> = new Set();
+
+  private handleFieldInvalid = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    if (input.id) {
+      this.invalidFields = new Set([...this.invalidFields, input.id]);
+    }
+  };
+
+  private handleFieldInput = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    if (!input.id) return;
+    if (!input.validity.valid) {
+      if (!this.invalidFields.has(input.id)) {
+        this.invalidFields = new Set([...this.invalidFields, input.id]);
+      }
+    } else if (this.invalidFields.has(input.id)) {
+      const next = new Set(this.invalidFields);
+      next.delete(input.id);
+      this.invalidFields = next;
+    }
+  };
+
+  private hideSubscript(fieldId: string): string | undefined {
+    return this.invalidFields.has(fieldId) ? undefined : "always";
+  }
+
   override connectedCallback() {
     super.connectedCallback();
     if (store.editingTask) {
       const t = store.editingTask;
       this.form = {
         title: t.title,
-        notes: t.notes || "",
         priority: t.priority,
         due_date: t.due_date ? t.due_date.split("T")[0] : "",
         project_id: t.project_id || null,
@@ -247,6 +194,18 @@ export class TaskForm extends LitElement {
     } else if (store.selectedProjectId) {
       this.form.project_id = store.selectedProjectId;
     }
+    this.addEventListener("invalid", this.handleFieldInvalid, true);
+  }
+
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    this.removeEventListener("invalid", this.handleFieldInvalid, true);
+  }
+
+  override firstUpdated() {
+    const dialog = this.renderRoot.querySelector("dialog");
+    dialog?.showModal();
+    dialog?.addEventListener("close", () => this.close());
   }
 
   private close() {
@@ -258,7 +217,6 @@ export class TaskForm extends LitElement {
     await store.saveTask(
       {
         title: this.form.title,
-        description: this.form.notes || null,
         priority: this.form.priority,
         dueDate: this.form.due_date || null,
         projectId: this.form.project_id || null,
@@ -309,194 +267,273 @@ export class TaskForm extends LitElement {
     ];
 
     return html`
-      <div class="backdrop" @click="${this.close}"></div>
-      <div class="modal">
-        <div class="modal-content">
-          <h2>${isEditing ? "Edit Task" : "New Task"}</h2>
-
-          <form @submit="${this.handleSubmit}">
-            <div class="form-group">
-              <label>Title</label>
-              <input
-                type="text"
+      <dialog @click="${(e: Event) => {
+        if ((e.target as HTMLElement).nodeName === "DIALOG") this.close();
+      }}">
+        <h2>${isEditing ? "edit task" : "new task"}</h2>
+        <form @submit="${this.handleSubmit}" @input="${this.handleFieldInput}">
+          <div class="form-group">
+            <m3e-form-field variant="outlined" hide-subscript="${ifDefined(
+              this.hideSubscript("task-title"),
+            )}">
+              <label slot="label" for="task-title">Task</label>
+              <textarea
+                id="task-title"
+                rows="1"
                 .value="${this.form.title}"
                 @input="${(e: Event) => (this.form = {
                   ...this.form,
-                  title: (e.target as HTMLInputElement).value,
+                  title: (e.target as HTMLTextAreaElement).value,
                 })}"
                 required
                 placeholder="Task title"
-              />
-            </div>
-
-            <div class="form-group">
-              <label>Notes</label>
-              <textarea
-                .value="${this.form.notes}"
-                @input="${(e: Event) => (this.form = {
-                  ...this.form,
-                  notes: (e.target as HTMLTextAreaElement).value,
-                })}"
-                placeholder="Additional notes..."
               ></textarea>
-            </div>
+            </m3e-form-field>
+            <m3e-textarea-autosize for="task-title"></m3e-textarea-autosize>
+          </div>
 
-            <div class="form-group">
-              <label>Priority</label>
-              <div class="priority-buttons">
-                ${[1, 2, 3, 4].map(
-                  (p) =>
-                    html`
-                      <button
-                        type="button"
-                        class="priority-btn p${p} ${this.form.priority === p
-                          ? "selected"
-                          : ""}"
-                        @click="${() => (this.form = {
-                          ...this.form,
-                          priority: p,
-                        })}"
-                      >
-                        P${p}
-                      </button>
-                    `,
-                )}
-              </div>
-            </div>
+          <div class="form-group">
+            <m3e-segmented-button
+              class="priority"
+              @change="${(e: Event) => {
+                const segment = e.target as HTMLElement;
+                const val = segment.getAttribute("value");
+                if (val) {
+                  this.form = { ...this.form, priority: parseInt(val) };
+                }
+              }}"
+            >
+              ${[1, 2, 3].map(
+                (p) =>
+                  html`
+                    <m3e-button-segment
+                      class="p${p}"
+                      value="${p}"
+                      .checked="${this.form.priority === p}"
+                    >
+                      P${p}
+                    </m3e-button-segment>
+                  `,
+              )}
+            </m3e-segmented-button>
+          </div>
 
-            <div class="form-group">
-              <label>Due Date</label>
+          <div class="form-group">
+            <m3e-form-field variant="outlined" hide-subscript="${ifDefined(
+              this.hideSubscript("due-date"),
+            )}">
+              <label slot="label" for="due-date">Due Date</label>
               <input
-                type="date"
-                .value="${this.form.due_date}"
-                @input="${(e: Event) => (this.form = {
-                  ...this.form,
-                  due_date: (e.target as HTMLInputElement).value,
-                })}"
+                id="due-date"
+                autocomplete="off"
+                .value="${this.form.due_date
+                  ? new Date(
+                    this.form.due_date + "T00:00:00",
+                  ).toLocaleDateString()
+                  : ""}"
+                readonly
               />
-            </div>
-
-            <div class="form-group">
-              <label>Project</label>
-              <select
-                .value="${String(this.form.project_id || "")}"
-                @change="${(e: Event) => (this.form = {
+              <m3e-icon-button slot="suffix">
+                <m3e-icon name="calendar_today" variant="rounded"></m3e-icon>
+                <m3e-datepicker-toggle
+                  for="task-datepicker"
+                ></m3e-datepicker-toggle>
+              </m3e-icon-button>
+            </m3e-form-field>
+            <m3e-datepicker
+              id="task-datepicker"
+              .date="${this.form.due_date
+                ? new Date(this.form.due_date + "T00:00:00")
+                : null}"
+              clearable
+              @change="${(e: Event) => {
+                const picker = e.target as HTMLElement & {
+                  date: Date | null;
+                };
+                this.form = {
                   ...this.form,
-                  project_id: (e.target as HTMLSelectElement).value
-                    ? (e.target as HTMLSelectElement).value
-                    : null,
-                })}"
+                  due_date: picker.date
+                    ? picker.date.toISOString().split("T")[0]
+                    : "",
+                };
+              }}"
+            ></m3e-datepicker>
+          </div>
+
+          <div class="form-group">
+            <m3e-form-field variant="outlined" hide-subscript="${ifDefined(
+              this.hideSubscript("project-select"),
+            )}">
+              <label slot="label" for="project-select">Project</label>
+              <m3e-select
+                id="project-select"
+                @change="${(e: Event) => {
+                  const select = e.target as HTMLElement & { value: string };
+                  this.form = {
+                    ...this.form,
+                    project_id: select.value === "inbox"
+                      ? null
+                      : select.value || null,
+                  };
+                }}"
               >
-                <option value="">Inbox</option>
+                <m3e-icon
+                  slot="arrow"
+                  name="arrow_drop_down_circle"
+                  variant="rounded"
+                ></m3e-icon>
+                <m3e-option value="inbox" ?selected="${!this.form
+                  .project_id}">Inbox</m3e-option>
                 ${store.projects.map(
                   (p) =>
                     html`
-                      <option value="${p.id}">${p.name}</option>
+                      <m3e-option
+                        value="${p.id}"
+                        ?selected="${this.form.project_id === p.id}"
+                      >${p.name}</m3e-option>
                     `,
                 )}
-              </select>
-            </div>
+              </m3e-select>
+            </m3e-form-field>
+          </div>
 
-            <div class="form-group">
-              <label>Recurrence</label>
-              <select
-                .value="${this.form.recurrence_type || ""}"
-                @change="${(e: Event) => (this.form = {
-                  ...this.form,
-                  recurrence_type: (e.target as HTMLSelectElement).value ||
-                    null,
-                })}"
+          <div class="form-group">
+            <m3e-form-field variant="outlined" hide-subscript="${ifDefined(
+              this.hideSubscript("recurrence-select"),
+            )}">
+              <label slot="label" for="recurrence-select">Recurrence</label>
+              <m3e-select
+                id="recurrence-select"
+                @change="${(e: Event) => {
+                  const select = e.target as HTMLElement & { value: string };
+                  this.form = {
+                    ...this.form,
+                    recurrence_type: select.value === "none"
+                      ? null
+                      : select.value || null,
+                  };
+                }}"
               >
-                <option value="">No recurrence</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select>
-            </div>
+                <m3e-icon
+                  slot="arrow"
+                  name="arrow_drop_down_circle"
+                  variant="rounded"
+                ></m3e-icon>
+                <m3e-option value="none" ?selected="${!this.form
+                  .recurrence_type}">None</m3e-option>
+                <m3e-option
+                  value="daily"
+                  ?selected="${this.form.recurrence_type === "daily"}"
+                >Daily</m3e-option>
+                <m3e-option
+                  value="weekly"
+                  ?selected="${this.form.recurrence_type === "weekly"}"
+                >Weekly</m3e-option>
+                <m3e-option
+                  value="monthly"
+                  ?selected="${this.form.recurrence_type === "monthly"}"
+                >Monthly</m3e-option>
+                <m3e-option
+                  value="yearly"
+                  ?selected="${this.form.recurrence_type === "yearly"}"
+                >Yearly</m3e-option>
+              </m3e-select>
+            </m3e-form-field>
+          </div>
 
-            ${this.form.recurrence_type
-              ? html`
-                <div class="form-group">
-                  <label>Repeat every</label>
-                  <div class="recurrence-interval">
+          ${this.form.recurrence_type
+            ? html`
+              <div class="form-group">
+                <div class="recurrence-interval">
+                  <m3e-form-field variant="outlined" hide-subscript="${ifDefined(
+                    this.hideSubscript("interval"),
+                  )}">
+                    <label slot="label" for="interval">Every</label>
                     <input
+                      id="interval"
                       type="number"
                       min="1"
                       .value="${String(this.form.recurrence_interval)}"
                       @input="${(e: Event) => (this.form = {
                         ...this.form,
-                        recurrence_interval:
-                          parseInt((e.target as HTMLInputElement).value) ||
-                          1,
+                        recurrence_interval: parseInt(
+                          (e.target as HTMLInputElement).value,
+                        ) || 1,
                       })}"
                     />
-                    <span>
+                    <span slot="suffix-text">
                       ${this.form.recurrence_type === "daily"
-                        ? "day(s)"
+                        ? this.form.recurrence_interval === 1 ? "day" : "days"
                         : this.form.recurrence_type === "weekly"
-                        ? "week(s)"
+                        ? this.form.recurrence_interval === 1 ? "week" : "weeks"
                         : this.form.recurrence_type === "monthly"
-                        ? "month(s)"
-                        : "year(s)"}
+                        ? this.form.recurrence_interval === 1
+                          ? "month"
+                          : "months"
+                        : this.form.recurrence_interval === 1
+                        ? "year"
+                        : "years"}
                     </span>
-                  </div>
+                  </m3e-form-field>
                 </div>
-              `
-              : null} ${this.form.recurrence_type === "weekly"
-              ? html`
-                <div class="form-group">
-                  <label>On days</label>
-                  <div class="day-buttons">
+              </div>
+            `
+            : null} ${this.form.recurrence_type === "weekly"
+            ? html`
+              <div class="form-group">
+                <div class="day-buttons">
+                  <m3e-segmented-button
+                    multi
+                    @change="${(e: Event) => {
+                      const segment = e.target as HTMLElement;
+                      const idx = [...segment.parentElement!.children].indexOf(
+                        segment,
+                      );
+                      if (idx !== -1) this.toggleDay(idx);
+                    }}"
+                  >
                     ${weekDays.map(
                       (day) =>
                         html`
-                          <button
-                            type="button"
-                            class="day-btn ${this.form.recurrence_days.includes(
-                                day.value,
-                              )
-                              ? "selected"
-                              : ""}"
-                            @click="${() => this.toggleDay(day.value)}"
+                          <m3e-button-segment
+                            .checked="${this.form.recurrence_days.includes(
+                              day.value,
+                            )}"
                           >
                             ${day.label}
-                          </button>
+                          </m3e-button-segment>
                         `,
                     )}
-                  </div>
+                  </m3e-segmented-button>
                 </div>
-              `
-              : null}
+              </div>
+            `
+            : null}
 
-            <div class="actions">
-              <div>
-                ${isEditing
-                  ? html`
-                    <button
-                      type="button"
-                      class="btn btn-delete"
-                      @click="${this.handleDelete}"
-                    >
-                      Delete
-                    </button>
-                  `
-                  : null}
-              </div>
-              <div style="display: flex; gap: 8px;">
-                <button
-                  type="button"
-                  class="btn btn-cancel"
-                  @click="${this.close}"
-                >
-                  Cancel
-                </button>
-                <button type="submit" class="btn btn-save">Save</button>
-              </div>
+          <div class="actions">
+            <div>
+              ${isEditing
+                ? html`
+                  <m3e-button
+                    variant="text"
+                    type="button"
+                    style="--m3e-button-label-text-color: var(--md-sys-color-error)"
+                    @click="${this.handleDelete}"
+                  >
+                    Delete
+                  </m3e-button>
+                `
+                : null}
             </div>
-          </form>
-        </div>
-      </div>
+            <div style="display: flex; gap: 8px;">
+              <m3e-button variant="text" type="button" @click="${this.close}">
+                Cancel
+              </m3e-button>
+              <m3e-button variant="filled" type="submit"> Save </m3e-button>
+            </div>
+          </div>
+        </form>
+      </dialog>
     `;
   }
 }

@@ -160,7 +160,7 @@ Deno.test({
         const res = await apiCall(ctx.app, "POST", "/api/import/tasks", {
           tasks: [
             { title: "Simple Import Task 1" },
-            { title: "Simple Import Task 2", description: "With description" },
+            { title: "Simple Import Task 2" },
           ],
         });
         assertEquals(res.status, 200);

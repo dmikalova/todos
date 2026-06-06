@@ -150,7 +150,6 @@ export class TodoSidebar extends StoreElement {
     .avatar {
       width: 32px;
       height: 32px;
-      border-radius: 50%;
       background: var(--md-sys-color-primary);
       color: var(--md-sys-color-on-primary);
       display: flex;
@@ -179,7 +178,6 @@ export class TodoSidebar extends StoreElement {
       padding: 8px 12px;
       border: none;
       background: transparent;
-      border-radius: var(--md-sys-shape-corner-small);
       cursor: pointer;
       font-size: 14px;
       color: var(--md-sys-color-on-surface-variant);
@@ -237,7 +235,6 @@ export class TodoSidebar extends StoreElement {
       color: var(--md-sys-color-outline);
       cursor: pointer;
       padding: 4px;
-      border-radius: var(--md-sys-shape-corner-small);
     }
 
     .section-add:hover {
@@ -252,8 +249,7 @@ export class TodoSidebar extends StoreElement {
 
     .item-row .nav-button {
       flex: 1;
-      border-radius: var(--md-sys-shape-corner-small) 0 0
-        var(--md-sys-shape-corner-small);
+      border-radius: var(--md-sys-shape-corner-small);
     }
 
     .item-edit {
@@ -264,8 +260,7 @@ export class TodoSidebar extends StoreElement {
       cursor: pointer;
       opacity: 0;
       transition: opacity 0.15s;
-      border-radius: 0 var(--md-sys-shape-corner-small)
-        var(--md-sys-shape-corner-small) 0;
+      border-radius: var(--md-sys-shape-corner-small) 0;
     }
 
     .item-row:hover .item-edit {
@@ -280,7 +275,6 @@ export class TodoSidebar extends StoreElement {
     .color-dot {
       width: 8px;
       height: 8px;
-      border-radius: 50%;
       flex-shrink: 0;
       box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.25), inset 0 0 0 0 transparent;
     }
@@ -297,7 +291,6 @@ export class TodoSidebar extends StoreElement {
       color: var(--md-sys-color-outline);
       cursor: pointer;
       padding: 0;
-      border-radius: var(--md-sys-shape-corner-small);
       transition: transform 0.15s;
     }
 
@@ -328,7 +321,6 @@ export class TodoSidebar extends StoreElement {
     .drop-top-level {
       height: 4px;
       margin: 0 12px;
-      border-radius: 2px;
       transition: background-color 0.15s, height 0.15s;
     }
 

@@ -22,7 +22,6 @@ export class ProjectView extends StoreElement {
 
     .filter-select {
       padding: 8px 12px;
-      border-radius: var(--md-sys-shape-corner-small);
       border: 1px solid var(--md-sys-color-outline-variant);
       background: var(--md-sys-color-surface);
       color: var(--md-sys-color-on-surface);

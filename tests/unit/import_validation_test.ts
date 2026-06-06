@@ -36,7 +36,6 @@ const recurrenceSchema = z.object({
 const taskSchema = z.object({
   id: z.string().uuid().optional(),
   title: z.string().min(1).max(500),
-  description: z.string().max(5000).nullable().optional(),
   due_date: z.string().datetime().nullable().optional(),
   project_id: z.string().uuid().nullable().optional(),
   contexts: z.array(z.string().uuid()).optional(),
@@ -304,7 +303,6 @@ Deno.test("taskSchema - accepts task with all fields", () => {
   const result = taskSchema.parse({
     id: "123e4567-e89b-12d3-a456-426614174000",
     title: "Complete report",
-    description: "Quarterly financial report",
     due_date: "2026-02-28T17:00:00.000Z",
     project_id: "223e4567-e89b-12d3-a456-426614174001",
     contexts: ["323e4567-e89b-12d3-a456-426614174002"],

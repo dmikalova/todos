@@ -20,8 +20,14 @@
     "jsr:@std/path@^1.1.5": "1.1.5",
     "jsr:@std/testing@1": "1.0.19",
     "jsr:@zaubrik/djwt@3": "3.0.2",
+    "npm:@fontsource/material-symbols-rounded@*": "5.2.45",
+    "npm:@fontsource/material-symbols-rounded@5": "5.2.45",
+    "npm:@fontsource/noto-sans@*": "5.2.10",
+    "npm:@fontsource/noto-sans@5": "5.2.10",
     "npm:@lit-labs/ssr@3": "3.3.1",
-    "npm:@material/web@*": "2.4.1",
+    "npm:@m3e/icons@*": "1.0.5_@m3e+web@2.5.8__lit@3.3.2__tslib@2.8.1__@floating-ui+utils@0.2.11_@floating-ui+utils@0.2.11_lit@3.3.2_tslib@2.8.1",
+    "npm:@m3e/web@*": "2.5.8_lit@3.3.2_tslib@2.8.1_@floating-ui+utils@0.2.11",
+    "npm:@m3e/web@2": "2.5.8_lit@3.3.2_tslib@2.8.1_@floating-ui+utils@0.2.11",
     "npm:@supabase/supabase-js@2": "2.95.3",
     "npm:autoprefixer@10": "10.4.24_postcss@8.5.6",
     "npm:cssnano@7": "7.1.2_postcss@8.5.6",
@@ -262,6 +268,28 @@
       "os": ["win32"],
       "cpu": ["x64"]
     },
+    "@floating-ui/core@1.7.5": {
+      "integrity": "sha512-1Ih4WTWyw0+lKyFMcBHGbb5U5FtuHJuujoyyr5zTaWS5EYMeT6Jb2AuDeftsCsEuchO+mM2ij5+q9crhydzLhQ==",
+      "dependencies": [
+        "@floating-ui/utils"
+      ]
+    },
+    "@floating-ui/dom@1.7.6": {
+      "integrity": "sha512-9gZSAI5XM36880PPMm//9dfiEngYoC6Am2izES1FF406YFsjvyBMmeJ2g4SAju3xWwtuynNRFL2s9hgxpLI5SQ==",
+      "dependencies": [
+        "@floating-ui/core",
+        "@floating-ui/utils"
+      ]
+    },
+    "@floating-ui/utils@0.2.11": {
+      "integrity": "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="
+    },
+    "@fontsource/material-symbols-rounded@5.2.45": {
+      "integrity": "sha512-CXFb9F55qZQMypJYUmHYVdd1BtnLiMDGGWFz5iVaYB5VcDBJTaRJWxvmVWMvdH2LMgm+dUcAEy6Qqb/L0SbXYg=="
+    },
+    "@fontsource/noto-sans@5.2.10": {
+      "integrity": "sha512-J58RVfS/C0Z2VBF+PoU260Tx8cdRGYuS+e3yQe4hYaIYDl0sEVn5CzlLo5zVRvQD0HaIUTV8AZMfqR7rtdEpqQ=="
+    },
     "@jridgewell/gen-mapping@0.3.13": {
       "integrity": "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==",
       "dependencies": [
@@ -315,12 +343,24 @@
         "@lit-labs/ssr-dom-shim"
       ]
     },
-    "@material/web@2.4.1": {
-      "integrity": "sha512-0sk9t25acJ72Qv3r0n9r0lgDbPaAKnpm0p+QmEAAwYyZomHxuVbgrrAdtNXaRm7jFyGh+WsTr8bhtvCnpPRFjw==",
+    "@m3e/icons@1.0.5_@m3e+web@2.5.8__lit@3.3.2__tslib@2.8.1__@floating-ui+utils@0.2.11_@floating-ui+utils@0.2.11_lit@3.3.2_tslib@2.8.1": {
+      "integrity": "sha512-YsNm73FFhVmVELsvwOSMrKCsRlpUhwRt3Bt0lc6UbSjWNhjy0izscFNT5V2BCngnKZP3pSgbp2c5F2k4rGxWMw==",
       "dependencies": [
+        "@m3e/web"
+      ]
+    },
+    "@m3e/web@2.5.8_lit@3.3.2_tslib@2.8.1_@floating-ui+utils@0.2.11": {
+      "integrity": "sha512-jFev4Nj7hRlmbcwO0zivDQUHZL7LCTVjsKHsktqVI8R3eXYN3JlL6rxftQNQ1x2dqcS1QmKHYf/9jho5ocyazw==",
+      "dependencies": [
+        "@floating-ui/dom",
+        "@material/material-color-utilities",
+        "composed-offset-position",
         "lit",
         "tslib"
       ]
+    },
+    "@material/material-color-utilities@0.4.0": {
+      "integrity": "sha512-dlq6VExJReb8dhjj3a/yTigr3ncNwoFmL5Iy2ENtbDX03EmNeOEdZ+vsaGrj7RTuO+mB7L58II4LCsl4NpM8uw=="
     },
     "@nodelib/fs.scandir@2.1.5": {
       "integrity": "sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==",
@@ -494,6 +534,12 @@
     },
     "commander@4.1.1": {
       "integrity": "sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA=="
+    },
+    "composed-offset-position@0.0.6_@floating-ui+utils@0.2.11": {
+      "integrity": "sha512-Q7dLompI6lUwd7LWyIcP66r4WcS9u7AL2h8HaeipiRfCRPLMWqRx8fYsjb4OHi6UQFifO7XtNC2IlEJ1ozIFxw==",
+      "dependencies": [
+        "@floating-ui/utils"
+      ]
     },
     "css-declaration-sorter@7.3.1_postcss@8.5.6": {
       "integrity": "sha512-gz6x+KkgNCjxq3Var03pRYLhyNfwhkKF1g/yoLgDNtFvVu0/fOLV9C8fFEZRjACp/XQLumjAYo7JVjzH3wLbxA==",
@@ -1344,8 +1390,11 @@
       "jsr:@std/assert@^1.0.18",
       "jsr:@std/testing@1",
       "jsr:@zaubrik/djwt@3",
+      "npm:@fontsource/material-symbols-rounded@5",
+      "npm:@fontsource/noto-sans@5",
       "npm:@lit-labs/ssr@3",
-      "npm:@material/web@*",
+      "npm:@m3e/icons@*",
+      "npm:@m3e/web@*",
       "npm:@supabase/supabase-js@2",
       "npm:esbuild@0.24",
       "npm:hono@4",

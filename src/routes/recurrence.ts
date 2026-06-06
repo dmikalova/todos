@@ -44,7 +44,6 @@ const updateRecurrenceSchema = z.object({
 interface Task {
   id: string;
   title: string;
-  description: string | null;
   project_id: string | null;
   priority: number;
   due_date: string | null;
@@ -318,11 +317,10 @@ recurrence.post("/:taskId/complete", async (c) => {
 
       // Create next task instance
       const [newTask] = await tx<Task[]>`
-      INSERT INTO tasks (user_id, title, description, project_id, priority, due_date, must_do)
+      INSERT INTO tasks (user_id, title, project_id, priority, due_date, must_do)
       VALUES (
         ${session.userId},
         ${task.title},
-        ${task.description},
         ${task.project_id},
         ${task.priority},
         ${nextDueDate.toISOString().split("T")[0]},

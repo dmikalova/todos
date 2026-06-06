@@ -32,7 +32,6 @@ Deno.test({
 
       const res = await apiCall(ctx.app, "POST", "/api/tasks", {
         title: "Integration Test Full Task",
-        description: "Test description",
         projectId: projectId,
         priority: 1,
         dueDate: dueDate,
@@ -44,7 +43,6 @@ Deno.test({
 
       assertExists(body.id);
       assertEquals(body.title, "Integration Test Full Task");
-      assertEquals(body.description, "Test description");
       assertEquals(body.project_id, projectId);
       assertEquals(body.priority, 1);
       assertEquals(body.due_date.split("T")[0], dueDate);
@@ -57,9 +55,8 @@ Deno.test({
       async () => {
         const res = await apiCall(ctx.app, "POST", "/api/tasks", {
           title: "Integration Test Minimal Task",
-          description: null,
           projectId: null,
-          priority: 4,
+          priority: 3,
           dueDate: null,
         });
 
@@ -68,16 +65,14 @@ Deno.test({
 
         assertExists(body.id);
         assertEquals(body.title, "Integration Test Minimal Task");
-        assertEquals(body.description, null);
         assertEquals(body.project_id, null);
-        assertEquals(body.priority, 4);
+        assertEquals(body.priority, 3);
         assertEquals(body.due_date, null);
       },
     );
 
     await t.step("POST /api/tasks validates title is required", async () => {
       const res = await apiCall(ctx.app, "POST", "/api/tasks", {
-        description: "Missing title",
         priority: 2,
       });
 
@@ -89,7 +84,7 @@ Deno.test({
     await t.step("PATCH /api/tasks/:id updates all fields", async () => {
       const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
         title: "Integration Test Update Task",
-        priority: 4,
+        priority: 3,
       });
       assertEquals(createRes.status, 201);
       const created = await createRes.json();
@@ -104,7 +99,6 @@ Deno.test({
         `/api/tasks/${created.id}`,
         {
           title: "Updated Title",
-          description: "Updated description",
           projectId: projectId,
           priority: 2,
           dueDate: dueDateStr,
@@ -120,7 +114,6 @@ Deno.test({
       const updated = await updateRes.json();
 
       assertEquals(updated.title, "Updated Title");
-      assertEquals(updated.description, "Updated description");
       assertEquals(updated.project_id, projectId);
       assertEquals(updated.priority, 2);
       assertEquals(updated.due_date.split("T")[0], dueDateStr);
@@ -132,7 +125,6 @@ Deno.test({
       async () => {
         const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
           title: "Integration Test Clear Task",
-          description: "To be cleared",
           projectId: projectId,
           priority: 1,
           dueDate: "2026-03-10",
@@ -145,7 +137,6 @@ Deno.test({
           "PATCH",
           `/api/tasks/${created.id}`,
           {
-            description: null,
             projectId: null,
             dueDate: null,
           },
@@ -154,7 +145,6 @@ Deno.test({
         assertEquals(updateRes.status, 200);
         const updated = await updateRes.json();
 
-        assertEquals(updated.description, null);
         assertEquals(updated.project_id, null);
         assertEquals(updated.due_date, null);
       },
@@ -165,7 +155,6 @@ Deno.test({
       async () => {
         const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
           title: "Integration Test Partial Task",
-          description: "Keep this",
           priority: 1,
           dueDate: "2026-03-15",
         });
@@ -185,7 +174,6 @@ Deno.test({
         const updated = await updateRes.json();
 
         assertEquals(updated.title, "Only Title Changed");
-        assertEquals(updated.description, "Keep this");
         assertEquals(updated.priority, 1);
         assertEquals(updated.due_date.split("T")[0], "2026-03-15");
       },
@@ -316,7 +304,7 @@ Deno.test({
         for (let i = 1; i <= 3; i++) {
           const res = await apiCall(ctx.app, "POST", "/api/tasks", {
             title: `Integration Test Paginate ${i}`,
-            priority: 4,
+            priority: 3,
           });
           assertEquals(res.status, 201);
         }

@@ -51,7 +51,7 @@ export class TodoApp extends StoreElement {
     }
 
     .content {
-      max-width: 48rem;
+      // max-width: 48rem;
       margin: 0 auto;
     }
 
@@ -107,7 +107,40 @@ export class TodoApp extends StoreElement {
 
     // Handle browser back/forward
     globalThis.addEventListener?.("popstate", () => store.parseUrl());
+
+    // Global keyboard shortcuts
+    globalThis.addEventListener?.("keydown", this.handleKeydown);
   }
+
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    globalThis.removeEventListener?.("keydown", this.handleKeydown);
+  }
+
+  private handleKeydown = (e: KeyboardEvent) => {
+    // Ignore when typing in inputs or when modals are open
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.tagName === "SELECT" ||
+      target.isContentEditable
+    ) {
+      return;
+    }
+
+    if (
+      store.showTaskForm || store.showProjectForm || store.showContextForm ||
+      store.showSearch
+    ) {
+      return;
+    }
+
+    if (e.key === "a" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      store.setShowTaskForm(true);
+    }
+  };
 
   private handleOverlayClick() {
     store.setSidebarOpen(false);

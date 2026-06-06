@@ -1,5 +1,10 @@
 // Project form modal
 
+import "npm:@m3e/web@2/button";
+import "npm:@m3e/web@2/form-field";
+import "npm:@m3e/web@2/icon";
+import "npm:@m3e/web@2/option";
+import "npm:@m3e/web@2/select";
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { store } from "../../store.ts";
@@ -8,74 +13,41 @@ import { store } from "../../store.ts";
 export class ProjectForm extends LitElement {
   static override styles = css`
     :host {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
+      display: contents;
     }
 
-    .backdrop {
-      position: absolute;
+    dialog {
+      position: fixed;
       inset: 0;
+      margin: auto;
+      border: none;
+      padding: 24px;
+      width: min(32rem, calc(100vw - 48px));
+      max-height: min(90vh, calc(100dvh - 48px));
+      overflow-y: auto;
+      background: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-on-surface);
+      border-radius: var(--md-sys-shape-corner-extra-large);
+      box-shadow: var(--md-sys-elevation-level4);
+      outline: none;
+    }
+
+    dialog::backdrop {
       background: rgba(0, 0, 0, 0.5);
     }
 
-    .modal {
-      position: relative;
-      background: var(--md-sys-color-surface);
-      border-radius: var(--md-sys-shape-corner-extra-large);
-      box-shadow: var(--md-sys-elevation-level4);
-      width: 100%;
-      max-width: 24rem;
-      padding: 24px;
-    }
-
-    h2 {
-      font-size: 20px;
-      font-weight: 500;
-      margin: 0 0 24px;
-      color: var(--md-sys-color-on-surface);
+    dialog h2 {
+      margin: 0 0 16px;
+      font-size: 24px;
+      font-weight: 400;
     }
 
     .form-group {
       margin-bottom: 16px;
     }
 
-    label {
-      display: block;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--md-sys-color-on-surface-variant);
-      margin-bottom: 4px;
-    }
-
-    input[type="text"] {
+    m3e-form-field {
       width: 100%;
-      padding: 12px;
-      border: 1px solid var(--md-sys-color-outline-variant);
-      border-radius: var(--md-sys-shape-corner-small);
-      background: var(--md-sys-color-surface);
-      color: var(--md-sys-color-on-surface);
-      font-size: 14px;
-    }
-
-    select {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid var(--md-sys-color-outline-variant);
-      border-radius: var(--md-sys-shape-corner-small);
-      background: var(--md-sys-color-surface);
-      color: var(--md-sys-color-on-surface);
-      font-size: 14px;
-    }
-
-    input:focus,
-    select:focus {
-      outline: 2px solid var(--md-sys-color-primary);
-      outline-offset: -1px;
     }
 
     .color-picker {
@@ -88,7 +60,6 @@ export class ProjectForm extends LitElement {
       width: 40px;
       height: 40px;
       border: 1px solid var(--md-sys-color-outline-variant);
-      border-radius: var(--md-sys-shape-corner-small);
       cursor: pointer;
     }
 
@@ -101,45 +72,6 @@ export class ProjectForm extends LitElement {
       display: flex;
       justify-content: space-between;
       margin-top: 24px;
-      padding-top: 16px;
-      border-top: 1px solid var(--md-sys-color-outline-variant);
-    }
-
-    .btn {
-      padding: 12px 24px;
-      border: none;
-      border-radius: var(--md-sys-shape-corner-small);
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .btn-save {
-      background: var(--md-sys-color-primary);
-      color: var(--md-sys-color-on-primary);
-    }
-
-    .btn-save:hover {
-      box-shadow: var(--md-sys-elevation-level2);
-    }
-
-    .btn-cancel {
-      background: transparent;
-      color: var(--md-sys-color-on-surface-variant);
-    }
-
-    .btn-cancel:hover {
-      background: var(--md-sys-color-surface-container);
-    }
-
-    .btn-delete {
-      background: transparent;
-      color: var(--md-sys-color-error);
-    }
-
-    .btn-delete:hover {
-      background: var(--md-sys-color-error-container);
     }
   `;
 
@@ -161,6 +93,12 @@ export class ProjectForm extends LitElement {
         parent_project_id: store.editingProject.parent_project_id || null,
       };
     }
+  }
+
+  override firstUpdated() {
+    const dialog = this.renderRoot.querySelector("dialog");
+    dialog?.showModal();
+    dialog?.addEventListener("close", () => this.close());
   }
 
   private close() {
@@ -232,23 +170,27 @@ export class ProjectForm extends LitElement {
     const isEditing = !!store.editingProject;
 
     return html`
-      <div class="backdrop" @click="${this.close}"></div>
-      <div class="modal">
+      <dialog @click="${(e: Event) => {
+        if ((e.target as HTMLElement).nodeName === "DIALOG") this.close();
+      }}">
         <h2>${isEditing ? "Edit Project" : "New Project"}</h2>
 
         <form @submit="${this.handleSubmit}">
           <div class="form-group">
-            <label>Name</label>
-            <input
-              type="text"
-              .value="${this.form.name}"
-              @input="${(e: Event) => (this.form = {
-                ...this.form,
-                name: (e.target as HTMLInputElement).value,
-              })}"
-              required
-              placeholder="Project name"
-            />
+            <m3e-form-field variant="outlined" hide-subscript="always">
+              <label slot="label" for="project-name">Name</label>
+              <input
+                id="project-name"
+                type="text"
+                .value="${this.form.name}"
+                @input="${(e: Event) => (this.form = {
+                  ...this.form,
+                  name: (e.target as HTMLInputElement).value,
+                })}"
+                required
+                placeholder="Project name"
+              />
+            </m3e-form-field>
           </div>
 
           <div class="form-group">
@@ -267,86 +209,98 @@ export class ProjectForm extends LitElement {
           </div>
 
           <div class="form-group">
-            <label>Context</label>
-            <select
-              @change="${(e: Event) => (this.form = {
-                ...this.form,
-                context_id: (e.target as HTMLSelectElement).value
-                  ? (e.target as HTMLSelectElement).value
-                  : null,
-              })}"
-            >
-              <option value="" ?selected="${!this.form.context_id}">
-                ${this._getInheritedContextLabel()}
-              </option>
-              ${store.contexts.map(
-                (c) =>
-                  html`
-                    <option
-                      value="${c.id}"
-                      ?selected="${c.id === this.form.context_id}"
-                    >
-                      ${c.name}
-                    </option>
-                  `,
-              )}
-            </select>
+            <m3e-form-field variant="outlined" hide-subscript="always">
+              <label slot="label" for="context-select">Context</label>
+              <m3e-select
+                id="context-select"
+                @change="${(e: Event) => {
+                  const select = e.target as HTMLElement & { value: string };
+                  this.form = {
+                    ...this.form,
+                    context_id: select.value || null,
+                  };
+                }}"
+              >
+                <m3e-icon
+                  slot="arrow"
+                  name="arrow_drop_down_circle"
+                  variant="rounded"
+                ></m3e-icon>
+                <m3e-option value="" selected>${this
+                  ._getInheritedContextLabel()}</m3e-option>
+                ${store.contexts.map(
+                  (c) =>
+                    html`
+                      <m3e-option value="${c
+                        .id}" ?selected="${this.form.context_id === c.id}">${c
+                        .name}</m3e-option>
+                    `,
+                )}
+              </m3e-select>
+            </m3e-form-field>
           </div>
 
           <div class="form-group">
-            <label>Parent Project</label>
-            <select
-              @change="${(e: Event) => (this.form = {
-                ...this.form,
-                parent_project_id: (e.target as HTMLSelectElement).value
-                  ? (e.target as HTMLSelectElement).value
-                  : null,
-              })}"
-            >
-              <option value="" ?selected="${!this.form.parent_project_id}">
-                None
-              </option>
-              ${this._getAvailableParents().map(
-                (p) =>
-                  html`
-                    <option
-                      value="${p.id}"
-                      ?selected="${p.id === this.form.parent_project_id}"
-                    >
-                      ${p.name}
-                    </option>
-                  `,
-              )}
-            </select>
+            <m3e-form-field variant="outlined" hide-subscript="always">
+              <label slot="label" for="parent-select">Parent Project</label>
+              <m3e-select
+                id="parent-select"
+                @change="${(e: Event) => {
+                  const select = e.target as HTMLElement & { value: string };
+                  this.form = {
+                    ...this.form,
+                    parent_project_id: select.value || null,
+                  };
+                }}"
+              >
+                <m3e-icon
+                  slot="arrow"
+                  name="arrow_drop_down_circle"
+                  variant="rounded"
+                ></m3e-icon>
+                <m3e-option value="" selected>None</m3e-option>
+                ${this._getAvailableParents().map(
+                  (p) =>
+                    html`
+                      <m3e-option value="${p
+                        .id}" ?selected="${this.form.parent_project_id ===
+                        p.id}">${p.name}</m3e-option>
+                    `,
+                )}
+              </m3e-select>
+            </m3e-form-field>
           </div>
 
           <div class="actions">
             <div>
               ${isEditing
                 ? html`
-                  <button
+                  <m3e-button
+                    variant="text"
                     type="button"
-                    class="btn btn-delete"
+                    style="--m3e-button-label-text-color: var(--md-sys-color-error)"
                     @click="${this.handleDelete}"
                   >
                     Delete
-                  </button>
+                  </m3e-button>
                 `
                 : null}
             </div>
             <div style="display: flex; gap: 8px;">
-              <button
+              <m3e-button
+                variant="text"
                 type="button"
-                class="btn btn-cancel"
                 @click="${this.close}"
               >
                 Cancel
-              </button>
-              <button type="submit" class="btn btn-save">Save</button>
+              </m3e-button>
+              <m3e-button variant="filled" type="submit">
+                Save
+              </m3e-button>
             </div>
           </div>
         </form>
-      </div>
+      </dialog>
     `;
   }
 }

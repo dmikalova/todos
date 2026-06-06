@@ -98,11 +98,6 @@ export class NextView extends StoreElement {
       margin: 0;
     }
 
-    .task-notes {
-      margin-top: 8px;
-      color: var(--md-sys-color-on-surface-variant);
-    }
-
     .priority-badge {
       font-size: 12px;
       font-weight: 500;
@@ -111,20 +106,16 @@ export class NextView extends StoreElement {
     }
 
     .priority-badge.p1 {
-      background: #ffebee;
-      color: var(--priority-1-color);
+      background: var(--priority-1-bg);
+      color: var(--priority-1-text);
     }
     .priority-badge.p2 {
-      background: #fff3e0;
-      color: var(--priority-2-color);
+      background: var(--priority-2-bg);
+      color: var(--priority-2-text);
     }
     .priority-badge.p3 {
-      background: #e3f2fd;
-      color: var(--priority-3-color);
-    }
-    .priority-badge.p4 {
-      background: var(--md-sys-color-surface-container);
-      color: var(--priority-4-color);
+      background: var(--priority-3-bg);
+      color: var(--priority-3-text);
     }
 
     .task-meta {
@@ -249,11 +240,6 @@ export class NextView extends StoreElement {
         <div class="task-header">
           <div>
             <h2 class="task-title">${task.title}</h2>
-            ${task.notes
-              ? html`
-                <p class="task-notes">${task.notes}</p>
-              `
-              : null}
           </div>
           ${task.priority
             ? html`

@@ -1,6 +1,15 @@
 /* Material 3 Theme - Generated from Lime Green seed color */
 /* Use CSS custom properties to theme @material/web components */
 
+/* Self-hosted Material Symbols Rounded icon font */
+@font-face {
+  font-family: "Material Symbols Rounded";
+  font-style: normal;
+  font-display: block;
+  font-weight: 400;
+  src: url(/fonts/material-symbols-rounded.woff2) format("woff2");
+}
+
 :root {
   /* Primary - Lime Green */
   --md-sys-color-primary: #4d6700;
@@ -14,11 +23,11 @@
   --md-sys-color-secondary-container: #dde6c4;
   --md-sys-color-on-secondary-container: #171e09;
 
-  /* Tertiary - Teal accent */
-  --md-sys-color-tertiary: #396661;
+  /* Tertiary - Lavender accent */
+  --md-sys-color-tertiary: #6b5778;
   --md-sys-color-on-tertiary: #ffffff;
-  --md-sys-color-tertiary-container: #bcece5;
-  --md-sys-color-on-tertiary-container: #00201d;
+  --md-sys-color-tertiary-container: #f2daff;
+  --md-sys-color-on-tertiary-container: #251432;
 
   /* Error */
   --md-sys-color-error: #ba1a1a;
@@ -66,25 +75,27 @@
   --md-sys-elevation-level4: 0px 6px 12px rgba(0, 0, 0, 0.1);
 
   /* Typography scale */
-  --md-sys-typescale-display-large-font: 400 57px/64px Roboto, sans-serif;
-  --md-sys-typescale-display-medium-font: 400 45px/52px Roboto, sans-serif;
-  --md-sys-typescale-display-small-font: 400 36px/44px Roboto, sans-serif;
+  --md-sys-typescale-display-large-font: 400 57px/64px "Noto Sans", sans-serif;
+  --md-sys-typescale-display-medium-font: 400 45px/52px "Noto Sans", sans-serif;
+  --md-sys-typescale-display-small-font: 400 36px/44px "Noto Sans", sans-serif;
 
-  --md-sys-typescale-headline-large-font: 400 32px/40px Roboto, sans-serif;
-  --md-sys-typescale-headline-medium-font: 400 28px/36px Roboto, sans-serif;
-  --md-sys-typescale-headline-small-font: 400 24px/32px Roboto, sans-serif;
+  --md-sys-typescale-headline-large-font: 400 32px/40px "Noto Sans", sans-serif;
+  --md-sys-typescale-headline-medium-font:
+    400 28px/36px "Noto Sans",
+    sans-serif;
+  --md-sys-typescale-headline-small-font: 400 24px/32px "Noto Sans", sans-serif;
 
-  --md-sys-typescale-title-large-font: 400 22px/28px Roboto, sans-serif;
-  --md-sys-typescale-title-medium-font: 500 16px/24px Roboto, sans-serif;
-  --md-sys-typescale-title-small-font: 500 14px/20px Roboto, sans-serif;
+  --md-sys-typescale-title-large-font: 400 22px/28px "Noto Sans", sans-serif;
+  --md-sys-typescale-title-medium-font: 500 16px/24px "Noto Sans", sans-serif;
+  --md-sys-typescale-title-small-font: 500 14px/20px "Noto Sans", sans-serif;
 
-  --md-sys-typescale-body-large-font: 400 16px/24px Roboto, sans-serif;
-  --md-sys-typescale-body-medium-font: 400 14px/20px Roboto, sans-serif;
-  --md-sys-typescale-body-small-font: 400 12px/16px Roboto, sans-serif;
+  --md-sys-typescale-body-large-font: 400 16px/24px "Noto Sans", sans-serif;
+  --md-sys-typescale-body-medium-font: 400 14px/20px "Noto Sans", sans-serif;
+  --md-sys-typescale-body-small-font: 400 12px/16px "Noto Sans", sans-serif;
 
-  --md-sys-typescale-label-large-font: 500 14px/20px Roboto, sans-serif;
-  --md-sys-typescale-label-medium-font: 500 12px/16px Roboto, sans-serif;
-  --md-sys-typescale-label-small-font: 500 11px/16px Roboto, sans-serif;
+  --md-sys-typescale-label-large-font: 500 14px/20px "Noto Sans", sans-serif;
+  --md-sys-typescale-label-medium-font: 500 12px/16px "Noto Sans", sans-serif;
+  --md-sys-typescale-label-small-font: 500 11px/16px "Noto Sans", sans-serif;
 
   /* Shape (border radius) */
   --md-sys-shape-corner-none: 0;
@@ -94,6 +105,12 @@
   --md-sys-shape-corner-large: 16px;
   --md-sys-shape-corner-extra-large: 28px;
   --md-sys-shape-corner-full: 9999px;
+
+  /* Override button and segmented button shapes to match form fields */
+  --m3e-button-shape-round: var(--md-sys-shape-corner-extra-small);
+  --m3e-button-selected-shape-round: var(--md-sys-shape-corner-extra-small);
+  --m3e-segmented-button-start-shape: var(--md-sys-shape-corner-extra-small);
+  --m3e-segmented-button-end-shape: var(--md-sys-shape-corner-extra-small);
 }
 
 /* Dark mode support */
@@ -109,10 +126,10 @@
     --md-sys-color-secondary-container: #424930;
     --md-sys-color-on-secondary-container: #dde6c4;
 
-    --md-sys-color-tertiary: #a0cfca;
-    --md-sys-color-on-tertiary: #003733;
-    --md-sys-color-tertiary-container: #1f4e49;
-    --md-sys-color-on-tertiary-container: #bcece5;
+    --md-sys-color-tertiary: #d6bee4;
+    --md-sys-color-on-tertiary: #3b2948;
+    --md-sys-color-tertiary-container: #534060;
+    --md-sys-color-on-tertiary-container: #f2daff;
 
     --md-sys-color-error: #ffb4ab;
     --md-sys-color-on-error: #690005;
@@ -149,7 +166,7 @@
 }
 
 html {
-  font-family: Roboto, system-ui, sans-serif;
+  font-family: "Noto Sans", system-ui, sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -163,10 +180,36 @@ body {
 
 /* Priority colors */
 :root {
-  --priority-1-color: #d32f2f;
-  --priority-2-color: #f57c00;
-  --priority-3-color: #1976d2;
-  --priority-4-color: #757575;
+  --priority-1-color: #ffe0b2;
+  --priority-2-color: #fff9c4;
+  --priority-3-color: #dcedc8;
+
+  /* Derived: light background tint (10% of color on surface) */
+  --priority-1-bg: color-mix(
+    in srgb,
+    var(--priority-1-color) 30%,
+    var(--md-sys-color-surface)
+  );
+  --priority-2-bg: color-mix(
+    in srgb,
+    var(--priority-2-color) 30%,
+    var(--md-sys-color-surface)
+  );
+  --priority-3-bg: color-mix(
+    in srgb,
+    var(--priority-3-color) 30%,
+    var(--md-sys-color-surface)
+  );
+
+  /* Derived: darkened for text/borders */
+  --priority-1-text: black;
+  --priority-2-text: black;
+  --priority-3-text: black;
+
+  /* Derived: border (stronger than bg, lighter than text) */
+  --priority-1-border: color-mix(in srgb, var(--priority-1-color) 90%, black);
+  --priority-2-border: color-mix(in srgb, var(--priority-2-color) 80%, black);
+  --priority-3-border: color-mix(in srgb, var(--priority-3-color) 70%, black);
 }
 
 /* Scrollbar styling */

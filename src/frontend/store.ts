@@ -4,7 +4,6 @@
 export interface Task {
   id: string;
   title: string;
-  notes?: string;
   priority: number;
   status: string;
   due_date?: string;
@@ -22,7 +21,6 @@ export interface Task {
 // Input type for API (camelCase)
 export interface TaskInput {
   title: string;
-  description?: string | null;
   projectId?: string | null;
   priority?: number;
   dueDate?: string | null;
@@ -86,6 +84,7 @@ class Store {
   private _historyTotal = 0;
   private _historyLoading = false;
   private _nextTasks: Task[] = [];
+  private _skippedTaskIds: Set<string> = new Set();
   private _loading = true;
   private _user: UserProfile | null = null;
 
@@ -128,10 +127,13 @@ class Store {
     return this._historyLoading;
   }
   get nextTasks() {
-    return this._nextTasks;
+    const filtered = this._nextTasks.filter(
+      (t) => !this._skippedTaskIds.has(t.id),
+    );
+    return filtered.length > 0 ? filtered : this._nextTasks;
   }
   get currentTask() {
-    return this._nextTasks[0] || null;
+    return this.nextTasks[0] || null;
   }
   get loading() {
     return this._loading;
@@ -537,6 +539,7 @@ class Store {
         "/next",
       );
       this._nextTasks = result.tasks;
+      this._skippedTaskIds.clear();
       this.notify();
     } catch (_e) {
       this.showToast("Failed to load next task", "error");
@@ -621,14 +624,10 @@ class Store {
     }
   }
 
-  async skipTask() {
+  skipTask() {
     if (!this.currentTask) return;
-    try {
-      await this.api(`/tasks/${this.currentTask.id}/skip`, { method: "POST" });
-      await this.fetchNext();
-    } catch (_e) {
-      this.showToast("Failed to skip task", "error");
-    }
+    this._skippedTaskIds.add(this.currentTask.id);
+    this.notify();
   }
 
   async deferTask(duration: string) {

@@ -88,7 +88,6 @@ Deno.test({
           { title: "Integration Test Simple Import 2" },
           {
             title: "Integration Test Simple Import 3",
-            description: "With desc",
             due_date: "2026-06-01T00:00:00Z",
           },
         ],

@@ -40,7 +40,6 @@ const recurrenceSchema = z.object({
 const taskSchema = z.object({
   id: z.string().uuid().optional(),
   title: z.string().min(1).max(500),
-  description: z.string().max(5000).nullable().optional(),
   due_date: z.string().datetime().nullable().optional(),
   project_id: z.string().uuid().nullable().optional(),
   contexts: z.array(z.string().uuid()).optional(), // Context IDs
@@ -242,11 +241,10 @@ importRoutes.post("/", async (c) => {
                 }
 
                 const [created] = await sp<{ id: string }[]>`
-                INSERT INTO tasks (user_id, title, description, due_date, project_id)
+                INSERT INTO tasks (user_id, title, due_date, project_id)
                 VALUES (
                   ${session.userId},
                   ${task.title},
-                  ${task.description || null},
                   ${task.due_date || null},
                   ${resolvedProjectId}
                 )
@@ -305,7 +303,6 @@ importRoutes.post("/tasks", async (c) => {
     tasks: z.array(
       z.object({
         title: z.string().min(1),
-        description: z.string().optional(),
         due_date: z.string().datetime().optional(),
       }),
     ),
@@ -330,10 +327,8 @@ importRoutes.post("/tasks", async (c) => {
         try {
           await tx.savepoint(async (sp) => {
             await sp`
-            INSERT INTO tasks (user_id, title, description, due_date)
-            VALUES (${session.userId}, ${task.title}, ${
-              task.description || null
-            }, ${task.due_date || null})
+            INSERT INTO tasks (user_id, title, due_date)
+            VALUES (${session.userId}, ${task.title}, ${task.due_date || null})
           `;
             imported++;
           });

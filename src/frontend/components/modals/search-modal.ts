@@ -26,7 +26,6 @@ export class SearchModal extends LitElement {
     .modal {
       position: relative;
       background: var(--md-sys-color-surface);
-      border-radius: var(--md-sys-shape-corner-extra-large);
       box-shadow: var(--md-sys-elevation-level4);
       width: 100%;
       max-width: 36rem;
@@ -68,7 +67,6 @@ export class SearchModal extends LitElement {
       border: none;
       color: var(--md-sys-color-outline);
       cursor: pointer;
-      border-radius: var(--md-sys-shape-corner-small);
     }
 
     .close-btn:hover {
@@ -103,7 +101,6 @@ export class SearchModal extends LitElement {
       width: 20px;
       height: 20px;
       border: 2px solid var(--md-sys-color-outline);
-      border-radius: 50%;
       flex-shrink: 0;
     }
 
@@ -139,7 +136,6 @@ export class SearchModal extends LitElement {
     .meta-tag {
       font-size: 11px;
       padding: 2px 6px;
-      border-radius: 9999px;
       background: var(--md-sys-color-surface-container-high);
       color: var(--md-sys-color-on-surface-variant);
     }
@@ -183,7 +179,6 @@ export class SearchModal extends LitElement {
       font-size: 11px;
       padding: 2px 6px;
       background: var(--md-sys-color-surface-container-high);
-      border-radius: 4px;
       font-family: monospace;
     }
   `;
@@ -230,11 +225,9 @@ export class SearchModal extends LitElement {
         )
         .slice(0, 10);
     } else {
-      // Filter tasks by title or notes
-      this.results = store.tasks.filter(
-        (t) =>
-          t.title.toLowerCase().includes(q) ||
-          (t.notes && t.notes.toLowerCase().includes(q)),
+      // Filter tasks by title
+      this.results = store.tasks.filter((t) =>
+        t.title.toLowerCase().includes(q)
       );
     }
   }

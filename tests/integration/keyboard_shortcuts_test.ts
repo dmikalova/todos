@@ -18,7 +18,7 @@ Deno.test({
       const expectedShortcuts = [
         { key: "n", description: "New task" },
         { key: "c", description: "Complete task" },
-        { key: "e", description: "Edit task" },
+        { key: "e", description: "edit task" },
         { key: "d", description: "Defer task" },
         { key: "?", description: "Show help" },
         { key: "Escape", description: "Close dialog" },

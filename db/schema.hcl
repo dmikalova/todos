@@ -226,11 +226,6 @@ table "tasks" {
     null = false
   }
 
-  column "description" {
-    type = text
-    null = true
-  }
-
   column "project_id" {
     type = uuid
     null = true

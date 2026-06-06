@@ -2,6 +2,12 @@
 
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import "npm:@m3e/web@2/button";
+import "npm:@m3e/web@2/form-field";
+import "npm:@m3e/web@2/icon";
+import "npm:@m3e/web@2/icon-button";
+import "npm:@m3e/web@2/option";
+import "npm:@m3e/web@2/select";
 import { store } from "../../store.ts";
 
 interface TimeWindow {
@@ -14,68 +20,41 @@ interface TimeWindow {
 export class ContextForm extends LitElement {
   static override styles = css`
     :host {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
+      display: contents;
     }
 
-    .backdrop {
-      position: absolute;
+    dialog {
+      position: fixed;
       inset: 0;
+      margin: auto;
+      border: none;
+      padding: 24px;
+      width: min(36rem, calc(100vw - 48px));
+      max-height: min(90vh, calc(100dvh - 48px));
+      overflow-y: auto;
+      background: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-on-surface);
+      border-radius: var(--md-sys-shape-corner-extra-large);
+      box-shadow: var(--md-sys-elevation-level4);
+      outline: none;
+    }
+
+    dialog::backdrop {
       background: rgba(0, 0, 0, 0.5);
     }
 
-    .modal {
-      position: relative;
-      background: var(--md-sys-color-surface);
-      border-radius: var(--md-sys-shape-corner-extra-large);
-      box-shadow: var(--md-sys-elevation-level4);
-      width: 100%;
-      max-width: 28rem;
-      max-height: 90vh;
-      overflow-y: auto;
-      padding: 24px;
-    }
-
-    h2 {
-      font-size: 20px;
-      font-weight: 500;
-      margin: 0 0 24px;
-      color: var(--md-sys-color-on-surface);
+    dialog h2 {
+      margin: 0 0 16px;
+      font-size: 24px;
+      font-weight: 400;
     }
 
     .form-group {
       margin-bottom: 16px;
     }
 
-    label {
-      display: block;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--md-sys-color-on-surface-variant);
-      margin-bottom: 4px;
-    }
-
-    input[type="text"],
-    input[type="time"],
-    select {
+    m3e-form-field {
       width: 100%;
-      padding: 12px;
-      border: 1px solid var(--md-sys-color-outline-variant);
-      border-radius: var(--md-sys-shape-corner-small);
-      background: var(--md-sys-color-surface);
-      color: var(--md-sys-color-on-surface);
-      font-size: 14px;
-    }
-
-    input:focus,
-    select:focus {
-      outline: 2px solid var(--md-sys-color-primary);
-      outline-offset: -1px;
     }
 
     .color-picker {
@@ -88,7 +67,6 @@ export class ContextForm extends LitElement {
       width: 40px;
       height: 40px;
       border: 1px solid var(--md-sys-color-outline-variant);
-      border-radius: var(--md-sys-shape-corner-small);
       cursor: pointer;
     }
 
@@ -110,18 +88,6 @@ export class ContextForm extends LitElement {
       color: var(--md-sys-color-on-surface-variant);
     }
 
-    .add-btn {
-      font-size: 12px;
-      color: var(--md-sys-color-primary);
-      background: transparent;
-      border: none;
-      cursor: pointer;
-    }
-
-    .add-btn:hover {
-      text-decoration: underline;
-    }
-
     .description {
       font-size: 11px;
       color: var(--md-sys-color-outline);
@@ -135,7 +101,7 @@ export class ContextForm extends LitElement {
       margin-bottom: 8px;
     }
 
-    .time-window select {
+    .time-window m3e-select {
       width: auto;
       flex-shrink: 0;
     }
@@ -143,20 +109,6 @@ export class ContextForm extends LitElement {
     .time-window input {
       width: auto;
       flex: 1;
-    }
-
-    .remove-btn {
-      padding: 8px;
-      background: transparent;
-      border: none;
-      color: var(--md-sys-color-outline);
-      cursor: pointer;
-      border-radius: var(--md-sys-shape-corner-small);
-    }
-
-    .remove-btn:hover {
-      color: var(--md-sys-color-error);
-      background: var(--md-sys-color-surface-container);
     }
 
     .empty-windows {
@@ -169,45 +121,6 @@ export class ContextForm extends LitElement {
       display: flex;
       justify-content: space-between;
       margin-top: 24px;
-      padding-top: 16px;
-      border-top: 1px solid var(--md-sys-color-outline-variant);
-    }
-
-    .btn {
-      padding: 12px 24px;
-      border: none;
-      border-radius: var(--md-sys-shape-corner-small);
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .btn-save {
-      background: var(--md-sys-color-primary);
-      color: var(--md-sys-color-on-primary);
-    }
-
-    .btn-save:hover {
-      box-shadow: var(--md-sys-elevation-level2);
-    }
-
-    .btn-cancel {
-      background: transparent;
-      color: var(--md-sys-color-on-surface-variant);
-    }
-
-    .btn-cancel:hover {
-      background: var(--md-sys-color-surface-container);
-    }
-
-    .btn-delete {
-      background: transparent;
-      color: var(--md-sys-color-error);
-    }
-
-    .btn-delete:hover {
-      background: var(--md-sys-color-error-container);
     }
   `;
 
@@ -239,6 +152,12 @@ export class ContextForm extends LitElement {
           : [],
       };
     }
+  }
+
+  override firstUpdated() {
+    const dialog = this.renderRoot.querySelector("dialog");
+    dialog?.showModal();
+    dialog?.addEventListener("close", () => this.close());
   }
 
   private close() {
@@ -296,23 +215,27 @@ export class ContextForm extends LitElement {
     const isEditing = !!store.editingContext;
 
     return html`
-      <div class="backdrop" @click="${this.close}"></div>
-      <div class="modal">
+      <dialog @click="${(e: Event) => {
+        if ((e.target as HTMLElement).nodeName === "DIALOG") this.close();
+      }}">
         <h2>${isEditing ? "Edit Context" : "New Context"}</h2>
 
         <form @submit="${this.handleSubmit}">
           <div class="form-group">
-            <label>Name</label>
-            <input
-              type="text"
-              .value="${this.form.name}"
-              @input="${(e: Event) => (this.form = {
-                ...this.form,
-                name: (e.target as HTMLInputElement).value,
-              })}"
-              required
-              placeholder="Context name"
-            />
+            <m3e-form-field variant="outlined" hide-subscript="always">
+              <label slot="label" for="context-name">Name</label>
+              <input
+                id="context-name"
+                type="text"
+                .value="${this.form.name}"
+                @input="${(e: Event) => (this.form = {
+                  ...this.form,
+                  name: (e.target as HTMLInputElement).value,
+                })}"
+                required
+                placeholder="Context name"
+              />
+            </m3e-form-field>
           </div>
 
           <div class="form-group">
@@ -333,13 +256,13 @@ export class ContextForm extends LitElement {
           <div class="form-group">
             <div class="section-header">
               <span class="section-title">Time Windows</span>
-              <button
+              <m3e-button
+                variant="text"
                 type="button"
-                class="add-btn"
                 @click="${this.addTimeWindow}"
               >
                 + Add Window
-              </button>
+              </m3e-button>
             </div>
             <p class="description">
               Define when this context is active (e.g., work hours)
@@ -347,30 +270,39 @@ export class ContextForm extends LitElement {
 
             ${this.form.timeWindows.length === 0
               ? html`
-                <p class="empty-windows">
-                  No time windows (always active)
-                </p>
+                <p class="empty-windows">No time windows (always active)</p>
               `
               : this.form.timeWindows.map(
                 (tw, i) =>
                   html`
                     <div class="time-window">
-                      <select
-                        .value="${String(tw.dayOfWeek)}"
-                        @change="${(e: Event) =>
+                      <m3e-select
+                        @change="${(e: Event) => {
+                          const select = e.target as HTMLElement & {
+                            value: string;
+                          };
                           this.updateTimeWindow(
                             i,
                             "dayOfWeek",
-                            parseInt((e.target as HTMLSelectElement).value),
-                          )}"
+                            parseInt(select.value),
+                          );
+                        }}"
                       >
+                        <m3e-icon
+                          slot="arrow"
+                          name="arrow_drop_down_circle"
+                          variant="rounded"
+                        ></m3e-icon>
                         ${this.dayNames.map(
                           (name, idx) =>
                             html`
-                              <option value="${idx}">${name}</option>
+                              <m3e-option
+                                value="${idx}"
+                                ?selected="${tw.dayOfWeek === idx}"
+                              >${name}</m3e-option>
                             `,
                         )}
-                      </select>
+                      </m3e-select>
                       <input
                         type="time"
                         .value="${tw.startTime}"
@@ -392,26 +324,12 @@ export class ContextForm extends LitElement {
                             (e.target as HTMLInputElement).value,
                           )}"
                       />
-                      <button
+                      <m3e-icon-button
                         type="button"
-                        class="remove-btn"
                         @click="${() => this.removeTimeWindow(i)}"
                       >
-                        <svg
-                          width="16"
-                          height="16"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
+                        <m3e-icon name="close" variant="rounded"></m3e-icon>
+                      </m3e-icon-button>
                     </div>
                   `,
               )}
@@ -421,26 +339,26 @@ export class ContextForm extends LitElement {
             <div>
               ${isEditing
                 ? html`
-                  <button
+                  <m3e-button
+                    variant="text"
                     type="button"
-                    class="btn btn-delete"
+                    style="--m3e-button-label-text-color: var(--md-sys-color-error)"
                     @click="${this.handleDelete}"
                   >
                     Delete
-                  </button>
+                  </m3e-button>
                 `
                 : null}
             </div>
             <div style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-cancel" @click="${this
-                .close}">
+              <m3e-button variant="text" type="button" @click="${this.close}">
                 Cancel
-              </button>
-              <button type="submit" class="btn btn-save">Save</button>
+              </m3e-button>
+              <m3e-button variant="filled" type="submit"> Save </m3e-button>
             </div>
           </div>
         </form>
-      </div>
+      </dialog>
     `;
   }
 }

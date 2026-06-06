@@ -21,7 +21,6 @@ const exportQuerySchema = z.object({
 interface Task {
   id: string;
   title: string;
-  description: string | null;
   due_date: Date | null;
   due_date_original: Date | null;
   deferred_until: Date | null;
@@ -265,7 +264,6 @@ function tasksToCSV(tasks: Task[]): string {
   const headers = [
     "id",
     "title",
-    "description",
     "due_date",
     "deferred_until",
     "project_id",

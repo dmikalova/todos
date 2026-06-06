@@ -27,7 +27,6 @@ export class TodoHeader extends StoreElement {
       color: var(--md-sys-color-on-surface-variant);
       cursor: pointer;
       padding: 8px;
-      border-radius: var(--md-sys-shape-corner-small);
     }
 
     .menu-btn:hover {

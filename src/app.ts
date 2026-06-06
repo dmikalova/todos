@@ -3,6 +3,7 @@
 import * as esbuild from "esbuild";
 import { type Context, Hono } from "hono";
 import { serveStatic } from "hono/deno";
+import { getConfig } from "./config.ts";
 import {
   authMiddleware,
   errorHandler,
@@ -38,7 +39,7 @@ export function _setBundleState(
 }
 
 export async function bundleFrontend(
-  isDev = Deno.env.get("DENO_ENV") === "development",
+  isDev = getConfig().isDev,
   entryPoint = "./src/frontend/app.ts",
 ): Promise<void> {
   console.log("Bundling frontend...");
@@ -220,8 +221,7 @@ app.get("/fonts/material-symbols-rounded.woff2", async (c) => {
 });
 
 // Live-reload SSE endpoint (dev only)
-const isDev = Deno.env.get("DENO_ENV") === "development";
-if (isDev) {
+if (getConfig().isDev) {
   app.get("/api/live-reload", (c) => {
     const stream = new ReadableStream({
       start(controller) {
@@ -267,7 +267,7 @@ async function serveIndex(c: Context): Promise<Response> {
   for (const path of ["./dist/index.html", "./src/public/index.html"]) {
     try {
       let html = await Deno.readTextFile(path);
-      if (isDev) {
+      if (getConfig().isDev) {
         html = html.replace("</body>", `${liveReloadScript}</body>`);
       }
       return c.html(html);

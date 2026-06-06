@@ -7,6 +7,7 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { create } from "djwt";
 import { Hono } from "hono";
+import { _resetConfig, _setConfigForTest } from "../../src/config.ts";
 import {
   authMiddleware,
   errorHandler,
@@ -56,30 +57,21 @@ function createTestApp(): Hono<AppEnv> {
   return app;
 }
 
-// Helper to save/restore env and fetch stub
+// Helper to save/restore config and fetch stub
 function setupEnv(): {
   originalFetch: typeof globalThis.fetch;
-  originalDeno: string | undefined;
-  originalSupabase: string | undefined;
 } {
   const originalFetch = globalThis.fetch;
-  const originalDeno = Deno.env.get("DENO_ENV");
-  const originalSupabase = Deno.env.get("SUPABASE_URL");
-  Deno.env.delete("DENO_ENV");
-  return { originalFetch, originalDeno, originalSupabase };
+  // Set production mode so auth middleware doesn't dev-bypass
+  _setConfigForTest({ isDev: false, supabaseUrl: null });
+  return { originalFetch };
 }
 
 function restoreEnv(saved: {
   originalFetch: typeof globalThis.fetch;
-  originalDeno: string | undefined;
-  originalSupabase: string | undefined;
 }): void {
   globalThis.fetch = saved.originalFetch;
-  if (saved.originalDeno) Deno.env.set("DENO_ENV", saved.originalDeno);
-  else Deno.env.delete("DENO_ENV");
-  if (saved.originalSupabase) {
-    Deno.env.set("SUPABASE_URL", saved.originalSupabase);
-  } else Deno.env.delete("SUPABASE_URL");
+  _resetConfig();
 }
 
 function stubFetch(
@@ -104,7 +96,6 @@ Deno.test({
   name: "Middleware - missing SUPABASE_URL returns 401",
   async fn() {
     const saved = setupEnv();
-    Deno.env.delete("SUPABASE_URL");
     stubFetch(() => new Response("should not be called", { status: 500 }));
     try {
       const app = createTestApp();
@@ -125,7 +116,7 @@ Deno.test({
   name: "Middleware - JWKS fetch failure returns 401",
   async fn() {
     const saved = setupEnv();
-    Deno.env.set("SUPABASE_URL", "http://localhost:19999");
+    _setConfigForTest({ isDev: false, supabaseUrl: "http://localhost:19999" });
     stubFetch(() => new Response("Server Error", { status: 500 }));
     try {
       const app = createTestApp();
@@ -146,7 +137,7 @@ Deno.test({
   name: "Middleware - JWKS with no keys returns 401",
   async fn() {
     const saved = setupEnv();
-    Deno.env.set("SUPABASE_URL", "http://localhost:29999");
+    _setConfigForTest({ isDev: false, supabaseUrl: "http://localhost:29999" });
     stubFetch(
       () => new Response(JSON.stringify({ keys: [] }), { status: 200 }),
     );
@@ -169,7 +160,7 @@ Deno.test({
   name: "Middleware - JWKS with no ES256 key returns 401",
   async fn() {
     const saved = setupEnv();
-    Deno.env.set("SUPABASE_URL", "http://localhost:39999");
+    _setConfigForTest({ isDev: false, supabaseUrl: "http://localhost:39999" });
     stubFetch(
       () =>
         new Response(
@@ -198,7 +189,7 @@ Deno.test({
   name: "Middleware - no session cookie on API request returns 401",
   async fn() {
     const saved = setupEnv();
-    Deno.env.set("SUPABASE_URL", "http://localhost:49999");
+    _setConfigForTest({ isDev: false, supabaseUrl: "http://localhost:49999" });
     try {
       const app = createTestApp();
       const req = new Request("http://localhost/api/test");
@@ -216,7 +207,7 @@ Deno.test({
   name: "Middleware - no session cookie on browser request redirects to login",
   async fn() {
     const saved = setupEnv();
-    Deno.env.set("SUPABASE_URL", "http://localhost:49999");
+    _setConfigForTest({ isDev: false, supabaseUrl: "http://localhost:49999" });
     try {
       const app = createTestApp();
       const req = new Request("http://localhost/page");
@@ -238,7 +229,7 @@ Deno.test({
     "Middleware - browser request without session redirects without returnUrl path only",
   async fn() {
     const saved = setupEnv();
-    Deno.env.set("SUPABASE_URL", "http://localhost:49999");
+    _setConfigForTest({ isDev: false, supabaseUrl: "http://localhost:49999" });
     try {
       const app = createTestApp();
       // Request to root "/" still includes returnUrl in redirect
@@ -267,7 +258,7 @@ Deno.test({
     const { privateKey, publicJwk } = await generateTestKeyPair();
     const supabaseUrl = "http://localhost:54321";
     const saved = setupEnv();
-    Deno.env.set("SUPABASE_URL", supabaseUrl);
+    _setConfigForTest({ isDev: false, supabaseUrl });
 
     // Stub fetch to return our test JWKS
     stubFetch((url) => {

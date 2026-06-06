@@ -3,10 +3,11 @@
 import { verify } from "djwt";
 import { type Context, type MiddlewareHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { getConfig } from "./config.ts";
 import type { AppEnv, SessionData } from "./types.ts";
 
 function getSessionDomain(): string {
-  return Deno.env.get("SESSION_DOMAIN") || "mklv.tech";
+  return getConfig().sessionDomain;
 }
 
 function getLoginUrl(returnUrl: string): string {
@@ -35,7 +36,7 @@ async function getJwtKey(): Promise<CryptoKey> {
     return jwtKey;
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseUrl = getConfig().supabaseUrl;
   if (!supabaseUrl) {
     throw new Error("SUPABASE_URL environment variable is required");
   }
@@ -87,7 +88,7 @@ async function validateSession(token: string): Promise<SessionData | null> {
       return null;
     }
 
-    const expectedIssuer = Deno.env.get("SUPABASE_URL");
+    const expectedIssuer = getConfig().supabaseUrl;
     if (expectedIssuer) {
       const issuerBase = expectedIssuer.replace(/\/$/, "");
       const payloadIssuer = (payload.iss as string)?.replace(/\/$/, "");
@@ -163,7 +164,7 @@ export const authMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
   }
 
   // Dev bypass - skip auth in development mode
-  if (Deno.env.get("DENO_ENV") === "development") {
+  if (getConfig().isDev) {
     c.set("session", {
       userId: "00000000-0000-0000-0000-000000000001",
       email: "dev@localhost",
@@ -212,7 +213,7 @@ export const errorHandler = (err: Error, c: Context): Response => {
   console.error("Unhandled error:", err);
 
   // Don't expose internal errors in production
-  const isDev = Deno.env.get("DENO_ENV") === "development";
+  const isDev = getConfig().isDev;
 
   return c.json(
     {

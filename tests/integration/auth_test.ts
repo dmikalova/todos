@@ -2,6 +2,7 @@
 // Tests: session validation, middleware behavior, unauthenticated requests
 
 import { assertEquals, assertNotEquals } from "@std/assert";
+import { getConfig } from "../../src/config.ts";
 import {
   apiCall,
   setupTestContext,
@@ -31,7 +32,7 @@ Deno.test({
 
         // In dev mode, auth is bypassed so we get 200
         // In production, this would return 401
-        const isDev = Deno.env.get("DENO_ENV") === "development";
+        const { isDev } = getConfig();
         assertEquals(res.status, isDev ? 200 : 401);
       },
     );
@@ -49,8 +50,8 @@ Deno.test({
 
         // In dev mode, auth is bypassed so we get 200
         // In production, this would return 401
-        const isDev = Deno.env.get("DENO_ENV") === "development";
-        assertEquals(res.status, isDev ? 200 : 401);
+        const { isDev: isDev2 } = getConfig();
+        assertEquals(res.status, isDev2 ? 200 : 401);
       },
     );
 

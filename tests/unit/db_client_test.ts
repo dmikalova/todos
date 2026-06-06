@@ -1,22 +1,28 @@
 // Unit tests for database client functions
-// Tests: getConfig, resetConnection, closeConnection
+// Tests: getDbConfig, resetConnection, closeConnection
 
 import { assertEquals, assertThrows } from "@std/assert";
+import { _resetConfig, _setConfigForTest } from "../../src/config.ts";
 import {
   closeConnection,
-  getConfig,
+  getDbConfig,
   getSchema,
   resetConnection,
 } from "../../src/db/client.ts";
 
-Deno.test("getConfig - returns config from environment variables", () => {
-  const original = Deno.env.get("DATABASE_URL_TRANSACTION");
-  Deno.env.set(
-    "DATABASE_URL_TRANSACTION",
-    "postgres://test:test@localhost:5432/test",
-  );
+Deno.test("getDbConfig - returns config from app config", () => {
+  _setConfigForTest({
+    db: {
+      url: "postgres://test:test@localhost:5432/test",
+      schema: "todos",
+      max: 10,
+      idleTimeout: 30,
+      connectTimeout: 10,
+      acquireTimeout: 30,
+    },
+  });
   try {
-    const config = getConfig();
+    const config = getDbConfig();
     assertEquals(config.url, "postgres://test:test@localhost:5432/test");
     assertEquals(config.schema, "todos");
     assertEquals(config.max, 10);
@@ -24,44 +30,49 @@ Deno.test("getConfig - returns config from environment variables", () => {
     assertEquals(config.connectTimeout, 10);
     assertEquals(config.acquireTimeout, 30);
   } finally {
-    if (original) Deno.env.set("DATABASE_URL_TRANSACTION", original);
-    else Deno.env.delete("DATABASE_URL_TRANSACTION");
+    _resetConfig();
   }
 });
 
-Deno.test("getConfig - throws when DATABASE_URL_TRANSACTION is missing", () => {
-  const original = Deno.env.get("DATABASE_URL_TRANSACTION");
-  Deno.env.delete("DATABASE_URL_TRANSACTION");
+Deno.test("getDbConfig - throws when db.url is null", () => {
+  _setConfigForTest({
+    db: {
+      url: null,
+      schema: "todos",
+      max: 10,
+      idleTimeout: 30,
+      connectTimeout: 10,
+      acquireTimeout: 30,
+    },
+  });
   try {
     assertThrows(
-      () => getConfig(),
+      () => getDbConfig(),
       Error,
       "DATABASE_URL_TRANSACTION environment variable is required",
     );
   } finally {
-    if (original) Deno.env.set("DATABASE_URL_TRANSACTION", original);
+    _resetConfig();
   }
 });
 
-Deno.test("getConfig - respects custom env values", () => {
-  const original = Deno.env.get("DATABASE_URL_TRANSACTION");
-  const originalSchema = Deno.env.get("DATABASE_SCHEMA");
-  const originalMax = Deno.env.get("DATABASE_POOL_MAX");
-
-  Deno.env.set("DATABASE_URL_TRANSACTION", "postgres://x:x@localhost/db");
-  Deno.env.set("DATABASE_SCHEMA", "custom_schema");
-  Deno.env.set("DATABASE_POOL_MAX", "25");
+Deno.test("getDbConfig - respects custom config values", () => {
+  _setConfigForTest({
+    db: {
+      url: "postgres://x:x@localhost/db",
+      schema: "custom_schema",
+      max: 25,
+      idleTimeout: 30,
+      connectTimeout: 10,
+      acquireTimeout: 30,
+    },
+  });
   try {
-    const config = getConfig();
+    const config = getDbConfig();
     assertEquals(config.schema, "custom_schema");
     assertEquals(config.max, 25);
   } finally {
-    if (original) Deno.env.set("DATABASE_URL_TRANSACTION", original);
-    else Deno.env.delete("DATABASE_URL_TRANSACTION");
-    if (originalSchema) Deno.env.set("DATABASE_SCHEMA", originalSchema);
-    else Deno.env.delete("DATABASE_SCHEMA");
-    if (originalMax) Deno.env.set("DATABASE_POOL_MAX", originalMax);
-    else Deno.env.delete("DATABASE_POOL_MAX");
+    _resetConfig();
   }
 });
 

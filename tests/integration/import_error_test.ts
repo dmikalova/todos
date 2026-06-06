@@ -2,6 +2,11 @@
 // Tests the outer catch block (transaction failure) and simple /tasks catch block
 
 import { assertEquals } from "@std/assert";
+import {
+  _resetConfig,
+  _setConfigForTest,
+  getConfig,
+} from "../../src/config.ts";
 import { resetConnection } from "../../src/db/client.ts";
 import {
   apiCall,
@@ -20,12 +25,14 @@ Deno.test({
     await t.step(
       "POST /api/import catches transaction failure in outer catch",
       async () => {
-        const originalUrl = Deno.env.get("DATABASE_URL_TRANSACTION")!;
+        const originalDb = getConfig().db;
         // Point to a port that refuses connections — triggers connection error
-        Deno.env.set(
-          "DATABASE_URL_TRANSACTION",
-          "postgres://x:x@localhost:1/db?sslmode=disable",
-        );
+        _setConfigForTest({
+          db: {
+            ...originalDb,
+            url: "postgres://x:x@localhost:1/db?sslmode=disable",
+          },
+        });
         resetConnection();
         try {
           const res = await apiCall(ctx.app, "POST", "/api/import?mode=merge", {
@@ -36,7 +43,7 @@ Deno.test({
           assertEquals(body.errors.length, 1);
           assertEquals(body.errors[0].startsWith("Transaction failed:"), true);
         } finally {
-          Deno.env.set("DATABASE_URL_TRANSACTION", originalUrl);
+          _resetConfig();
           resetConnection();
         }
       },

@@ -2,8 +2,8 @@
 
 export {
   closeConnection,
-  getConfig,
   getConnection,
+  getDbConfig,
   getSchema,
   query,
   resetConnection,

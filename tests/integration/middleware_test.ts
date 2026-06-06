@@ -2,6 +2,7 @@
 // Tests: rate limiting, error handling, auth in non-dev mode
 
 import { assertEquals } from "@std/assert";
+import { _resetConfig, _setConfigForTest } from "../../src/config.ts";
 import {
   setupTestContext,
   teardownTestContext,
@@ -54,8 +55,7 @@ Deno.test({
     await t.step(
       "non-dev mode: API request without cookie returns 401",
       async () => {
-        const originalEnv = Deno.env.get("DENO_ENV");
-        Deno.env.delete("DENO_ENV");
+        _setConfigForTest({ isDev: false });
         try {
           const req = new Request("http://localhost/api/tasks", {
             headers: { "Content-Type": "application/json" },
@@ -65,7 +65,7 @@ Deno.test({
           const body = await res.json();
           assertEquals(body.error, "Unauthorized");
         } finally {
-          if (originalEnv) Deno.env.set("DENO_ENV", originalEnv);
+          _resetConfig();
         }
       },
     );
@@ -73,8 +73,7 @@ Deno.test({
     await t.step(
       "non-dev mode: browser request without cookie redirects to login",
       async () => {
-        const originalEnv = Deno.env.get("DENO_ENV");
-        Deno.env.delete("DENO_ENV");
+        _setConfigForTest({ isDev: false });
         try {
           const req = new Request("http://localhost/some-page", {
             headers: { Accept: "text/html" },
@@ -85,7 +84,7 @@ Deno.test({
           const location = res.headers.get("Location") || "";
           assertEquals(location.includes("login.mklv.tech"), true);
         } finally {
-          if (originalEnv) Deno.env.set("DENO_ENV", originalEnv);
+          _resetConfig();
         }
       },
     );
@@ -93,8 +92,7 @@ Deno.test({
     await t.step(
       "non-dev mode: API request with invalid session returns 401",
       async () => {
-        const originalEnv = Deno.env.get("DENO_ENV");
-        Deno.env.delete("DENO_ENV");
+        _setConfigForTest({ isDev: false });
         try {
           const req = new Request("http://localhost/api/tasks", {
             headers: {
@@ -107,7 +105,7 @@ Deno.test({
           const body = await res.json();
           assertEquals(body.error, "Invalid or expired session");
         } finally {
-          if (originalEnv) Deno.env.set("DENO_ENV", originalEnv);
+          _resetConfig();
         }
       },
     );
@@ -115,8 +113,7 @@ Deno.test({
     await t.step(
       "non-dev mode: browser request with invalid session redirects",
       async () => {
-        const originalEnv = Deno.env.get("DENO_ENV");
-        Deno.env.delete("DENO_ENV");
+        _setConfigForTest({ isDev: false });
         try {
           const req = new Request("http://localhost/dashboard", {
             headers: {
@@ -130,7 +127,7 @@ Deno.test({
           assertEquals(location.includes("login.mklv.tech"), true);
           assertEquals(location.includes("returnUrl"), true);
         } finally {
-          if (originalEnv) Deno.env.set("DENO_ENV", originalEnv);
+          _resetConfig();
         }
       },
     );

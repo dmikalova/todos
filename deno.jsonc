@@ -28,7 +28,7 @@
   "tasks": {
     // Development: start postgres, apply schema, run server with hot reload (frontend bundled on startup)
     // App connects as todos_app (non-superuser) so RLS policies are enforced
-    "dev": "docker compose up -d && sleep 1 && deno task db:local && export DATABASE_URL_TRANSACTION='postgres://todos_app:todos_app@localhost:5432/todos?search_path=todos&sslmode=disable' && DENO_ENV=development deno run --permission-set --watch=src/,db/ src/main.ts",
+    "dev": "docker compose up -d && sleep 1 && deno task db:local && export DATABASE_URL_TRANSACTION='postgres://todos_app:todos_app@localhost:5432/todos?search_path=todos&sslmode=disable' && deno run --permission-set --watch=src/,db/ src/main.ts",
     // Production start
     "start": "deno run --permission-set src/main.ts",
     // Type-check API and frontend
@@ -48,11 +48,11 @@
     // Lint TypeScript files
     "lint": "deno lint",
     // Run unit tests
-    "test": "export DENO_ENV=development DATABASE_URL_TRANSACTION='postgres://todos_app:todos_app@localhost:5432/todos?search_path=todos&sslmode=disable' && deno test --permission-set tests/unit/",
+    "test": "deno test --permission-set tests/unit/",
     // Run all tests (unit + integration, requires PostgreSQL)
-    "test:all": "export DENO_ENV=development DATABASE_URL_TRANSACTION='postgres://todos_app:todos_app@localhost:5432/todos?search_path=todos&sslmode=disable' && deno test --permission-set tests/",
+    "test:all": "deno test --permission-set tests/",
     // Run integration tests (requires PostgreSQL)
-    "test:integration": "export DENO_ENV=development DATABASE_URL_TRANSACTION='postgres://todos_app:todos_app@localhost:5432/todos?search_path=todos&sslmode=disable' && deno test --permission-set tests/integration/"
+    "test:integration": "deno test --permission-set tests/integration/"
   },
 
   // Permission sets for different contexts
@@ -91,6 +91,7 @@
 
   // Linter rules
   "lint": {
+    "plugins": ["./lint-plugin.ts"],
     "rules": {
       "tags": ["recommended"]
     }

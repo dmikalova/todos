@@ -2,10 +2,10 @@
 // This file bootstraps the application
 
 import { app } from "./app.ts";
+import { getConfig } from "./config.ts";
 import { closeConnection } from "./db/index.ts";
-import "./secrets.ts";
 
-const port = parseInt(Deno.env.get("PORT") || "8000");
+const { port, isDev } = getConfig();
 
 // Structured logging helper
 function log(
@@ -40,7 +40,7 @@ async function shutdown(signal: string) {
   }
 
   // Only exit in production — in dev, --watch needs the process to end naturally
-  if (Deno.env.get("DENO_ENV") !== "development") {
+  if (!isDev) {
     Deno.exit(signal === "SIGTERM" ? 0 : 1);
   }
 }
@@ -53,7 +53,7 @@ Deno.addSignalListener("SIGINT", () => shutdown("SIGINT"));
 async function initialize() {
   try {
     // In development, apply DB migrations on each restart (supports --watch=db/)
-    if (Deno.env.get("DENO_ENV") === "development") {
+    if (isDev) {
       const cmd = new Deno.Command("deno", {
         args: ["task", "db:local"],
         stdout: "inherit",

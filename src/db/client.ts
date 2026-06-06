@@ -2,6 +2,7 @@
 // Configured for Supabase with Supavisor connection pooler (port 6543)
 
 import postgres from "postgres";
+import { getConfig } from "../config.ts";
 
 export interface DatabaseConfig {
   url: string;
@@ -28,21 +29,21 @@ export interface SqlQuery {
 
 let sql: postgres.Sql | null = null;
 
-export function getConfig(): DatabaseConfig {
-  const url = Deno.env.get("DATABASE_URL_TRANSACTION");
-  if (!url) {
+export function getDbConfig(): DatabaseConfig {
+  const { db } = getConfig();
+  if (!db.url) {
     throw new Error(
       "DATABASE_URL_TRANSACTION environment variable is required",
     );
   }
 
   return {
-    url,
-    schema: Deno.env.get("DATABASE_SCHEMA") || "todos",
-    max: parseInt(Deno.env.get("DATABASE_POOL_MAX") || "10"),
-    idleTimeout: parseInt(Deno.env.get("DATABASE_IDLE_TIMEOUT") || "30"),
-    connectTimeout: parseInt(Deno.env.get("DATABASE_CONNECT_TIMEOUT") || "10"),
-    acquireTimeout: parseInt(Deno.env.get("DATABASE_ACQUIRE_TIMEOUT") || "30"),
+    url: db.url,
+    schema: db.schema,
+    max: db.max,
+    idleTimeout: db.idleTimeout,
+    connectTimeout: db.connectTimeout,
+    acquireTimeout: db.acquireTimeout,
   };
 }
 
@@ -50,12 +51,15 @@ let schemaName: string | null = null;
 
 export function getSchema(): string {
   if (!schemaName) {
-    schemaName = Deno.env.get("DATABASE_SCHEMA") || "todos";
+    schemaName = getConfig().db.schema;
   }
   return schemaName;
 }
 
 export const SCHEMA = "todos";
+
+// Suppress postgres NOTICE messages (e.g. from RAISE NOTICE in stored procedures)
+export function suppressNotice(..._: unknown[]): void {}
 
 // Determines if SSL should be enabled based on the connection URL's sslmode parameter
 export function isSslEnabled(url: string): boolean {
@@ -64,12 +68,26 @@ export function isSslEnabled(url: string): boolean {
   return sslMode !== "disable";
 }
 
+// Test-only: inject a mock connection to avoid needing a real database
+// When set, getConnection returns this instead of creating a real connection
+let mockConnection: postgres.Sql | null = null;
+export function _setConnectionForTest(mock: postgres.Sql | null): void {
+  mockConnection = mock;
+  sql = mock;
+}
+
 export function getConnection(): postgres.Sql {
   if (sql) {
     return sql;
   }
 
-  const config = getConfig();
+  // In test mode, reinstall the mock after reset
+  if (mockConnection) {
+    sql = mockConnection;
+    return sql;
+  }
+
+  const config = getDbConfig();
   const sslEnabled = isSslEnabled(config.url);
 
   sql = postgres(config.url, {
@@ -77,7 +95,7 @@ export function getConnection(): postgres.Sql {
     idle_timeout: config.idleTimeout,
     connect_timeout: config.connectTimeout,
     ssl: sslEnabled ? "require" : false,
-    onnotice: () => {},
+    onnotice: suppressNotice,
     transform: {
       undefined: null,
     },

@@ -206,8 +206,10 @@ Deno.test({
       "GET /fonts/material-symbols-rounded.woff2 returns font when available",
       async () => {
         const fakeFont = new Uint8Array([0x77, 0x4f, 0x46, 0x32]);
-        const readFileStub = stub(Deno, "readFile", (_path: string | URL) =>
-          Promise.resolve(fakeFont),
+        const readFileStub = stub(
+          Deno,
+          "readFile",
+          (_path: string | URL) => Promise.resolve(fakeFont),
         );
         try {
           const req = new Request(

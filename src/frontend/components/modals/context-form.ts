@@ -122,6 +122,10 @@ export class ContextForm extends LitElement {
       justify-content: space-between;
       margin-top: 24px;
     }
+
+    .delete-button {
+      --md-sys-color-primary: var(--md-sys-color-error);
+    }
   `;
 
   @state()
@@ -194,7 +198,7 @@ export class ContextForm extends LitElement {
   private async handleSubmit(e: Event) {
     e.preventDefault();
     await store.saveContext({
-      name: this.form.name,
+      name: this.form.name.trim(),
       color: this.form.color,
       time_windows: this.form.timeWindows.length > 0
         ? this.form.timeWindows
@@ -349,22 +353,22 @@ export class ContextForm extends LitElement {
               ${isEditing
                 ? html`
                   <m3e-button
+                    class="delete-button"
                     variant="text"
                     type="button"
-                    style="--m3e-button-label-text-color: var(--md-sys-color-error)"
                     @click="${this.handleDelete}"
                   >
+                    <m3e-icon
+                      slot="icon"
+                      name="delete"
+                      variant="rounded"
+                    ></m3e-icon>
                     Delete
                   </m3e-button>
                 `
                 : null}
             </div>
-            <div style="display: flex; gap: 8px;">
-              <m3e-button variant="text" type="button" @click="${this.close}">
-                Cancel
-              </m3e-button>
-              <m3e-button variant="filled" type="submit"> Save </m3e-button>
-            </div>
+            <m3e-button variant="filled" type="submit"> Save </m3e-button>
           </div>
         </form>
       </dialog>

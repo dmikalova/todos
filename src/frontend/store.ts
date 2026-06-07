@@ -338,8 +338,8 @@ class Store {
         (this._taskFilter.completed === ""
           ? true
           : this._taskFilter.completed === "true"
-            ? t.completed_at
-            : !t.completed_at),
+          ? t.completed_at
+          : !t.completed_at),
     );
   }
 
@@ -356,8 +356,8 @@ class Store {
         (this._taskFilter.completed === ""
           ? true
           : this._taskFilter.completed === "true"
-            ? t.completed_at
-            : !t.completed_at),
+          ? t.completed_at
+          : !t.completed_at),
     );
   }
 
@@ -388,15 +388,17 @@ class Store {
 
   get currentBreadcrumb(): string | null {
     switch (this._currentTab) {
+      case "next":
+      case "inbox":
+        return "Tasks";
       case "project":
         return "Projects";
       case "context":
         return "Contexts";
       case "due":
         return "Filters";
-      default:
-        return null;
     }
+    return null;
   }
 
   get currentTitleEditable(): boolean {

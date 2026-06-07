@@ -85,6 +85,10 @@ export class ProjectForm extends LitElement {
       justify-content: space-between;
       margin-top: 24px;
     }
+
+    .delete-button {
+      --md-sys-color-primary: var(--md-sys-color-error);
+    }
   `;
 
   @state()
@@ -162,7 +166,7 @@ export class ProjectForm extends LitElement {
   private async handleSubmit(e: Event) {
     e.preventDefault();
     await store.saveProject({
-      name: this.form.name,
+      name: this.form.name.trim(),
       color: this.form.color,
       contextId: this.form.context_id || undefined,
       parentProjectId: this.form.parent_project_id,
@@ -310,28 +314,25 @@ export class ProjectForm extends LitElement {
               ${isEditing
                 ? html`
                   <m3e-button
+                    class="delete-button"
                     variant="text"
                     type="button"
-                    style="--m3e-button-label-text-color: var(--md-sys-color-error)"
                     @click="${this.handleDelete}"
                   >
+                    <m3e-icon
+                      slot="icon"
+                      name="delete"
+                      variant="rounded"
+                    ></m3e-icon>
                     Delete
                   </m3e-button>
                 `
                 : null}
             </div>
-            <div style="display: flex; gap: 8px;">
-              <m3e-button
-                variant="text"
-                type="button"
-                @click="${this.close}"
-              >
-                Cancel
-              </m3e-button>
-              <m3e-button variant="filled" type="submit">
-                Save
-              </m3e-button>
-            </div>
+            <m3e-button variant="filled" type="submit">
+              <m3e-icon slot="icon" name="save" variant="rounded"></m3e-icon>
+              Save
+            </m3e-button>
           </div>
         </form>
       </dialog>

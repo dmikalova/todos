@@ -28,7 +28,7 @@ export class ContextView extends StoreElement {
     .add-task-row {
       background: var(--md-sys-color-surface);
       border-radius: var(--md-sys-shape-corner-medium);
-      padding: 16px;
+      padding: 12px;
       display: flex;
       align-items: center;
       gap: 16px;
@@ -45,14 +45,14 @@ export class ContextView extends StoreElement {
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      border: 2px solid var(--md-sys-color-outline);
+      background: var(--md-sys-color-primary);
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
       font-size: 16px;
       font-weight: 500;
-      color: var(--md-sys-color-outline);
+      color: var(--md-sys-color-on-primary);
     }
 
     .add-task-label {

@@ -53,13 +53,13 @@ export class TaskItem extends LitElement {
     }
 
     .checkbox.p1 {
-      border-color: var(--priority-1-border);
+      border-color: var(--priority-1-color);
     }
     .checkbox.p2 {
-      border-color: var(--priority-2-border);
+      border-color: var(--priority-2-color);
     }
     .checkbox.p3 {
-      border-color: var(--priority-3-border);
+      border-color: var(--priority-3-color);
     }
 
     .check-icon {

@@ -2,6 +2,7 @@
 
 import { css, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { styleMap } from "lit/directives/style-map.js";
 import "npm:@m3e/web@2/icon";
 import "npm:@m3e/web@2/icon-button";
 import "npm:@m3e/web@2/segmented-button";
@@ -89,9 +90,48 @@ export class TodoApp extends StoreElement {
       line-height: 1.2;
     }
 
+    .title-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+      color: var(--md-sys-color-on-surface-variant);
+      flex-shrink: 0;
+    }
+
+    .title-dot {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .title-dot::after {
+      content: "";
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background-color: var(--dot-color);
+    }
+
+    .filter-placeholder {
+      visibility: hidden;
+    }
+
+    .title-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .edit-button {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
     m3e-segmented-button.view-filter {
       width: auto;
-      margin-left: auto;
     }
 
     m3e-segmented-button.view-filter m3e-button-segment {
@@ -139,7 +179,9 @@ export class TodoApp extends StoreElement {
     }
 
     if (
-      store.showTaskForm || store.showProjectForm || store.showContextForm ||
+      store.showTaskForm ||
+      store.showProjectForm ||
+      store.showContextForm ||
       store.showSearch
     ) {
       return;
@@ -172,6 +214,67 @@ export class TodoApp extends StoreElement {
     }
   }
 
+  private renderPageIcon() {
+    switch (store.currentTab) {
+      case "next":
+        return html`<m3e-icon
+          class="title-icon"
+          name="double_arrow"
+          variant="rounded"
+        ></m3e-icon>`;
+      case "inbox":
+        return html`<m3e-icon
+          class="title-icon"
+          name="inbox"
+          variant="rounded"
+        ></m3e-icon>`;
+      case "due":
+        return html`<m3e-icon
+          class="title-icon"
+          name="event"
+          variant="rounded"
+        ></m3e-icon>`;
+      case "history":
+        return html`<m3e-icon
+          class="title-icon"
+          name="history"
+          variant="rounded"
+        ></m3e-icon>`;
+      case "settings":
+        return html`<m3e-icon
+          class="title-icon"
+          name="settings"
+          variant="rounded"
+        ></m3e-icon>`;
+      case "project": {
+        const project = store.projects.find(
+          (p) => p.id === store.selectedProjectId,
+        );
+        if (!project) return null;
+        return html`<span
+          class="title-dot"
+          style=${styleMap({
+            "--dot-color": project.color || "#4caf50",
+          })}
+        ></span>`;
+      }
+      case "context": {
+        const context = store.contexts.find(
+          (c) => c.id === store.selectedContextId,
+        );
+        if (!context) return null;
+        return html`<span
+          class="title-dot"
+          style=${styleMap({
+            "--dot-color": context.color || "#FDD835",
+          })}
+        ></span>`;
+      }
+      default:
+        return null;
+    }
+  }
+
   private get showFilter(): boolean {
     return ["inbox", "project", "context"].includes(store.currentTab);
   }
@@ -188,53 +291,52 @@ export class TodoApp extends StoreElement {
       <div class="page-heading">
         ${breadcrumb
           ? html`
-            <div class="breadcrumb">
-              <span>${breadcrumb}</span>
-              <span class="breadcrumb-sep">/</span>
-            </div>
-          `
+              <div class="breadcrumb">
+                <span>${breadcrumb}</span>
+                <span class="breadcrumb-sep">/</span>
+              </div>
+            `
           : null}
         <div class="title-row">
-          <h1 class="page-title">
-            ${title}
-          </h1>
-          ${this.showFilter
-            ? html`
-              <m3e-segmented-button
-                class="view-filter"
-                @change="${(e: Event) => {
-                  const segment = e.target as HTMLElement & { value: string };
-                  if (segment.value !== undefined) {
-                    this.handleFilterChange(
-                      segment.value,
-                    );
-                  }
-                }}"
+          ${this.renderPageIcon()}
+          <h1 class="page-title">${title}</h1>
+          <div class="title-actions">
+            ${editable
+              ? html`
+                  <m3e-icon-button
+                    class="edit-button"
+                    @click="${this.handleTitleClick}"
+                  >
+                    <m3e-icon name="edit" variant="rounded"></m3e-icon>
+                  </m3e-icon-button>
+                `
+              : null}
+            <m3e-segmented-button
+              class="view-filter ${this.showFilter ? "" : "filter-placeholder"}"
+              @change="${(e: Event) => {
+                const segment = e.target as HTMLElement & { value: string };
+                if (segment.value !== undefined) {
+                  this.handleFilterChange(segment.value);
+                }
+              }}"
+            >
+              <m3e-button-segment
+                value="true"
+                .checked="${store.taskFilter.completed === "true"}"
+                >done</m3e-button-segment
               >
-                <m3e-button-segment
-                  value="true"
-                  .checked="${store.taskFilter.completed === "true"}"
-                >done</m3e-button-segment>
-                <m3e-button-segment
-                  value=""
-                  .checked="${store.taskFilter.completed === ""}"
-                >all</m3e-button-segment>
-                <m3e-button-segment
-                  value="false"
-                  .checked="${store.taskFilter.completed === "false"}"
-                >next</m3e-button-segment>
-              </m3e-segmented-button>
-            `
-            : null} ${editable
-            ? html`
-              <m3e-icon-button
-                class="edit-button"
-                @click="${this.handleTitleClick}"
+              <m3e-button-segment
+                value=""
+                .checked="${store.taskFilter.completed === ""}"
+                >all</m3e-button-segment
               >
-                <m3e-icon name="more_vert" variant="rounded"></m3e-icon>
-              </m3e-icon-button>
-            `
-            : null}
+              <m3e-button-segment
+                value="false"
+                .checked="${store.taskFilter.completed === "false"}"
+                >next</m3e-button-segment
+              >
+            </m3e-segmented-button>
+          </div>
         </div>
       </div>
     `;
@@ -243,37 +345,21 @@ export class TodoApp extends StoreElement {
   private renderCurrentView() {
     switch (store.currentTab) {
       case "next":
-        return html`
-          <next-view></next-view>
-        `;
+        return html` <next-view></next-view> `;
       case "inbox":
-        return html`
-          <inbox-view></inbox-view>
-        `;
+        return html` <inbox-view></inbox-view> `;
       case "due":
-        return html`
-          <due-view></due-view>
-        `;
+        return html` <due-view></due-view> `;
       case "project":
-        return html`
-          <project-view></project-view>
-        `;
+        return html` <project-view></project-view> `;
       case "context":
-        return html`
-          <context-view></context-view>
-        `;
+        return html` <context-view></context-view> `;
       case "history":
-        return html`
-          <history-view></history-view>
-        `;
+        return html` <history-view></history-view> `;
       case "settings":
-        return html`
-          <settings-view></settings-view>
-        `;
+        return html` <settings-view></settings-view> `;
       default:
-        return html`
-          <next-view></next-view>
-        `;
+        return html` <next-view></next-view> `;
     }
   }
 
@@ -281,8 +367,8 @@ export class TodoApp extends StoreElement {
     return html`
       ${store.sidebarOpen
         ? html`
-          <div class="overlay" @click="${this.handleOverlayClick}"></div>
-        `
+            <div class="overlay" @click="${this.handleOverlayClick}"></div>
+          `
         : null}
 
       <todo-sidebar></todo-sidebar>
@@ -298,23 +384,10 @@ export class TodoApp extends StoreElement {
         </main>
       </div>
 
-      ${store.showTaskForm
-        ? html`
-          <task-form></task-form>
-        `
-        : null} ${store.showProjectForm
-        ? html`
-          <project-form></project-form>
-        `
-        : null} ${store.showContextForm
-        ? html`
-          <context-form></context-form>
-        `
-        : null} ${store.showSearch
-        ? html`
-          <search-modal></search-modal>
-        `
-        : null}
+      ${store.showTaskForm ? html` <task-form></task-form> ` : null}
+      ${store.showProjectForm ? html` <project-form></project-form> ` : null}
+      ${store.showContextForm ? html` <context-form></context-form> ` : null}
+      ${store.showSearch ? html` <search-modal></search-modal> ` : null}
     `;
   }
 }

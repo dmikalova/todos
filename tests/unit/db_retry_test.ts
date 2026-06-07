@@ -26,14 +26,12 @@ function createMockSql(): postgres.Sql {
       begin: (fn: (tx: unknown) => unknown) => {
         // Simulate a transaction: call the callback with a mock tx
         const tx = Object.assign(() => Promise.resolve([]), {
-          unsafe: () => Promise.resolve([]),
           json: (v: unknown) => v,
           savepoint: (cb: (sql: unknown) => unknown) => cb(tx),
         });
         return fn(tx);
       },
       end: () => Promise.resolve(),
-      unsafe: () => Promise.resolve([]),
       json: (v: unknown) => v,
     },
   );

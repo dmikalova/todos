@@ -223,14 +223,18 @@ export class SearchModal extends StoreElement {
                   : "No tasks yet"}
               </div>
             `
-            : this.results.map((task, i) => html`
-              <div
-                class="result-wrapper ${i === this.focusedIndex ? "focused" : ""}"
-                @click="${() => this.handleResultClick()}"
-              >
-                <task-item .task="${task}"></task-item>
-              </div>
-            `)}
+            : this.results.map((task, i) =>
+              html`
+                <div
+                  class="result-wrapper ${i === this.focusedIndex
+                    ? "focused"
+                    : ""}"
+                  @click="${() => this.handleResultClick()}"
+                >
+                  <task-item .task="${task}"></task-item>
+                </div>
+              `
+            )}
         </div>
       </div>
     `;

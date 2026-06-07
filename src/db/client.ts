@@ -136,14 +136,12 @@ export async function withTransaction<T>(
     const connection = getConnection();
     try {
       const result = (await connection.begin(async (tx) => {
-        await tx.unsafe(`SET LOCAL search_path TO ${schema}, public`);
-        if (userId) {
-          await tx.unsafe(
-            `SET LOCAL app.user_id = '${userId.replace(/'/g, "''")}'`,
-          );
-        }
         // Cast through unknown to break TypeScript's type tracking
         const sqlQuery: SqlQuery = tx as unknown as SqlQuery;
+        await sqlQuery`SELECT set_config('search_path', ${schema + ', public'}, true)`;
+        if (userId) {
+          await sqlQuery`SELECT set_config('app.user_id', ${userId}, true)`;
+        }
         return await fn(sqlQuery);
       })) as T;
       return result;
@@ -195,14 +193,12 @@ export async function query<T>(
     const connection = getConnection();
     try {
       return (await connection.begin(async (tx) => {
-        await tx.unsafe(`SET LOCAL search_path TO ${schema}, public`);
-        if (userId) {
-          await tx.unsafe(
-            `SET LOCAL app.user_id = '${userId.replace(/'/g, "''")}'`,
-          );
-        }
         // Cast through unknown to break TypeScript's type tracking
         const sqlQuery: SqlQuery = tx as unknown as SqlQuery;
+        await sqlQuery`SELECT set_config('search_path', ${schema + ', public'}, true)`;
+        if (userId) {
+          await sqlQuery`SELECT set_config('app.user_id', ${userId}, true)`;
+        }
         return await queryFn(sqlQuery);
       })) as T;
     } catch (error) {

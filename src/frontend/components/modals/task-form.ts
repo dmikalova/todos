@@ -310,7 +310,7 @@ export class TaskForm extends LitElement {
     }
     await store.saveTask(
       {
-        title: this.form.title,
+        title: this.form.title.trim(),
         priority: this.form.priority,
         dueDate: this.form.due_date || null,
         projectId: this.form.project_id || null,
@@ -396,25 +396,44 @@ export class TaskForm extends LitElement {
           </div>
 
           <div class="form-group">
-            <m3e-segmented-button
-              class="priority"
+            <m3e-form-field
+              variant="outlined"
+              float-label="always"
+              hide-subscript="${ifDefined(
+                this.hideSubscript("project-select"),
+              )}"
             >
-              ${[1, 2, 3].map(
-                (p) =>
-                  html`
-                    <m3e-button-segment
-                      class="p${p}"
-                      value="${p}"
-                      .checked="${this.form.priority === p}"
-                      @click="${() => {
-                        this.form = { ...this.form, priority: p };
-                      }}"
-                    >
-                      P${p}
-                    </m3e-button-segment>
-                  `,
-              )}
-            </m3e-segmented-button>
+              <label slot="label" for="project-select">Project</label>
+              <m3e-select
+                id="project-select"
+                @change="${(e: Event) => {
+                  const select = e.target as HTMLElement & { value: string };
+                  this.form = {
+                    ...this.form,
+                    project_id: select.value === "inbox"
+                      ? null
+                      : select.value || null,
+                  };
+                }}"
+              >
+                <m3e-icon
+                  slot="arrow"
+                  name="arrow_drop_down_circle"
+                  variant="rounded"
+                ></m3e-icon>
+                <m3e-option value="inbox" ?selected="${!this.form
+                  .project_id}">Inbox</m3e-option>
+                ${store.projects.map(
+                  (p) =>
+                    html`
+                      <m3e-option
+                        value="${p.id}"
+                        ?selected="${this.form.project_id === p.id}"
+                      >${p.name}</m3e-option>
+                    `,
+                )}
+              </m3e-select>
+            </m3e-form-field>
           </div>
 
           <div class="form-group">
@@ -459,47 +478,6 @@ export class TaskForm extends LitElement {
                 };
               }}"
             ></m3e-datepicker>
-          </div>
-
-          <div class="form-group">
-            <m3e-form-field
-              variant="outlined"
-              float-label="always"
-              hide-subscript="${ifDefined(
-                this.hideSubscript("project-select"),
-              )}"
-            >
-              <label slot="label" for="project-select">Project</label>
-              <m3e-select
-                id="project-select"
-                @change="${(e: Event) => {
-                  const select = e.target as HTMLElement & { value: string };
-                  this.form = {
-                    ...this.form,
-                    project_id: select.value === "inbox"
-                      ? null
-                      : select.value || null,
-                  };
-                }}"
-              >
-                <m3e-icon
-                  slot="arrow"
-                  name="arrow_drop_down_circle"
-                  variant="rounded"
-                ></m3e-icon>
-                <m3e-option value="inbox" ?selected="${!this.form
-                  .project_id}">Inbox</m3e-option>
-                ${store.projects.map(
-                  (p) =>
-                    html`
-                      <m3e-option
-                        value="${p.id}"
-                        ?selected="${this.form.project_id === p.id}"
-                      >${p.name}</m3e-option>
-                    `,
-                )}
-              </m3e-select>
-            </m3e-form-field>
           </div>
 
           <div class="form-group">
@@ -625,6 +603,28 @@ export class TaskForm extends LitElement {
             `
             : null}
 
+          <div class="form-group">
+            <m3e-segmented-button
+              class="priority"
+            >
+              ${[1, 2, 3].map(
+                (p) =>
+                  html`
+                    <m3e-button-segment
+                      class="p${p}"
+                      value="${p}"
+                      .checked="${this.form.priority === p}"
+                      @click="${() => {
+                        this.form = { ...this.form, priority: p };
+                      }}"
+                    >
+                      P${p}
+                    </m3e-button-segment>
+                  `,
+              )}
+            </m3e-segmented-button>
+          </div>
+
           <div class="actions">
             <div>
               ${isEditing
@@ -672,7 +672,7 @@ export class TaskForm extends LitElement {
                 type="button"
                 @click="${this.cancelDiscard}"
               >
-                Cancel
+                Continue editing
               </m3e-button>
               <m3e-button
                 class="discard-button"

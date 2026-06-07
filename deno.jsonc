@@ -21,26 +21,26 @@
     "lit": "npm:lit@^3",
     "playwright": "npm:playwright@^1.49",
     "postgres": "npm:postgres@^3",
-    "zod": "npm:zod@^3"
+    "zod": "npm:zod@^3",
   },
 
   // Available tasks: deno task <name>
   "tasks": {
     // Development: start postgres, apply schema, run server with hot reload (frontend bundled on startup)
     // App connects as todos_app (non-superuser) so RLS policies are enforced
-    "dev": "docker compose up -d && sleep 1 && deno task db:local && deno run --permission-set --watch=src/,db/ src/main.ts",
+    "dev": "docker compose up -d && sleep 1 && deno task db:apply && deno run --permission-set --watch=src/,db/ src/main.ts",
     // Production start
     "start": "DENO_ENV=production deno run --permission-set src/main.ts",
     // Type-check API and frontend
     "check": "deno check src/**/*.ts",
-    // Apply schema to remote database (fetches URL from Secret Manager)
+    // Apply schema to local database (default, uses local dev URL)
     "db:apply": "deno run --permission-set=scripts scripts/db.ts apply",
+    // Apply schema to production database (fetches URL from Secret Manager)
+    "db:apply:prd": "DENO_ENV=production deno run --permission-set=scripts scripts/db.ts apply",
     // Show planned schema changes
     "db:diff": "deno run --permission-set=scripts scripts/db.ts diff",
-    // Apply schema to local database
-    "db:local": "deno run --permission-set=scripts scripts/db.ts apply",
     // Reset local database (deletes all data)
-    "db:reset": "docker compose down -v && docker compose up -d && sleep 1 && deno task db:local",
+    "db:reset": "docker compose down -v && docker compose up -d && sleep 1 && deno task db:apply",
     // Stop local postgres
     "db:stop": "docker compose down",
     // Format all files
@@ -52,7 +52,7 @@
     // Run all tests (unit + integration, requires PostgreSQL)
     "test:all": "deno test --permission-set tests/",
     // Run integration tests (requires PostgreSQL)
-    "test:integration": "deno test --permission-set tests/integration/"
+    "test:integration": "deno test --permission-set tests/integration/",
   },
 
   // Permission sets for different contexts
@@ -62,19 +62,19 @@
       "env": true,
       "net": true,
       "read": true,
-      "run": true
+      "run": true,
     },
     // Scripts: database migrations and tooling
     "scripts": {
       "env": true,
       "read": true,
-      "run": true
-    }
+      "run": true,
+    },
   },
 
   // Test configuration
   "test": {
-    "include": ["tests/"]
+    "include": ["tests/"],
   },
 
   // TypeScript settings
@@ -86,14 +86,14 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     // DOM types for frontend code
-    "lib": ["deno.ns", "esnext", "dom", "dom.iterable"]
+    "lib": ["deno.ns", "esnext", "dom", "dom.iterable"],
   },
 
   // Linter rules
   "lint": {
     "plugins": ["./lint-plugin.ts"],
     "rules": {
-      "tags": ["recommended"]
-    }
-  }
+      "tags": ["recommended"],
+    },
+  },
 }

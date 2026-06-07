@@ -18,7 +18,7 @@ export interface AppConfig {
 }
 
 const DEV_DATABASE_URL =
-  "postgres://todos_app:todos_app@localhost:5432/todos?search_path=todos&sslmode=disable";
+  "postgres://tasks_app:tasks_app@localhost:5432/tasks?search_path=tasks&sslmode=disable";
 
 const SECRETS_PATH = "/secrets/config.json";
 
@@ -61,7 +61,7 @@ function loadConfig(): AppConfig {
     supabaseUrl: envOrSecret("SUPABASE_URL", secrets) || null,
     db: {
       url: dbUrl,
-      schema: envOrSecret("DATABASE_SCHEMA", secrets, "todos")!,
+      schema: envOrSecret("DATABASE_SCHEMA", secrets, "tasks")!,
       max: parseInt(envOrSecret("DATABASE_POOL_MAX", secrets, "10")!),
       idleTimeout: parseInt(
         envOrSecret("DATABASE_IDLE_TIMEOUT", secrets, "30")!,

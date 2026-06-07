@@ -6,19 +6,19 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: todos-postgres
+    container_name: tasks-postgres
     environment:
-      POSTGRES_USER: todos
-      POSTGRES_PASSWORD: todos
-      POSTGRES_DB: todos
+      POSTGRES_USER: tasks
+      POSTGRES_PASSWORD: tasks
+      POSTGRES_DB: tasks
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Create the todos schema on startup
+      # Create the tasks schema on startup
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U todos"]
+      test: ["CMD-SHELL", "pg_isready -U tasks"]
       interval: 5s
       timeout: 5s
       retries: 5

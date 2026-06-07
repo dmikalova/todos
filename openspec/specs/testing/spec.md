@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the testing strategy and coverage requirements for the todos app,
+Define the testing strategy and coverage requirements for the tasks app,
 covering unit tests, integration tests, and frontend component tests.
 
 ## Requirements

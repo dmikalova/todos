@@ -87,7 +87,7 @@ function getCurrentPageTitle(
       return c?.name || "context";
     }
     default:
-      return "todos";
+      return "tasks";
   }
 }
 
@@ -284,6 +284,6 @@ Deno.test("currentPageTitle - returns 'context' when context not found", () => {
   );
 });
 
-Deno.test("currentPageTitle - returns 'todos' for unknown tab", () => {
-  assertEquals(getCurrentPageTitle("unknown", [], null, [], null), "todos");
+Deno.test("currentPageTitle - returns 'tasks' for unknown tab", () => {
+  assertEquals(getCurrentPageTitle("unknown", [], null, [], null), "tasks");
 });

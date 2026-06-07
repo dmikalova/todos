@@ -56,7 +56,7 @@ export function getSchema(): string {
   return schemaName;
 }
 
-export const SCHEMA = "todos";
+export const SCHEMA = "tasks";
 
 // Suppress postgres NOTICE messages (e.g. from RAISE NOTICE in stored procedures)
 export function suppressNotice(..._: unknown[]): void {}

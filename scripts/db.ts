@@ -11,11 +11,11 @@
  *   deno task db:seed    # Insert default data
  */
 
-const APP_NAME = "todos";
-const SCHEMA_NAME = "todos";
+const APP_NAME = "tasks";
+const SCHEMA_NAME = "tasks";
 const GCP_PROJECT = "mklv-infrastructure";
 const DEV_DATABASE_URL_SESSION =
-  "postgres://todos:todos@localhost:5432/todos?search_path=todos&sslmode=disable";
+  "postgres://tasks:tasks@localhost:5432/tasks?search_path=tasks&sslmode=disable";
 
 async function getDatabaseUrl(): Promise<string> {
   // Check environment variable first

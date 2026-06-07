@@ -186,7 +186,7 @@ export const authMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
       return c.json({ error: "Unauthorized" }, 401);
     }
     // Redirect browser requests to login
-    const returnUrl = `https://todos.${getSessionDomain()}${c.req.path}`;
+    const returnUrl = `https://tasks.${getSessionDomain()}${c.req.path}`;
     return c.redirect(getLoginUrl(returnUrl));
   }
 
@@ -196,7 +196,7 @@ export const authMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
     if (c.req.path.startsWith("/api/")) {
       return c.json({ error: "Invalid or expired session" }, 401);
     }
-    const returnUrl = `https://todos.${getSessionDomain()}${c.req.path}`;
+    const returnUrl = `https://tasks.${getSessionDomain()}${c.req.path}`;
     return c.redirect(getLoginUrl(returnUrl));
   }
 

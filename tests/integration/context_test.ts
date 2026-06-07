@@ -140,7 +140,7 @@ Deno.test({
 
       // Verify old windows are removed
       const [{ count }] = await ctx.db`
-        SELECT count(*)::int FROM todos.context_time_windows
+        SELECT count(*)::int FROM tasks.context_time_windows
         WHERE context_id = ${createdContextId}
       `;
       assertEquals(count, 1);
@@ -159,12 +159,12 @@ Deno.test({
 
         // Verify context is gone
         const contexts = await ctx
-          .db`SELECT id FROM todos.contexts WHERE id = ${createdContextId}`;
+          .db`SELECT id FROM tasks.contexts WHERE id = ${createdContextId}`;
         assertEquals(contexts.length, 0);
 
         // Verify windows cascaded
         const windows = await ctx
-          .db`SELECT id FROM todos.context_time_windows WHERE context_id = ${createdContextId}`;
+          .db`SELECT id FROM tasks.context_time_windows WHERE context_id = ${createdContextId}`;
         assertEquals(windows.length, 0);
       },
     );

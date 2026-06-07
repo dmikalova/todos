@@ -273,7 +273,7 @@ raw markdown - no WYSIWYG editor or formatting toolbar.
 Vue frontend, and Atlas schema migrations.
 
 ```text
-todos/
+tasks/
 ├── api/
 │   ├── main.ts
 │   ├── app.ts

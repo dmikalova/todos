@@ -278,7 +278,7 @@ class Store {
     try {
       const ids = Array.from(this._collapsedProjectIds);
       globalThis.localStorage?.setItem(
-        "todos:collapsedProjects",
+        "tasks:collapsedProjects",
         JSON.stringify(ids),
       );
     } catch {
@@ -289,7 +289,7 @@ class Store {
   // Restore collapsed state from localStorage
   restoreCollapsedState() {
     try {
-      const raw = globalThis.localStorage?.getItem("todos:collapsedProjects");
+      const raw = globalThis.localStorage?.getItem("tasks:collapsedProjects");
       if (raw) {
         const ids: string[] = JSON.parse(raw);
         this._collapsedProjectIds = new Set(ids);
@@ -382,7 +382,7 @@ class Store {
         return c?.name || "context";
       }
       default:
-        return "todos";
+        return "tasks";
     }
   }
 

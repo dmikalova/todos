@@ -1,6 +1,6 @@
 # Development
 
-Local development setup for the todos app.
+Local development setup for the tasks app.
 
 ## Prerequisites
 

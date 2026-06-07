@@ -306,14 +306,14 @@ Deno.test({
 
         // Verify original task is completed
         const [original] = await ctx.db`
-          SELECT completed_at FROM todos.tasks WHERE id = ${task.id}
+          SELECT completed_at FROM tasks.tasks WHERE id = ${task.id}
         `;
         assertExists(original.completed_at);
 
         // Verify new task was created with tomorrow's date
         const [nextTask] = await ctx.db`
           SELECT id, due_date
-          FROM todos.tasks
+          FROM tasks.tasks
           WHERE title = 'Integration Test Daily Complete'
           AND id != ${task.id}
           ORDER BY created_at DESC
@@ -364,7 +364,7 @@ Deno.test({
 
         const [nextTask] = await ctx.db`
           SELECT id, due_date
-          FROM todos.tasks
+          FROM tasks.tasks
           WHERE title = 'Integration Test Weekly Complete'
           AND id != ${task.id}
           ORDER BY created_at DESC
@@ -403,7 +403,7 @@ Deno.test({
 
         const [nextTask] = await ctx.db`
           SELECT id, due_date
-          FROM todos.tasks
+          FROM tasks.tasks
           WHERE title = 'Integration Test Completion Complete'
           AND id != ${task.id}
           ORDER BY created_at DESC
@@ -438,7 +438,7 @@ Deno.test({
 
         const [{ count }] = await ctx.db`
           SELECT COUNT(*)::int as count
-          FROM todos.tasks
+          FROM tasks.tasks
           WHERE title = 'Integration Test No Recurrence Complete'
         `;
         assertEquals(count, 1);

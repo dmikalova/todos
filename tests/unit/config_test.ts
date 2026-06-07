@@ -14,7 +14,7 @@ Deno.test("getConfig - returns dev defaults when DENO_ENV is not production", ()
   assertEquals(config.isDev, true);
   assertEquals(config.port, 8000);
   assertEquals(config.sessionDomain, "mklv.tech");
-  assertEquals(config.db.schema, "todos");
+  assertEquals(config.db.schema, "tasks");
   assertEquals(config.db.max, 10);
   // DB URL defaults to dev URL when isDev is true
   assertEquals(config.db.url?.includes("localhost:5432"), true);

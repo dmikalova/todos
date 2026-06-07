@@ -1,6 +1,6 @@
 # Why
 
-The todos app has several bugs preventing MVP usability: context assignment is
+The tasks app has several bugs preventing MVP usability: context assignment is
 broken, the "Next" view does not pull from contexts, and windows (time-based
 filters within contexts) are untested. The UI also lacks consistent labeling
 conventions, reducing polish and trust.

@@ -1,5 +1,5 @@
 {
-  "name": "todos",
+  "name": "tasks",
   "entrypoint": "api/main.ts",
   "runtime": {
     "port": 8000,

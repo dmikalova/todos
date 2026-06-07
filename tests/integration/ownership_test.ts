@@ -25,15 +25,15 @@ Deno.test({
     const otherTaskId = crypto.randomUUID();
 
     await ctx.db`
-      INSERT INTO todos.projects (id, user_id, name, created_at)
+      INSERT INTO tasks.projects (id, user_id, name, created_at)
       VALUES (${otherProjectId}, ${OTHER_USER_ID}, 'Other User Project', NOW())
     `;
     await ctx.db`
-      INSERT INTO todos.contexts (id, user_id, name, created_at)
+      INSERT INTO tasks.contexts (id, user_id, name, created_at)
       VALUES (${otherContextId}, ${OTHER_USER_ID}, 'Other User Context', NOW())
     `;
     await ctx.db`
-      INSERT INTO todos.tasks (id, user_id, title, priority, created_at)
+      INSERT INTO tasks.tasks (id, user_id, title, priority, created_at)
       VALUES (${otherTaskId}, ${OTHER_USER_ID}, 'Other User Task', 3, NOW())
     `;
 
@@ -148,9 +148,9 @@ Deno.test({
     });
 
     // Clean up other user's data (not handled by standard cleanup which only cleans test user)
-    await ctx.db`DELETE FROM todos.tasks WHERE id = ${otherTaskId}`;
-    await ctx.db`DELETE FROM todos.projects WHERE id = ${otherProjectId}`;
-    await ctx.db`DELETE FROM todos.contexts WHERE id = ${otherContextId}`;
+    await ctx.db`DELETE FROM tasks.tasks WHERE id = ${otherTaskId}`;
+    await ctx.db`DELETE FROM tasks.projects WHERE id = ${otherProjectId}`;
+    await ctx.db`DELETE FROM tasks.contexts WHERE id = ${otherContextId}`;
 
     await teardownTestContext(ctx);
   },

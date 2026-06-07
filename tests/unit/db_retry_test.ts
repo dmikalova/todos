@@ -80,7 +80,7 @@ Deno.test({
     _setConfigForTest({
       db: {
         url: sslUrl,
-        schema: "todos",
+        schema: "tasks",
         max: 10,
         idleTimeout: 30,
         connectTimeout: 10,

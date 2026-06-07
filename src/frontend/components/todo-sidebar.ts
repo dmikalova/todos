@@ -197,7 +197,7 @@ export class TodoSidebar extends StoreElement {
 
   override connectedCallback() {
     super.connectedCallback();
-    const saved = globalThis.localStorage?.getItem("todos:sidebarWidth");
+    const saved = globalThis.localStorage?.getItem("tasks:sidebarWidth");
     if (saved) this._sidebarWidth = parseInt(saved, 10) || 256;
   }
 
@@ -206,7 +206,7 @@ export class TodoSidebar extends StoreElement {
     if (changed.has("_sidebarWidth")) {
       try {
         globalThis.localStorage?.setItem(
-          "todos:sidebarWidth",
+          "tasks:sidebarWidth",
           String(this._sidebarWidth),
         );
       } catch {

@@ -65,7 +65,7 @@ None - this is a new application.
 
 ## Impact
 
-- **New repository**: `todos` with full stack (API + frontend + database)
+- **New repository**: `tasks` with full stack (API + frontend + database)
 - **Infrastructure**: New Cloud Run service, database schema, DNS entry
 - **Authentication**: Integration with login.mklv.tech portal
 - **CI/CD**: Reusable workflow from github-meta

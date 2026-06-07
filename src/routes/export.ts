@@ -171,7 +171,7 @@ exportRoutes.get("/", async (c) => {
     c.header("Content-Type", "text/csv");
     c.header(
       "Content-Disposition",
-      `attachment; filename="todos-export-${Date.now()}.csv"`,
+      `attachment; filename="tasks-export-${Date.now()}.csv"`,
     );
     return c.body(csv);
   }
@@ -180,7 +180,7 @@ exportRoutes.get("/", async (c) => {
   c.header("Content-Type", "application/json");
   c.header(
     "Content-Disposition",
-    `attachment; filename="todos-export-${Date.now()}.json"`,
+      `attachment; filename="tasks-export-${Date.now()}.json"`,
   );
   return c.json(data);
 });

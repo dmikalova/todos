@@ -14,7 +14,7 @@ Deno.test("getDbConfig - returns config from app config", () => {
   _setConfigForTest({
     db: {
       url: "postgres://test:test@localhost:5432/test",
-      schema: "todos",
+      schema: "tasks",
       max: 10,
       idleTimeout: 30,
       connectTimeout: 10,
@@ -24,7 +24,7 @@ Deno.test("getDbConfig - returns config from app config", () => {
   try {
     const config = getDbConfig();
     assertEquals(config.url, "postgres://test:test@localhost:5432/test");
-    assertEquals(config.schema, "todos");
+    assertEquals(config.schema, "tasks");
     assertEquals(config.max, 10);
     assertEquals(config.idleTimeout, 30);
     assertEquals(config.connectTimeout, 10);
@@ -38,7 +38,7 @@ Deno.test("getDbConfig - throws when db.url is null", () => {
   _setConfigForTest({
     db: {
       url: null,
-      schema: "todos",
+      schema: "tasks",
       max: 10,
       idleTimeout: 30,
       connectTimeout: 10,
@@ -78,7 +78,7 @@ Deno.test("getDbConfig - respects custom config values", () => {
 
 Deno.test("getSchema - returns default schema", () => {
   const schema = getSchema();
-  assertEquals(schema, "todos");
+  assertEquals(schema, "tasks");
 });
 
 Deno.test("resetConnection - handles no active connection gracefully", () => {

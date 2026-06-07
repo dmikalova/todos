@@ -2,14 +2,14 @@
 
 ## ADDED Requirements
 
-### Requirement: Web dashboard at todos.mklv.tech
+### Requirement: Web dashboard at tasks.mklv.tech
 
-The system SHALL provide a Vue.js web dashboard accessible at todos.mklv.tech
+The system SHALL provide a Vue.js web dashboard accessible at tasks.mklv.tech
 with responsive design for desktop and mobile browsers.
 
 #### Scenario: Access dashboard
 
-- **WHEN** user navigates to todos.mklv.tech
+- **WHEN** user navigates to tasks.mklv.tech
 - **THEN** system displays the todo dashboard (or login redirect if not
   authenticated)
 
@@ -20,7 +20,7 @@ login.mklv.tech. Unauthenticated requests redirect to login.
 
 #### Scenario: Redirect to login
 
-- **WHEN** unauthenticated user accesses todos.mklv.tech
+- **WHEN** unauthenticated user accesses tasks.mklv.tech
 - **THEN** system redirects to login.mklv.tech with return URL
 
 #### Scenario: Authenticated session

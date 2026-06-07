@@ -21,7 +21,7 @@ context: |
   - Priority-based task ordering
   - Projects and filters for organization
   - "Next" page with smart task selection based on time/context/priority
-  - Web dashboard at todos.mklv.tech
+  - Web dashboard at tasks.mklv.tech
 
   # Deployment
   - Google Cloud Run (serverless, scale-to-zero)

@@ -11,162 +11,162 @@ BEGIN;
 -- ============================================================================
 -- projects
 -- ============================================================================
-ALTER TABLE todos.projects ENABLE ROW LEVEL SECURITY;
-ALTER TABLE todos.projects FORCE ROW LEVEL SECURITY;
+ALTER TABLE tasks.projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks.projects FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS projects_user_select ON todos.projects;
-CREATE POLICY projects_user_select ON todos.projects FOR SELECT
+DROP POLICY IF EXISTS projects_user_select ON tasks.projects;
+CREATE POLICY projects_user_select ON tasks.projects FOR SELECT
   USING (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS projects_user_insert ON todos.projects;
-CREATE POLICY projects_user_insert ON todos.projects FOR INSERT
+DROP POLICY IF EXISTS projects_user_insert ON tasks.projects;
+CREATE POLICY projects_user_insert ON tasks.projects FOR INSERT
   WITH CHECK (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS projects_user_update ON todos.projects;
-CREATE POLICY projects_user_update ON todos.projects FOR UPDATE
+DROP POLICY IF EXISTS projects_user_update ON tasks.projects;
+CREATE POLICY projects_user_update ON tasks.projects FOR UPDATE
   USING (user_id = current_setting('app.user_id')::uuid)
   WITH CHECK (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS projects_user_delete ON todos.projects;
-CREATE POLICY projects_user_delete ON todos.projects FOR DELETE
+DROP POLICY IF EXISTS projects_user_delete ON tasks.projects;
+CREATE POLICY projects_user_delete ON tasks.projects FOR DELETE
   USING (user_id = current_setting('app.user_id')::uuid);
 
 -- ============================================================================
 -- contexts
 -- ============================================================================
-ALTER TABLE todos.contexts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE todos.contexts FORCE ROW LEVEL SECURITY;
+ALTER TABLE tasks.contexts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks.contexts FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS contexts_user_select ON todos.contexts;
-CREATE POLICY contexts_user_select ON todos.contexts FOR SELECT
+DROP POLICY IF EXISTS contexts_user_select ON tasks.contexts;
+CREATE POLICY contexts_user_select ON tasks.contexts FOR SELECT
   USING (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS contexts_user_insert ON todos.contexts;
-CREATE POLICY contexts_user_insert ON todos.contexts FOR INSERT
+DROP POLICY IF EXISTS contexts_user_insert ON tasks.contexts;
+CREATE POLICY contexts_user_insert ON tasks.contexts FOR INSERT
   WITH CHECK (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS contexts_user_update ON todos.contexts;
-CREATE POLICY contexts_user_update ON todos.contexts FOR UPDATE
+DROP POLICY IF EXISTS contexts_user_update ON tasks.contexts;
+CREATE POLICY contexts_user_update ON tasks.contexts FOR UPDATE
   USING (user_id = current_setting('app.user_id')::uuid)
   WITH CHECK (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS contexts_user_delete ON todos.contexts;
-CREATE POLICY contexts_user_delete ON todos.contexts FOR DELETE
+DROP POLICY IF EXISTS contexts_user_delete ON tasks.contexts;
+CREATE POLICY contexts_user_delete ON tasks.contexts FOR DELETE
   USING (user_id = current_setting('app.user_id')::uuid);
 
 -- ============================================================================
 -- context_time_windows (no user_id — check via parent context)
 -- ============================================================================
-ALTER TABLE todos.context_time_windows ENABLE ROW LEVEL SECURITY;
-ALTER TABLE todos.context_time_windows FORCE ROW LEVEL SECURITY;
+ALTER TABLE tasks.context_time_windows ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks.context_time_windows FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS ctw_user_select ON todos.context_time_windows;
-CREATE POLICY ctw_user_select ON todos.context_time_windows FOR SELECT
-  USING (EXISTS (SELECT 1 FROM todos.contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid));
+DROP POLICY IF EXISTS ctw_user_select ON tasks.context_time_windows;
+CREATE POLICY ctw_user_select ON tasks.context_time_windows FOR SELECT
+  USING (EXISTS (SELECT 1 FROM tasks.contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid));
 
-DROP POLICY IF EXISTS ctw_user_insert ON todos.context_time_windows;
-CREATE POLICY ctw_user_insert ON todos.context_time_windows FOR INSERT
-  WITH CHECK (EXISTS (SELECT 1 FROM todos.contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid));
+DROP POLICY IF EXISTS ctw_user_insert ON tasks.context_time_windows;
+CREATE POLICY ctw_user_insert ON tasks.context_time_windows FOR INSERT
+  WITH CHECK (EXISTS (SELECT 1 FROM tasks.contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid));
 
-DROP POLICY IF EXISTS ctw_user_update ON todos.context_time_windows;
-CREATE POLICY ctw_user_update ON todos.context_time_windows FOR UPDATE
-  USING (EXISTS (SELECT 1 FROM todos.contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid))
-  WITH CHECK (EXISTS (SELECT 1 FROM todos.contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid));
+DROP POLICY IF EXISTS ctw_user_update ON tasks.context_time_windows;
+CREATE POLICY ctw_user_update ON tasks.context_time_windows FOR UPDATE
+  USING (EXISTS (SELECT 1 FROM tasks.contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid))
+  WITH CHECK (EXISTS (SELECT 1 FROM tasks.contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid));
 
-DROP POLICY IF EXISTS ctw_user_delete ON todos.context_time_windows;
-CREATE POLICY ctw_user_delete ON todos.context_time_windows FOR DELETE
-  USING (EXISTS (SELECT 1 FROM todos.contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid));
+DROP POLICY IF EXISTS ctw_user_delete ON tasks.context_time_windows;
+CREATE POLICY ctw_user_delete ON tasks.context_time_windows FOR DELETE
+  USING (EXISTS (SELECT 1 FROM tasks.contexts WHERE id = context_id AND user_id = current_setting('app.user_id')::uuid));
 
 -- ============================================================================
 -- tasks
 -- ============================================================================
-ALTER TABLE todos.tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE todos.tasks FORCE ROW LEVEL SECURITY;
+ALTER TABLE tasks.tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks.tasks FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS tasks_user_select ON todos.tasks;
-CREATE POLICY tasks_user_select ON todos.tasks FOR SELECT
+DROP POLICY IF EXISTS tasks_user_select ON tasks.tasks;
+CREATE POLICY tasks_user_select ON tasks.tasks FOR SELECT
   USING (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS tasks_user_insert ON todos.tasks;
-CREATE POLICY tasks_user_insert ON todos.tasks FOR INSERT
+DROP POLICY IF EXISTS tasks_user_insert ON tasks.tasks;
+CREATE POLICY tasks_user_insert ON tasks.tasks FOR INSERT
   WITH CHECK (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS tasks_user_update ON todos.tasks;
-CREATE POLICY tasks_user_update ON todos.tasks FOR UPDATE
+DROP POLICY IF EXISTS tasks_user_update ON tasks.tasks;
+CREATE POLICY tasks_user_update ON tasks.tasks FOR UPDATE
   USING (user_id = current_setting('app.user_id')::uuid)
   WITH CHECK (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS tasks_user_delete ON todos.tasks;
-CREATE POLICY tasks_user_delete ON todos.tasks FOR DELETE
+DROP POLICY IF EXISTS tasks_user_delete ON tasks.tasks;
+CREATE POLICY tasks_user_delete ON tasks.tasks FOR DELETE
   USING (user_id = current_setting('app.user_id')::uuid);
 
 -- ============================================================================
 -- recurrence_rules (no user_id — check via parent task)
 -- ============================================================================
-ALTER TABLE todos.recurrence_rules ENABLE ROW LEVEL SECURITY;
-ALTER TABLE todos.recurrence_rules FORCE ROW LEVEL SECURITY;
+ALTER TABLE tasks.recurrence_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks.recurrence_rules FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS recurrence_user_select ON todos.recurrence_rules;
-CREATE POLICY recurrence_user_select ON todos.recurrence_rules FOR SELECT
-  USING (EXISTS (SELECT 1 FROM todos.tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid));
+DROP POLICY IF EXISTS recurrence_user_select ON tasks.recurrence_rules;
+CREATE POLICY recurrence_user_select ON tasks.recurrence_rules FOR SELECT
+  USING (EXISTS (SELECT 1 FROM tasks.tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid));
 
-DROP POLICY IF EXISTS recurrence_user_insert ON todos.recurrence_rules;
-CREATE POLICY recurrence_user_insert ON todos.recurrence_rules FOR INSERT
-  WITH CHECK (EXISTS (SELECT 1 FROM todos.tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid));
+DROP POLICY IF EXISTS recurrence_user_insert ON tasks.recurrence_rules;
+CREATE POLICY recurrence_user_insert ON tasks.recurrence_rules FOR INSERT
+  WITH CHECK (EXISTS (SELECT 1 FROM tasks.tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid));
 
-DROP POLICY IF EXISTS recurrence_user_update ON todos.recurrence_rules;
-CREATE POLICY recurrence_user_update ON todos.recurrence_rules FOR UPDATE
-  USING (EXISTS (SELECT 1 FROM todos.tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid))
-  WITH CHECK (EXISTS (SELECT 1 FROM todos.tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid));
+DROP POLICY IF EXISTS recurrence_user_update ON tasks.recurrence_rules;
+CREATE POLICY recurrence_user_update ON tasks.recurrence_rules FOR UPDATE
+  USING (EXISTS (SELECT 1 FROM tasks.tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid))
+  WITH CHECK (EXISTS (SELECT 1 FROM tasks.tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid));
 
-DROP POLICY IF EXISTS recurrence_user_delete ON todos.recurrence_rules;
-CREATE POLICY recurrence_user_delete ON todos.recurrence_rules FOR DELETE
-  USING (EXISTS (SELECT 1 FROM todos.tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid));
+DROP POLICY IF EXISTS recurrence_user_delete ON tasks.recurrence_rules;
+CREATE POLICY recurrence_user_delete ON tasks.recurrence_rules FOR DELETE
+  USING (EXISTS (SELECT 1 FROM tasks.tasks WHERE id = task_id AND user_id = current_setting('app.user_id')::uuid));
 
 -- ============================================================================
 -- saved_filters
 -- ============================================================================
-ALTER TABLE todos.saved_filters ENABLE ROW LEVEL SECURITY;
-ALTER TABLE todos.saved_filters FORCE ROW LEVEL SECURITY;
+ALTER TABLE tasks.saved_filters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks.saved_filters FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS saved_filters_user_select ON todos.saved_filters;
-CREATE POLICY saved_filters_user_select ON todos.saved_filters FOR SELECT
+DROP POLICY IF EXISTS saved_filters_user_select ON tasks.saved_filters;
+CREATE POLICY saved_filters_user_select ON tasks.saved_filters FOR SELECT
   USING (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS saved_filters_user_insert ON todos.saved_filters;
-CREATE POLICY saved_filters_user_insert ON todos.saved_filters FOR INSERT
+DROP POLICY IF EXISTS saved_filters_user_insert ON tasks.saved_filters;
+CREATE POLICY saved_filters_user_insert ON tasks.saved_filters FOR INSERT
   WITH CHECK (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS saved_filters_user_update ON todos.saved_filters;
-CREATE POLICY saved_filters_user_update ON todos.saved_filters FOR UPDATE
+DROP POLICY IF EXISTS saved_filters_user_update ON tasks.saved_filters;
+CREATE POLICY saved_filters_user_update ON tasks.saved_filters FOR UPDATE
   USING (user_id = current_setting('app.user_id')::uuid)
   WITH CHECK (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS saved_filters_user_delete ON todos.saved_filters;
-CREATE POLICY saved_filters_user_delete ON todos.saved_filters FOR DELETE
+DROP POLICY IF EXISTS saved_filters_user_delete ON tasks.saved_filters;
+CREATE POLICY saved_filters_user_delete ON tasks.saved_filters FOR DELETE
   USING (user_id = current_setting('app.user_id')::uuid);
 
 -- ============================================================================
 -- task_history
 -- ============================================================================
-ALTER TABLE todos.task_history ENABLE ROW LEVEL SECURITY;
-ALTER TABLE todos.task_history FORCE ROW LEVEL SECURITY;
+ALTER TABLE tasks.task_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks.task_history FORCE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS task_history_user_select ON todos.task_history;
-CREATE POLICY task_history_user_select ON todos.task_history FOR SELECT
+DROP POLICY IF EXISTS task_history_user_select ON tasks.task_history;
+CREATE POLICY task_history_user_select ON tasks.task_history FOR SELECT
   USING (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS task_history_user_insert ON todos.task_history;
-CREATE POLICY task_history_user_insert ON todos.task_history FOR INSERT
+DROP POLICY IF EXISTS task_history_user_insert ON tasks.task_history;
+CREATE POLICY task_history_user_insert ON tasks.task_history FOR INSERT
   WITH CHECK (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS task_history_user_update ON todos.task_history;
-CREATE POLICY task_history_user_update ON todos.task_history FOR UPDATE
+DROP POLICY IF EXISTS task_history_user_update ON tasks.task_history;
+CREATE POLICY task_history_user_update ON tasks.task_history FOR UPDATE
   USING (user_id = current_setting('app.user_id')::uuid)
   WITH CHECK (user_id = current_setting('app.user_id')::uuid);
 
-DROP POLICY IF EXISTS task_history_user_delete ON todos.task_history;
-CREATE POLICY task_history_user_delete ON todos.task_history FOR DELETE
+DROP POLICY IF EXISTS task_history_user_delete ON tasks.task_history;
+CREATE POLICY task_history_user_delete ON tasks.task_history FOR DELETE
   USING (user_id = current_setting('app.user_id')::uuid);
 
 -- ============================================================================
@@ -175,16 +175,16 @@ CREATE POLICY task_history_user_delete ON todos.task_history FOR DELETE
 DO $$
 BEGIN
   -- Grant to production role if it exists
-  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'todos-role') THEN
-    EXECUTE 'GRANT USAGE ON SCHEMA todos TO "todos-role"';
-    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA todos TO "todos-role"';
-    EXECUTE 'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA todos TO "todos-role"';
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'tasks-role') THEN
+    EXECUTE 'GRANT USAGE ON SCHEMA tasks TO "tasks-role"';
+    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA tasks TO "tasks-role"';
+    EXECUTE 'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA tasks TO "tasks-role"';
   END IF;
   -- Grant to local dev role if it exists
-  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'todos_app') THEN
-    EXECUTE 'GRANT USAGE ON SCHEMA todos TO todos_app';
-    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA todos TO todos_app';
-    EXECUTE 'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA todos TO todos_app';
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'tasks_app') THEN
+    EXECUTE 'GRANT USAGE ON SCHEMA tasks TO tasks_app';
+    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA tasks TO tasks_app';
+    EXECUTE 'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA tasks TO tasks_app';
   END IF;
 END $$;
 

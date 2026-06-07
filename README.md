@@ -1,10 +1,10 @@
-# Todos
+# Tasks
 
-Personal todo application with intelligent task presentation and flexible
+Personal task application with intelligent task presentation and flexible
 recurrence. Built for single-user productivity with a focus on getting the right
 task done at the right time.
 
-**Live at [todos.mklv.tech](https://todos.mklv.tech)**
+**Live at [tasks.mklv.tech](https://tasks.mklv.tech)**
 
 ## Features
 

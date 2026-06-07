@@ -24,15 +24,15 @@ Deno.test({
     const otherTaskId = crypto.randomUUID();
 
     await ctx.db`
-      INSERT INTO todos.contexts (id, user_id, name, created_at)
+      INSERT INTO tasks.contexts (id, user_id, name, created_at)
       VALUES (${otherContextId}, ${OTHER_USER_ID}, 'RLS Other Context', NOW())
     `;
     await ctx.db`
-      INSERT INTO todos.projects (id, user_id, name, created_at)
+      INSERT INTO tasks.projects (id, user_id, name, created_at)
       VALUES (${otherProjectId}, ${OTHER_USER_ID}, 'RLS Other Project', NOW())
     `;
     await ctx.db`
-      INSERT INTO todos.tasks (id, user_id, title, priority, project_id, created_at)
+      INSERT INTO tasks.tasks (id, user_id, title, priority, project_id, created_at)
       VALUES (${otherTaskId}, ${OTHER_USER_ID}, 'RLS Other Task', 3, ${otherProjectId}, NOW())
     `;
 
@@ -152,14 +152,14 @@ Deno.test({
 
     // Verify other user's data still exists (RLS hid it, didn't delete it)
     const [taskStillExists] = await ctx.db`
-      SELECT id FROM todos.tasks WHERE id = ${otherTaskId}
+      SELECT id FROM tasks.tasks WHERE id = ${otherTaskId}
     `;
     assertEquals(taskStillExists.id, otherTaskId);
 
     // Clean up other user's data
-    await ctx.db`DELETE FROM todos.tasks WHERE id = ${otherTaskId}`;
-    await ctx.db`DELETE FROM todos.projects WHERE id = ${otherProjectId}`;
-    await ctx.db`DELETE FROM todos.contexts WHERE id = ${otherContextId}`;
+    await ctx.db`DELETE FROM tasks.tasks WHERE id = ${otherTaskId}`;
+    await ctx.db`DELETE FROM tasks.projects WHERE id = ${otherProjectId}`;
+    await ctx.db`DELETE FROM tasks.contexts WHERE id = ${otherContextId}`;
 
     await teardownTestContext(ctx);
   },

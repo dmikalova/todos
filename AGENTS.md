@@ -1,4 +1,4 @@
-# Todos App
+# Tasks App
 
 Conventions specific to this Deno + Hono + Lit web application.
 
@@ -31,10 +31,10 @@ Conventions specific to this Deno + Hono + Lit web application.
 
 ## Database
 
-- PostgreSQL with schema isolation (`todos` schema)
+- PostgreSQL with schema isolation (`tasks` schema)
 - Schema managed by Atlas CLI (`db/schema.hcl`)
 - Local dev uses Docker Compose (`compose.yaml`)
-- App connects as `todos_app` (non-superuser) for RLS enforcement
+- App connects as `tasks_app` (non-superuser) for RLS enforcement
 - Migrations applied via `scripts/db.ts`
 
 ## Frontend

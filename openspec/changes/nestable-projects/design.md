@@ -2,7 +2,7 @@
 
 ## Context
 
-The todos app already has full backend and data model support for nested
+The tasks app already has full backend and data model support for nested
 projects: `parent_project_id` column on the projects table, self-referential FK,
 API endpoints that accept/return `parentProjectId`, and a
 `resolveProjectContext()` store method that walks the ancestor chain for context
@@ -88,7 +88,7 @@ hierarchy.
 ### Collapsible tree nodes persisted in localStorage
 
 **Decision:** Collapsed project IDs are stored as a `Set<string>` in the store
-and persisted to `localStorage` under a key like `todos:collapsedProjects`. When
+and persisted to `localStorage` under a key like `tasks:collapsedProjects`. When
 a parent project is collapsed, its entire subtree is hidden from the rendered
 list. The `projectTree` getter filters out children of collapsed parents.
 

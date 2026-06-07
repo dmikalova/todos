@@ -1,4 +1,4 @@
-// Todos - Main Entry Point
+// Tasks - Main Entry Point
 // This file bootstraps the application
 
 import { app } from "./app.ts";
@@ -64,7 +64,7 @@ async function initialize() {
         log("warn", "DB migration failed", { code: result.code });
       }
     }
-    log("info", "Starting Todos service", { port });
+    log("info", "Starting Tasks service", { port });
   } catch (error) {
     log("error", "Initialization failed", { error: String(error) });
     throw error;

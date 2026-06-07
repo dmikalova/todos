@@ -10,7 +10,7 @@ export const TEST_USER_ID = "00000000-0000-0000-0000-000000000001";
 // Test database configuration
 // Uses superuser connection for setup/cleanup (bypasses RLS)
 const TEST_DATABASE_URL = Deno.env.get("TEST_DATABASE_URL") ||
-  "postgres://todos:todos@localhost:5432/todos";
+  "postgres://tasks:tasks@localhost:5432/tasks";
 
 // Create a test database client (superuser, bypasses RLS for setup/cleanup)
 export function createTestDb() {
@@ -52,13 +52,13 @@ export async function teardownTestContext(ctx: TestContext): Promise<void> {
 // Clean test data from database
 async function cleanTestData(db: ReturnType<typeof postgres>): Promise<void> {
   // Delete in reverse dependency order, matching by name/title patterns (not UUID ids)
-  await db`DELETE FROM todos.recurrence_rules WHERE task_id IN (SELECT id FROM todos.tasks WHERE title LIKE 'Integration Test%')`;
-  await db`DELETE FROM todos.task_history WHERE task_id IN (SELECT id FROM todos.tasks WHERE title LIKE 'Integration Test%')`;
-  await db`DELETE FROM todos.tasks WHERE title LIKE 'Integration Test%'`;
-  await db`DELETE FROM todos.saved_filters WHERE name LIKE 'Test Filter%'`;
-  await db`DELETE FROM todos.context_time_windows WHERE context_id IN (SELECT id FROM todos.contexts WHERE name LIKE 'Test Context%' OR name LIKE 'RLS %' OR name LIKE 'Other User%')`;
-  await db`DELETE FROM todos.contexts WHERE name LIKE 'Test Context%' OR name LIKE 'RLS %' OR name LIKE 'Other User%'`;
-  await db`DELETE FROM todos.projects WHERE name LIKE 'Test Project%' OR name LIKE 'RLS %' OR name LIKE 'Other User%' OR name LIKE 'Integration Test%'`;
+  await db`DELETE FROM tasks.recurrence_rules WHERE task_id IN (SELECT id FROM tasks.tasks WHERE title LIKE 'Integration Test%')`;
+  await db`DELETE FROM tasks.task_history WHERE task_id IN (SELECT id FROM tasks.tasks WHERE title LIKE 'Integration Test%')`;
+  await db`DELETE FROM tasks.tasks WHERE title LIKE 'Integration Test%'`;
+  await db`DELETE FROM tasks.saved_filters WHERE name LIKE 'Test Filter%'`;
+  await db`DELETE FROM tasks.context_time_windows WHERE context_id IN (SELECT id FROM tasks.contexts WHERE name LIKE 'Test Context%' OR name LIKE 'RLS %' OR name LIKE 'Other User%')`;
+  await db`DELETE FROM tasks.contexts WHERE name LIKE 'Test Context%' OR name LIKE 'RLS %' OR name LIKE 'Other User%'`;
+  await db`DELETE FROM tasks.projects WHERE name LIKE 'Test Project%' OR name LIKE 'RLS %' OR name LIKE 'Other User%' OR name LIKE 'Integration Test%'`;
 }
 
 // Create a mock authenticated request

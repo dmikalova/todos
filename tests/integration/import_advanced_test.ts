@@ -209,14 +209,14 @@ Deno.test({
 
     // Clean up contexts created outside standard test cleanup patterns
     await ctx
-      .db`DELETE FROM todos.context_time_windows WHERE context_id IN (SELECT id FROM todos.contexts WHERE name LIKE 'Test Context%')`;
-    await ctx.db`DELETE FROM todos.contexts WHERE name LIKE 'Test Context%'`;
+      .db`DELETE FROM tasks.context_time_windows WHERE context_id IN (SELECT id FROM tasks.contexts WHERE name LIKE 'Test Context%')`;
+    await ctx.db`DELETE FROM tasks.contexts WHERE name LIKE 'Test Context%'`;
     await ctx
-      .db`DELETE FROM todos.recurrence_rules WHERE task_id IN (SELECT id FROM todos.tasks WHERE title LIKE 'Integration Test%' OR title LIKE 'Simple Import%' OR title LIKE 'Dedup%')`;
+      .db`DELETE FROM tasks.recurrence_rules WHERE task_id IN (SELECT id FROM tasks.tasks WHERE title LIKE 'Integration Test%' OR title LIKE 'Simple Import%' OR title LIKE 'Dedup%')`;
     await ctx
-      .db`DELETE FROM todos.tasks WHERE title LIKE 'Integration Test%' OR title LIKE 'Simple Import%' OR title LIKE 'Dedup%'`;
+      .db`DELETE FROM tasks.tasks WHERE title LIKE 'Integration Test%' OR title LIKE 'Simple Import%' OR title LIKE 'Dedup%'`;
     await ctx
-      .db`DELETE FROM todos.projects WHERE name LIKE 'Test Project%' OR name LIKE 'Dedup%'`;
+      .db`DELETE FROM tasks.projects WHERE name LIKE 'Test Project%' OR name LIKE 'Dedup%'`;
 
     await teardownTestContext(ctx);
   },

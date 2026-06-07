@@ -178,10 +178,10 @@
 ## 17. Infrastructure
 
 - [x] 17.1 Create Dockerfile for Cloud Run deployment
-- [x] 17.2 Add todos app to infrastructure Terramate stack
+- [x] 17.2 Add tasks app to infrastructure Terramate stack
 - [x] 17.3 Configure Supabase database and pooler connection
 - [x] 17.4 Set up GitHub Actions workflow using github-meta
-- [x] 17.5 Configure DNS for todos.mklv.tech subdomain
+- [x] 17.5 Configure DNS for tasks.mklv.tech subdomain
 - [x] 17.6 Add secrets to Secret Manager (database URL, etc.)
 
 ## 18. Integration Testing

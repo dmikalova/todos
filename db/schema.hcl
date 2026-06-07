@@ -1,24 +1,24 @@
-# Database schema for todos
+# Database schema for tasks
 # Managed by Atlas CLI - https://atlasgo.io
 
-schema "todos" {}
+schema "tasks" {}
 
 # Enums
 
 enum "schedule_type" {
-  schema = schema.todos
+  schema = schema.tasks
 
   values = ["fixed", "completion"]
 }
 
 enum "frequency" {
-  schema = schema.todos
+  schema = schema.tasks
 
   values = ["daily", "weekly", "monthly", "yearly"]
 }
 
 enum "task_action" {
-  schema = schema.todos
+  schema = schema.tasks
 
   values = [
     "created",
@@ -34,7 +34,7 @@ enum "task_action" {
 # Tables
 
 table "projects" {
-  schema = schema.todos
+  schema = schema.tasks
 
   column "id" {
     type    = uuid
@@ -120,7 +120,7 @@ table "projects" {
 }
 
 table "contexts" {
-  schema = schema.todos
+  schema = schema.tasks
 
   column "id" {
     type    = uuid
@@ -166,7 +166,7 @@ table "contexts" {
 }
 
 table "context_time_windows" {
-  schema = schema.todos
+  schema = schema.tasks
 
   column "id" {
     type    = uuid
@@ -220,7 +220,7 @@ table "context_time_windows" {
 }
 
 table "tasks" {
-  schema = schema.todos
+  schema = schema.tasks
 
   column "id" {
     type    = uuid
@@ -331,7 +331,7 @@ table "tasks" {
 }
 
 table "recurrence_rules" {
-  schema = schema.todos
+  schema = schema.tasks
 
   column "id" {
     type    = uuid
@@ -442,7 +442,7 @@ table "recurrence_rules" {
 }
 
 table "saved_filters" {
-  schema = schema.todos
+  schema = schema.tasks
 
   column "id" {
     type    = uuid
@@ -483,7 +483,7 @@ table "saved_filters" {
 }
 
 table "task_history" {
-  schema = schema.todos
+  schema = schema.tasks
 
   column "id" {
     type    = uuid

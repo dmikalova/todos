@@ -1,6 +1,6 @@
 # Context
 
-The todos app has a data model that includes tasks, projects, contexts, and
+The tasks app has a data model that includes tasks, projects, contexts, and
 windows. The revised model (agreed in design review):
 
 - **Contexts** are named, reusable labels (e.g., "morning", "evening", "free

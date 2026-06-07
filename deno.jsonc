@@ -34,7 +34,7 @@
     // Type-check API and frontend
     "check": "deno check src/*.ts src/db/**/*.ts src/routes/**/*.ts src/services/**/*.ts src/frontend/**/*.ts",
     // Apply schema to local database
-    "db:local": "export DATABASE_URL_SESSION='postgres://todos:todos@localhost:5432/todos?search_path=todos&sslmode=disable' && deno run --permission-set=scripts scripts/db.ts apply",
+    "db:local": "deno run --permission-set=scripts scripts/db.ts apply",
     // Apply schema to remote database (fetches URL from Secret Manager)
     "db:apply": "deno run --permission-set=scripts scripts/db.ts apply",
     // Show planned schema changes

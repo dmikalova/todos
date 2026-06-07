@@ -11,13 +11,19 @@ import { store } from "../store.ts";
 @customElement("todo-sidebar")
 export class TodoSidebar extends StoreElement {
   @state()
-  accessor _dragOverId: string | null = null;
-
-  @state()
-  accessor _dragOverTopLevel: boolean = false;
-
-  @state()
   accessor _draggingId: string | null = null;
+
+  @state()
+  accessor _dropIndex: number = -1;
+
+  @state()
+  accessor _dropDepth: number = 0;
+
+  @state()
+  accessor _sidebarWidth: number = 256;
+
+  @state()
+  accessor _isResizing: boolean = false;
 
   private _handleDragStart(e: DragEvent, projectId: string) {
     this._draggingId = projectId;
@@ -27,76 +33,185 @@ export class TodoSidebar extends StoreElement {
 
   private _handleDragEnd() {
     this._draggingId = null;
-    this._dragOverId = null;
-    this._dragOverTopLevel = false;
+    this._dropIndex = -1;
+    this._dropDepth = 0;
   }
 
-  private _handleDragOver(e: DragEvent, targetId: string) {
-    e.preventDefault();
-    if (!this._draggingId || this._draggingId === targetId) return;
-    // Prevent dropping onto self or descendants
-    const descendants = store.getDescendantIds(this._draggingId);
-    if (descendants.includes(targetId)) return;
-    e.dataTransfer!.dropEffect = "move";
-    this._dragOverId = targetId;
-  }
-
-  private _handleDragLeave(e: DragEvent, targetId: string) {
-    // Only clear if actually leaving this element
-    const related = e.relatedTarget as HTMLElement | null;
-    if (related && (e.currentTarget as HTMLElement).contains(related)) return;
-    if (this._dragOverId === targetId) {
-      this._dragOverId = null;
-    }
-  }
-
-  private async _handleDrop(e: DragEvent, targetId: string) {
-    e.preventDefault();
-    const draggedId = e.dataTransfer!.getData("text/plain");
-    this._dragOverId = null;
-    this._draggingId = null;
-    if (!draggedId || draggedId === targetId) return;
-    // Prevent circular drops
-    const descendants = store.getDescendantIds(draggedId);
-    if (descendants.includes(targetId)) return;
-    try {
-      await fetch(`/api/projects/${draggedId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ parentProjectId: targetId }),
-      });
-      await store.fetchProjects();
-    } catch {
-      store.showToast("Failed to move project", "error");
-    }
-  }
-
-  private _handleTopLevelDragOver(e: DragEvent) {
+  private _handleProjectListDragOver(e: DragEvent) {
     e.preventDefault();
     if (!this._draggingId) return;
     e.dataTransfer!.dropEffect = "move";
-    this._dragOverTopLevel = true;
+
+    const container = e.currentTarget as HTMLElement;
+    const items = container.querySelectorAll(".item-row");
+    const mouseY = e.clientY;
+    const mouseX = e.clientX;
+
+    // Find the gap closest to the mouse
+    let closestIndex = 0;
+    let closestDist = Infinity;
+
+    // Check before first item
+    if (items.length > 0) {
+      const firstRect = items[0].getBoundingClientRect();
+      const dist = Math.abs(mouseY - firstRect.top);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestIndex = 0;
+      }
+    }
+
+    // Check between/after items
+    for (let i = 0; i < items.length; i++) {
+      const rect = items[i].getBoundingClientRect();
+      const bottom = rect.bottom;
+      const dist = Math.abs(mouseY - bottom);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestIndex = i + 1;
+      }
+    }
+
+    // Calculate depth based on horizontal position
+    const containerRect = container.getBoundingClientRect();
+    const relativeX = mouseX - containerRect.left - 20; // offset for padding
+    const depth = Math.max(0, Math.min(4, Math.floor(relativeX / 16)));
+
+    // Constrain depth: can't be deeper than the item above + 1
+    const tree = store.projectTree;
+    let maxDepth = 0;
+    if (closestIndex > 0 && closestIndex <= tree.length) {
+      const aboveEntry = tree[closestIndex - 1];
+      if (aboveEntry) {
+        maxDepth = aboveEntry.depth + 1;
+      }
+    }
+
+    this._dropIndex = closestIndex;
+    this._dropDepth = Math.min(depth, maxDepth);
   }
 
-  private _handleTopLevelDragLeave() {
-    this._dragOverTopLevel = false;
+  private _handleProjectListDragLeave(e: DragEvent) {
+    const related = e.relatedTarget as HTMLElement | null;
+    if (related && (e.currentTarget as HTMLElement).contains(related)) return;
+    this._dropIndex = -1;
   }
 
-  private async _handleTopLevelDrop(e: DragEvent) {
+  private async _handleProjectListDrop(e: DragEvent) {
     e.preventDefault();
     const draggedId = e.dataTransfer!.getData("text/plain");
-    this._dragOverTopLevel = false;
+    const dropIndex = this._dropIndex;
+    const dropDepth = this._dropDepth;
+
     this._draggingId = null;
+    this._dropIndex = -1;
+    this._dropDepth = 0;
+
     if (!draggedId) return;
-    try {
-      await fetch(`/api/projects/${draggedId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ parentProjectId: null }),
-      });
-      await store.fetchProjects();
-    } catch {
-      store.showToast("Failed to move project", "error");
+
+    // Prevent dropping onto self or descendants
+    const descendants = store.getDescendantIds(draggedId);
+
+    const tree = store.projectTree;
+
+    // Determine the new parent based on drop depth and position
+    let newParentId: string | null = null;
+    let sortOrder = 0;
+
+    if (dropDepth === 0) {
+      // Top-level drop
+      newParentId = null;
+    } else {
+      // Find the parent: walk backwards from dropIndex to find an item at depth = dropDepth - 1
+      for (let i = dropIndex - 1; i >= 0; i--) {
+        if (tree[i].depth === dropDepth - 1) {
+          newParentId = tree[i].project.id;
+          break;
+        }
+      }
+    }
+
+    // Prevent circular drops
+    if (
+      newParentId &&
+      (newParentId === draggedId || descendants.includes(newParentId))
+    ) {
+      return;
+    }
+
+    // Calculate sort_order: count siblings before this position
+    const siblings = tree.filter(
+      (entry) =>
+        entry.depth === dropDepth &&
+        (entry.project.parent_project_id ?? null) === newParentId &&
+        entry.project.id !== draggedId,
+    );
+
+    // Find which sibling position this drop corresponds to
+    let siblingIndex = 0;
+    for (let i = 0; i < dropIndex; i++) {
+      if (
+        tree[i] &&
+        tree[i].depth === dropDepth &&
+        (tree[i].project.parent_project_id ?? null) === newParentId &&
+        tree[i].project.id !== draggedId
+      ) {
+        siblingIndex++;
+      }
+    }
+
+    sortOrder = siblingIndex;
+
+    // Update sort orders: shift siblings after this position
+    const updates: Promise<void>[] = [];
+    for (let i = siblingIndex; i < siblings.length; i++) {
+      if (siblings[i].project.sort_order <= sortOrder + i) {
+        updates.push(
+          store.moveProject(siblings[i].project.id, newParentId, i + 1),
+        );
+      }
+    }
+
+    await store.moveProject(draggedId, newParentId, sortOrder);
+  }
+
+  private _startResize(e: MouseEvent) {
+    e.preventDefault();
+    this._isResizing = true;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+    const onMouseMove = (ev: MouseEvent) => {
+      const newWidth = Math.max(180, Math.min(400, ev.clientX));
+      this._sidebarWidth = newWidth;
+    };
+    const onMouseUp = () => {
+      this._isResizing = false;
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }
+
+  override connectedCallback() {
+    super.connectedCallback();
+    const saved = globalThis.localStorage?.getItem("todos:sidebarWidth");
+    if (saved) this._sidebarWidth = parseInt(saved, 10) || 256;
+  }
+
+  override updated(changed: Map<string, unknown>) {
+    super.updated(changed);
+    if (changed.has("_sidebarWidth")) {
+      try {
+        globalThis.localStorage?.setItem(
+          "todos:sidebarWidth",
+          String(this._sidebarWidth),
+        );
+      } catch {
+        // localStorage may not be available
+      }
     }
   }
 
@@ -111,9 +226,7 @@ export class TodoSidebar extends StoreElement {
       top: 0;
       left: 0;
       bottom: 0;
-      width: 16rem;
       background: var(--md-sys-color-surface-container-low);
-      border-right: 1px solid var(--md-sys-color-outline-variant);
       display: flex;
       flex-direction: column;
       transform: translateX(-100%);
@@ -131,15 +244,31 @@ export class TodoSidebar extends StoreElement {
       }
 
       aside {
-        position: static;
+        position: relative;
         transform: none;
         height: 100%;
       }
     }
 
+    .resize-handle {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 4px;
+      cursor: col-resize;
+      background: transparent;
+      transition: background 0.15s;
+      z-index: 10;
+    }
+
+    .resize-handle:hover,
+    .resize-handle.active {
+      background: var(--md-sys-color-primary);
+    }
+
     .user-section {
       padding: 8px;
-      border-bottom: 1px solid var(--md-sys-color-outline-variant);
     }
 
     .user-info {
@@ -172,6 +301,12 @@ export class TodoSidebar extends StoreElement {
       padding: 8px;
     }
 
+    .divider {
+      margin: 4px 12px;
+      border: none;
+      border-top: 1px solid var(--md-sys-color-outline-variant);
+    }
+
     .nav-button {
       width: 100%;
       display: flex;
@@ -179,11 +314,22 @@ export class TodoSidebar extends StoreElement {
       gap: 12px;
       padding: 8px 12px;
       border: none;
+      border-radius: var(--md-sys-shape-corner-small);
       background: transparent;
       cursor: pointer;
       font-size: 14px;
+      text-align: left;
       color: var(--md-sys-color-on-surface-variant);
       transition: background-color 0.15s;
+      overflow: hidden;
+    }
+
+    .nav-button-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
     }
 
     .nav-button:hover {
@@ -205,34 +351,70 @@ export class TodoSidebar extends StoreElement {
     }
 
     .count {
-      margin-left: auto;
       font-size: 12px;
       color: var(--md-sys-color-outline);
+      flex-shrink: 0;
     }
 
     .section {
-      padding: 8px;
-      border-top: 1px solid var(--md-sys-color-outline-variant);
+      padding: 4px 8px;
     }
 
     .section-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 8px 12px;
+      padding: 6px 12px;
     }
 
     .section-title {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: var(--md-sys-color-outline);
+      flex: 1;
     }
 
-    .section-add {
-      --m3e-icon-button-state-layer-size: 28px;
-      --m3e-icon-button-icon-size: 16px;
+    .section-actions {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .section-header:hover .section-actions {
+      opacity: 1;
+    }
+
+    .section-action {
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--md-sys-color-outline);
+      padding: 0;
+      outline: none;
+      transition: background-color 0.15s;
+    }
+
+    .section-action:hover {
+      background: var(--md-sys-color-surface-container-highest);
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .section-action m3e-icon {
+      font-size: 16px;
+      transition: transform 0.15s;
+    }
+
+    .section-action.collapsed m3e-icon {
+      transform: rotate(180deg);
     }
 
     .item-row {
@@ -242,80 +424,72 @@ export class TodoSidebar extends StoreElement {
 
     .item-row .nav-button {
       flex: 1;
-      border-radius: var(--md-sys-shape-corner-small);
-    }
-
-    .item-edit {
-      opacity: 0;
-      transition: opacity 0.15s;
-      --m3e-icon-button-state-layer-size: 28px;
-      --m3e-icon-button-icon-size: 16px;
-    }
-
-    .item-row:hover .item-edit {
-      opacity: 1;
     }
 
     .color-dot {
-      width: 8px;
-      height: 8px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
       flex-shrink: 0;
-      box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.25), inset 0 0 0 0 transparent;
     }
 
-    .collapse-toggle {
+    .collapse-indicator {
       width: 20px;
       height: 20px;
-      flex-shrink: 0;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
       display: flex;
       align-items: center;
       justify-content: center;
-      border: none;
-      background: transparent;
+      opacity: 0;
+      transition: opacity 0.15s, background-color 0.15s;
       color: var(--md-sys-color-outline);
+      flex-shrink: 0;
       cursor: pointer;
       padding: 0;
+      outline: none;
+    }
+
+    .nav-button:hover .collapse-indicator {
+      opacity: 1;
+    }
+
+    .collapse-indicator:hover {
+      background: var(--md-sys-color-surface-container-highest);
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .collapse-indicator m3e-icon {
+      font-size: 16px;
       transition: transform 0.15s;
     }
 
-    .collapse-toggle:hover {
-      color: var(--md-sys-color-on-surface-variant);
-      background: var(--md-sys-color-surface-container-high);
-    }
-
-    .collapse-toggle m3e-icon {
-      font-size: 16px;
-    }
-
-    .collapse-toggle.collapsed {
-      transform: rotate(-90deg);
-    }
-
-    .collapse-spacer {
-      width: 20px;
-      flex-shrink: 0;
-    }
-
-    .item-row.drag-over > .nav-button {
-      background: var(--md-sys-color-primary-container);
-      outline: 2px dashed var(--md-sys-color-primary);
-      outline-offset: -2px;
+    .collapse-indicator.collapsed m3e-icon {
+      transform: rotate(180deg);
     }
 
     .item-row.dragging {
-      opacity: 0.5;
+      opacity: 0.4;
     }
 
-    .drop-top-level {
-      height: 4px;
-      margin: 0 12px;
-      transition: background-color 0.15s, height 0.15s;
+    .drop-indicator {
+      height: 2px;
+      background: var(--md-sys-color-primary);
+      border-radius: 1px;
+      pointer-events: none;
+      position: relative;
     }
 
-    .drop-top-level.drag-over {
+    .drop-indicator::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: -3px;
+      width: 8px;
       height: 8px;
-      background: var(--md-sys-color-primary-container);
-      outline: 2px dashed var(--md-sys-color-primary);
+      border-radius: 50%;
+      background: var(--md-sys-color-primary);
     }
 
     .section.scrollable {
@@ -325,16 +499,23 @@ export class TodoSidebar extends StoreElement {
 
     .bottom-section {
       padding: 8px;
-      border-top: 1px solid var(--md-sys-color-outline-variant);
     }
   `;
 
   override render() {
-    // Indentation: cap at 4 levels visually
     const indent = (depth: number) => Math.min(depth, 4) * 16;
 
     return html`
-      <aside class="${store.sidebarOpen ? "open" : ""}">
+      <aside
+        class="${store.sidebarOpen ? "open" : ""}"
+        style="width: ${this._sidebarWidth}px"
+      >
+        <div
+          class="resize-handle ${this._isResizing ? "active" : ""}"
+          @mousedown="${this._startResize}"
+        >
+        </div>
+
         <!-- User Section -->
         <div class="user-section">
           <div class="user-info">
@@ -359,6 +540,8 @@ export class TodoSidebar extends StoreElement {
           </div>
         </div>
 
+        <hr class="divider" />
+
         <!-- Quick Actions -->
         <div class="quick-actions">
           <button
@@ -369,7 +552,7 @@ export class TodoSidebar extends StoreElement {
             }}"
           >
             <m3e-icon name="add" variant="rounded"></m3e-icon>
-            ${NAV_LABELS.addTask}
+            <span class="nav-button-label">${NAV_LABELS.addTask}</span>
           </button>
 
           <button
@@ -380,7 +563,7 @@ export class TodoSidebar extends StoreElement {
             }}"
           >
             <m3e-icon name="search" variant="rounded"></m3e-icon>
-            ${NAV_LABELS.search}
+            <span class="nav-button-label">${NAV_LABELS.search}</span>
           </button>
 
           <button
@@ -388,7 +571,8 @@ export class TodoSidebar extends StoreElement {
             @click="${() => store.navigate("inbox")}"
           >
             <m3e-icon name="inbox" variant="rounded"></m3e-icon>
-            ${NAV_LABELS.inbox} ${store.inboxCount > 0
+            <span class="nav-button-label">${NAV_LABELS.inbox}</span>
+            ${store.inboxCount > 0
               ? html`
                 <span class="count">${store.inboxCount}</span>
               `
@@ -400,156 +584,197 @@ export class TodoSidebar extends StoreElement {
             @click="${() => store.navigate("next")}"
           >
             <m3e-icon name="chevron_right" variant="rounded"></m3e-icon>
-            ${NAV_LABELS.next}
+            <span class="nav-button-label">${NAV_LABELS.next}</span>
           </button>
         </div>
+
+        <hr class="divider" />
 
         <!-- Filters -->
         <div class="section">
           <div class="section-header">
             <span class="section-title">${SECTION_LABELS.filters}</span>
+            <div class="section-actions">
+              <button
+                class="section-action ${store.collapsedSections.has("filters")
+                  ? "collapsed"
+                  : ""}"
+                @click="${() => store.toggleSectionCollapse("filters")}"
+              >
+                <m3e-icon name="expand_more" variant="rounded"></m3e-icon>
+              </button>
+            </div>
           </div>
-          <button
-            class="nav-button ${store.currentTab === "due" ? "active" : ""}"
-            @click="${() => store.navigate("due")}"
-          >
-            <span
-              class="color-dot"
-              style="background: var(--md-sys-color-tertiary)"
-            ></span>
-            ${NAV_LABELS.due} ${store.dueCount > 0
-              ? html`
-                <span class="count">${store.dueCount}</span>
-              `
-              : null}
-          </button>
+          ${!store.collapsedSections.has("filters")
+            ? html`
+              <button
+                class="nav-button ${store.currentTab === "due" ? "active" : ""}"
+                @click="${() => store.navigate("due")}"
+              >
+                <span
+                  class="color-dot"
+                  style="background: var(--md-sys-color-tertiary)"
+                ></span>
+                <span class="nav-button-label">${NAV_LABELS.due}</span>
+                ${store.dueCount > 0
+                  ? html`
+                    <span class="count">${store.dueCount}</span>
+                  `
+                  : null}
+              </button>
+            `
+            : null}
         </div>
+
+        <hr class="divider" />
 
         <!-- Projects -->
         <div class="section scrollable">
           <div class="section-header">
             <span class="section-title">${SECTION_LABELS.projects}</span>
-            <m3e-icon-button
-              class="section-add"
-              @click="${() => store.setShowProjectForm(true)}"
-            >
-              <m3e-icon name="add" variant="rounded"></m3e-icon>
-            </m3e-icon-button>
+            <div class="section-actions">
+              <button
+                class="section-action"
+                @click="${() => store.setShowProjectForm(true)}"
+              >
+                <m3e-icon name="add" variant="rounded"></m3e-icon>
+              </button>
+              <button
+                class="section-action ${store.collapsedSections.has("projects")
+                  ? "collapsed"
+                  : ""}"
+                @click="${() => store.toggleSectionCollapse("projects")}"
+              >
+                <m3e-icon name="expand_more" variant="rounded"></m3e-icon>
+              </button>
+            </div>
           </div>
-          ${store.projectTree.map(
-            ({ project, depth }) =>
-              html`
-                <div
-                  class="item-row ${this._dragOverId === project.id
-                    ? "drag-over"
-                    : ""} ${this._draggingId === project.id ? "dragging" : ""}"
-                  draggable="true"
-                  @dragstart="${(e: DragEvent) =>
-                    this._handleDragStart(e, project.id)}"
-                  @dragend="${() => this._handleDragEnd()}"
-                  @dragover="${(e: DragEvent) =>
-                    this._handleDragOver(e, project.id)}"
-                  @dragleave="${(e: DragEvent) =>
-                    this._handleDragLeave(e, project.id)}"
-                  @drop="${(e: DragEvent) => this._handleDrop(e, project.id)}"
-                  style="padding-left: ${indent(depth)}px"
-                >
-                  ${store.hasChildren(project.id)
-                    ? html`
-                      <button
-                        class="collapse-toggle ${store.collapsedProjectIds.has(
-                            project.id,
-                          )
-                          ? "collapsed"
+          ${!store.collapsedSections.has("projects")
+            ? html`
+              <div
+                class="project-list"
+                @dragover="${(e: DragEvent) =>
+                  this._handleProjectListDragOver(e)}"
+                @dragleave="${(e: DragEvent) =>
+                  this._handleProjectListDragLeave(e)}"
+                @drop="${(e: DragEvent) => this._handleProjectListDrop(e)}"
+              >
+                ${store.projectTree.map(
+                  ({ project, depth }, index) =>
+                    html`
+                      ${this._dropIndex === index
+                        ? html`
+                          <div class="drop-indicator" style="margin-left: ${indent(
+                            this._dropDepth,
+                          )}px"></div>
+                        `
+                        : null}
+                      <div
+                        class="item-row ${this._draggingId === project.id
+                          ? "dragging"
                           : ""}"
-                        @click="${(e: Event) => {
-                          e.stopPropagation();
-                          store.toggleCollapse(project.id);
-                        }}"
+                        draggable="true"
+                        @dragstart="${(e: DragEvent) =>
+                          this._handleDragStart(e, project.id)}"
+                        @dragend="${() => this._handleDragEnd()}"
+                        style="padding-left: ${indent(depth)}px"
                       >
-                        <m3e-icon name="expand_more" variant="rounded"></m3e-icon>
-                      </button>
-                    `
-                    : html`
-                      <span class="collapse-spacer"></span>
-                    `}
-                  <button
-                    class="nav-button ${store.currentTab === "project" &&
-                        store.selectedProjectId === project.id
-                      ? "active"
-                      : ""}"
-                    @click="${() => store.navigate("project", project.id)}"
-                  >
-                    <span
-                      class="color-dot"
-                      style="background: ${project.color || "#4caf50"}"
-                    ></span>
-                    ${project.name} ${project.task_count
-                      ? html`
-                        <span class="count">${project.task_count}</span>
-                      `
-                      : null}
-                  </button>
-                  <m3e-icon-button
-                    class="item-edit"
-                    @click="${(e: Event) => {
-                      e.stopPropagation();
-                      store.setShowProjectForm(true, project);
-                    }}"
-                  >
-                    <m3e-icon name="edit" variant="rounded"></m3e-icon>
-                  </m3e-icon-button>
-                </div>
-              `,
-          )}
-          <div
-            class="drop-top-level ${this._dragOverTopLevel ? "drag-over" : ""}"
-            @dragover="${(e: DragEvent) => this._handleTopLevelDragOver(e)}"
-            @dragleave="${() => this._handleTopLevelDragLeave()}"
-            @drop="${(e: DragEvent) => this._handleTopLevelDrop(e)}"
-          >
-          </div>
+                        <button
+                          class="nav-button ${store.currentTab === "project" &&
+                              store.selectedProjectId === project.id
+                            ? "active"
+                            : ""}"
+                          @click="${() =>
+                            store.navigate("project", project.id)}"
+                        >
+                          <span
+                            class="color-dot"
+                            style="background: ${project.color || "#4caf50"}"
+                          ></span>
+                          <span class="nav-button-label">${project.name}</span>
+                          ${store.hasChildren(project.id)
+                            ? html`
+                              <button
+                                class="collapse-indicator ${store
+                                    .collapsedProjectIds.has(project.id)
+                                  ? "collapsed"
+                                  : ""}"
+                                @click="${(e: Event) => {
+                                  e.stopPropagation();
+                                  store.toggleCollapse(project.id);
+                                }}"
+                              >
+                                <m3e-icon name="expand_more" variant="rounded"></m3e-icon>
+                              </button>
+                            `
+                            : null} ${project.task_count
+                            ? html`
+                              <span class="count">${project.task_count}</span>
+                            `
+                            : null}
+                        </button>
+                      </div>
+                    `,
+                )} ${this._dropIndex === store.projectTree.length
+                  ? html`
+                    <div class="drop-indicator" style="margin-left: ${indent(
+                      this._dropDepth,
+                    )}px"></div>
+                  `
+                  : null}
+              </div>
+            `
+            : null}
+
+          <hr class="divider" />
 
           <!-- Contexts -->
-          <div class="section-header" style="margin-top: 16px;">
+          <div class="section-header">
             <span class="section-title">${SECTION_LABELS.contexts}</span>
-            <m3e-icon-button
-              class="section-add"
-              @click="${() => store.setShowContextForm(true)}"
-            >
-              <m3e-icon name="add" variant="rounded"></m3e-icon>
-            </m3e-icon-button>
+            <div class="section-actions">
+              <button
+                class="section-action"
+                @click="${() => store.setShowContextForm(true)}"
+              >
+                <m3e-icon name="add" variant="rounded"></m3e-icon>
+              </button>
+              <button
+                class="section-action ${store.collapsedSections.has("contexts")
+                  ? "collapsed"
+                  : ""}"
+                @click="${() => store.toggleSectionCollapse("contexts")}"
+              >
+                <m3e-icon name="expand_more" variant="rounded"></m3e-icon>
+              </button>
+            </div>
           </div>
-          ${store.contexts.map(
-            (context) =>
-              html`
-                <div class="item-row">
-                  <button
-                    class="nav-button ${store.currentTab === "context" &&
-                        store.selectedContextId === context.id
-                      ? "active"
-                      : ""}"
-                    @click="${() => store.navigate("context", context.id)}"
-                  >
-                    <span
-                      class="color-dot"
-                      style="background: ${context.color || "#2196f3"}"
-                    ></span>
-                    ${context.name}
-                  </button>
-                  <m3e-icon-button
-                    class="item-edit"
-                    @click="${(e: Event) => {
-                      e.stopPropagation();
-                      store.setShowContextForm(true, context);
-                    }}"
-                  >
-                    <m3e-icon name="edit" variant="rounded"></m3e-icon>
-                  </m3e-icon-button>
-                </div>
-              `,
-          )}
+          ${!store.collapsedSections.has("contexts")
+            ? html`
+              ${store.contexts.map(
+                (context) =>
+                  html`
+                    <div class="item-row">
+                      <button
+                        class="nav-button ${store.currentTab === "context" &&
+                            store.selectedContextId === context.id
+                          ? "active"
+                          : ""}"
+                        @click="${() => store.navigate("context", context.id)}"
+                      >
+                        <span
+                          class="color-dot"
+                          style="background: ${context.color || "#2196f3"}"
+                        ></span>
+                        <span class="nav-button-label">${context.name}</span>
+                      </button>
+                    </div>
+                  `,
+              )}
+            `
+            : null}
         </div>
+
+        <hr class="divider" />
 
         <!-- Bottom Links -->
         <div class="bottom-section">
@@ -558,7 +783,7 @@ export class TodoSidebar extends StoreElement {
             @click="${() => store.navigate("history")}"
           >
             <m3e-icon name="history" variant="rounded"></m3e-icon>
-            ${NAV_LABELS.history}
+            <span class="nav-button-label">${NAV_LABELS.history}</span>
           </button>
           <button
             class="nav-button ${store.currentTab === "settings"
@@ -567,7 +792,7 @@ export class TodoSidebar extends StoreElement {
             @click="${() => store.navigate("settings")}"
           >
             <m3e-icon name="settings" variant="rounded"></m3e-icon>
-            ${NAV_LABELS.settings}
+            <span class="nav-button-label">${NAV_LABELS.settings}</span>
           </button>
         </div>
       </aside>

@@ -263,6 +263,21 @@ Deno.test({
       },
     );
 
+    await t.step(
+      "PATCH /api/projects/:id updates sortOrder",
+      async () => {
+        const res = await apiCall(
+          ctx.app,
+          "PATCH",
+          `/api/projects/${projectId}`,
+          { sortOrder: 5 },
+        );
+        assertEquals(res.status, 200);
+        const body = await res.json();
+        assertEquals(body.sort_order, 5);
+      },
+    );
+
     // -----------------------------------------------------------------------
     // Validation and error path tests
     // -----------------------------------------------------------------------

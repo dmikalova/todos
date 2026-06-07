@@ -34,6 +34,7 @@ export interface Project {
   description?: string | null;
   context_id?: string | null;
   parent_project_id?: string | null;
+  sort_order: number;
   task_count?: number;
 }
 
@@ -103,6 +104,7 @@ class Store {
   private _toasts: Toast[] = [];
   private _taskFilter = { completed: "false" };
   private _collapsedProjectIds: Set<string> = new Set();
+  private _collapsedSections: Set<string> = new Set();
 
   // Listeners for reactivity
   private listeners: Set<Listener> = new Set();
@@ -185,8 +187,21 @@ class Store {
     return this._collapsedProjectIds;
   }
 
+  get collapsedSections(): Set<string> {
+    return this._collapsedSections;
+  }
+
+  toggleSectionCollapse(sectionId: string) {
+    if (this._collapsedSections.has(sectionId)) {
+      this._collapsedSections.delete(sectionId);
+    } else {
+      this._collapsedSections.add(sectionId);
+    }
+    this.notify();
+  }
+
   // Computed: depth-annotated flat list of projects ordered as a tree.
-  // Siblings sorted alphabetically by name. Children of collapsed parents excluded.
+  // Siblings maintain their sort_order from the API. Children of collapsed parents excluded.
   get projectTree(): ProjectTreeEntry[] {
     const entries: ProjectTreeEntry[] = [];
     const childrenMap = new Map<string | null, Project[]>();
@@ -198,11 +213,6 @@ class Store {
         childrenMap.set(parentId, []);
       }
       childrenMap.get(parentId)!.push(project);
-    }
-
-    // Sort each group alphabetically by name
-    for (const children of childrenMap.values()) {
-      children.sort((a, b) => a.name.localeCompare(b.name));
     }
 
     // DFS traversal to build flat list
@@ -564,6 +574,22 @@ class Store {
     }
   }
 
+  async moveProject(
+    projectId: string,
+    parentProjectId: string | null,
+    sortOrder: number,
+  ) {
+    try {
+      await this.api(`/projects/${projectId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ parentProjectId, sortOrder }),
+      });
+      await this.fetchProjects();
+    } catch {
+      this.showToast("Failed to move project", "error");
+    }
+  }
+
   async fetchContexts() {
     try {
       this._contexts = await this.api<Context[]>("/contexts");
@@ -694,7 +720,8 @@ class Store {
       }
 
       // Handle recurrence
-      await this.saveRecurrence(taskId, recurrence);
+      const isNew = !this._editingTask;
+      await this.saveRecurrence(taskId, recurrence, isNew);
 
       this._showTaskForm = false;
       this._editingTask = null;
@@ -715,16 +742,8 @@ class Store {
       interval: number;
       daysOfWeek?: number[];
     } | null,
+    isNew = false,
   ) {
-    // Check if task already has recurrence
-    let hasExisting = false;
-    try {
-      await this.api(`/recurrence/${taskId}`);
-      hasExisting = true;
-    } catch {
-      hasExisting = false;
-    }
-
     if (recurrence) {
       const payload = {
         scheduleType: "fixed",
@@ -733,19 +752,21 @@ class Store {
         daysOfWeek: recurrence.daysOfWeek,
       };
 
-      if (hasExisting) {
-        await this.api(`/recurrence/${taskId}`, {
-          method: "PATCH",
-          body: JSON.stringify(payload),
-        });
-      } else {
+      if (isNew || !this._editingTask?.recurrence_type) {
+        // New task or task without existing recurrence — create
         await this.api("/recurrence", {
           method: "POST",
           body: JSON.stringify({ taskId, ...payload }),
         });
+      } else {
+        // Task already has recurrence — update
+        await this.api(`/recurrence/${taskId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
       }
-    } else if (hasExisting) {
-      // Remove recurrence if it existed but user cleared it
+    } else if (!isNew && this._editingTask?.recurrence_type) {
+      // Recurrence was cleared — delete it
       await this.api(`/recurrence/${taskId}`, { method: "DELETE" });
     }
   }

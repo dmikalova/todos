@@ -24,6 +24,7 @@ const updateProjectSchema = z.object({
   color: z.string().optional().nullable(),
   contextId: z.string().uuid().optional().nullable(),
   parentProjectId: z.string().uuid().optional().nullable(),
+  sortOrder: z.number().int().optional(),
 });
 
 // Types
@@ -36,6 +37,7 @@ interface Project {
   color: string | null;
   context_id: string | null;
   parent_project_id: string | null;
+  sort_order: number;
   created_at: Date;
 }
 
@@ -68,10 +70,14 @@ projects.post("/", async (c) => {
       }
 
       const [created] = await tx<Project[]>`
-      INSERT INTO projects (user_id, name, description, color, context_id, parent_project_id)
+      INSERT INTO projects (user_id, name, description, color, context_id, parent_project_id, sort_order)
       VALUES (${session.userId}, ${name}, ${description || null}, ${
         color || null
-      }, ${contextId || null}, ${parentProjectId || null})
+      }, ${contextId || null}, ${parentProjectId || null}, (
+        SELECT COALESCE(MAX(sort_order), 0) + 1 FROM projects WHERE user_id = ${session.userId} AND parent_project_id IS NOT DISTINCT FROM ${
+        parentProjectId || null
+      }
+      ))
       RETURNING *
     `;
       return created;
@@ -93,7 +99,7 @@ projects.get("/", async (c) => {
       FROM projects p
       LEFT JOIN tasks t ON p.id = t.project_id AND t.deleted_at IS NULL AND t.completed_at IS NULL
       GROUP BY p.id
-      ORDER BY p.name
+      ORDER BY p.sort_order, p.created_at
     `;
       return result;
     },
@@ -261,6 +267,11 @@ projects.patch("/:id", async (c) => {
         updates.parentProjectId !== undefined
           ? updates.parentProjectId
           : existing.parent_project_id
+      },
+        sort_order = ${
+        updates.sortOrder !== undefined
+          ? updates.sortOrder
+          : existing.sort_order
       }
       WHERE id = ${id}
       RETURNING *

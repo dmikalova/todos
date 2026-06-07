@@ -72,6 +72,12 @@ table "projects" {
     null = true
   }
 
+  column "sort_order" {
+    type    = integer
+    null    = false
+    default = 0
+  }
+
   column "created_at" {
     type    = timestamptz
     null    = false
@@ -135,6 +141,12 @@ table "contexts" {
   column "color" {
     type = text
     null = true
+  }
+
+  column "sort_order" {
+    type    = integer
+    null    = false
+    default = 0
   }
 
   column "created_at" {

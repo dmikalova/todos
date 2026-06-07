@@ -220,9 +220,18 @@ export class ContextForm extends LitElement {
       }}">
         <h2>${isEditing ? "Edit Context" : "New Context"}</h2>
 
-        <form @submit="${this.handleSubmit}">
+        <form @submit="${this.handleSubmit}" @keydown="${(e: KeyboardEvent) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            this.handleSubmit(e);
+          }
+        }}">
           <div class="form-group">
-            <m3e-form-field variant="outlined" hide-subscript="always">
+            <m3e-form-field
+              variant="outlined"
+              float-label="always"
+              hide-subscript="always"
+            >
               <label slot="label" for="context-name">Name</label>
               <input
                 id="context-name"

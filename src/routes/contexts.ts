@@ -123,7 +123,7 @@ contexts.get("/", async (c) => {
 
   const contextList = await withDb(async (sql: SqlQuery) => {
     const allContexts = await sql<Context[]>`
-      SELECT * FROM contexts ORDER BY name
+      SELECT * FROM contexts ORDER BY sort_order, created_at
     `;
 
     const result: ContextWithWindows[] = [];

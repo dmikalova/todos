@@ -2,6 +2,8 @@
 
 import { css, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import "npm:@m3e/web@2/icon";
+import "npm:@m3e/web@2/icon-button";
 import "npm:@m3e/web@2/segmented-button";
 import { StoreElement } from "../base.ts";
 import { store } from "../store.ts";
@@ -87,21 +89,9 @@ export class TodoApp extends StoreElement {
       line-height: 1.2;
     }
 
-    h1.page-title.editable {
-      cursor: pointer;
-      display: inline-block;
-      border-radius: 4px;
-      padding: 2px 4px;
-      margin-left: -4px;
-      transition: background 0.15s;
-    }
-
-    h1.page-title.editable:hover {
-      background: var(--md-sys-color-surface-container-high);
-    }
-
     m3e-segmented-button.view-filter {
       width: auto;
+      margin-left: auto;
     }
 
     m3e-segmented-button.view-filter m3e-button-segment {
@@ -202,11 +192,7 @@ export class TodoApp extends StoreElement {
           `
           : null}
         <div class="title-row">
-          <h1
-            class="page-title ${editable ? "editable" : ""}"
-            @click="${editable ? this.handleTitleClick : null}"
-            title="${editable ? "Click to edit" : ""}"
-          >
+          <h1 class="page-title">
             ${title}
           </h1>
           ${this.showFilter
@@ -223,10 +209,6 @@ export class TodoApp extends StoreElement {
                 }}"
               >
                 <m3e-button-segment
-                  value="false"
-                  .checked="${store.taskFilter.completed === "false"}"
-                >next</m3e-button-segment>
-                <m3e-button-segment
                   value="true"
                   .checked="${store.taskFilter.completed === "true"}"
                 >done</m3e-button-segment>
@@ -234,7 +216,20 @@ export class TodoApp extends StoreElement {
                   value=""
                   .checked="${store.taskFilter.completed === ""}"
                 >all</m3e-button-segment>
+                <m3e-button-segment
+                  value="false"
+                  .checked="${store.taskFilter.completed === "false"}"
+                >next</m3e-button-segment>
               </m3e-segmented-button>
+            `
+            : null} ${editable
+            ? html`
+              <m3e-icon-button
+                class="edit-button"
+                @click="${this.handleTitleClick}"
+              >
+                <m3e-icon name="more_vert" variant="rounded"></m3e-icon>
+              </m3e-icon-button>
             `
             : null}
         </div>

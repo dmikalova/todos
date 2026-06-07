@@ -48,24 +48,36 @@ export class ProjectForm extends LitElement {
 
     m3e-form-field {
       width: 100%;
+      --m3e-form-field-label-top: -9px;
     }
 
-    .color-picker {
-      display: flex;
+    .color-pill {
+      display: inline-flex;
       align-items: center;
-      gap: 12px;
-    }
-
-    input[type="color"] {
-      width: 40px;
-      height: 40px;
-      border: 1px solid var(--md-sys-color-outline-variant);
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      border: none;
       cursor: pointer;
+      font-size: 14px;
+      color: #fff;
+      font-weight: 500;
+      position: relative;
+      overflow: hidden;
+      transition: opacity 0.15s;
     }
 
-    .color-value {
-      font-size: 14px;
-      color: var(--md-sys-color-outline);
+    .color-pill:hover {
+      opacity: 0.85;
+    }
+
+    .color-pill input[type="color"] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
     }
 
     .actions {
@@ -175,9 +187,56 @@ export class ProjectForm extends LitElement {
       }}">
         <h2>${isEditing ? "Edit Project" : "New Project"}</h2>
 
-        <form @submit="${this.handleSubmit}">
+        <form @submit="${this.handleSubmit}" @keydown="${(e: KeyboardEvent) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            this.handleSubmit(e);
+          }
+        }}">
           <div class="form-group">
-            <m3e-form-field variant="outlined" hide-subscript="always">
+            <m3e-form-field
+              variant="outlined"
+              float-label="always"
+              hide-subscript="always"
+            >
+              <label slot="label" for="parent-select">Parent Project</label>
+              <m3e-select
+                id="parent-select"
+                @change="${(e: Event) => {
+                  const select = e.target as HTMLElement & { value: string };
+                  this.form = {
+                    ...this.form,
+                    parent_project_id: select.value === "none"
+                      ? null
+                      : select.value || null,
+                  };
+                }}"
+              >
+                <m3e-icon
+                  slot="arrow"
+                  name="arrow_drop_down_circle"
+                  variant="rounded"
+                ></m3e-icon>
+                <m3e-option value="none" ?selected="${!this.form
+                  .parent_project_id}">None</m3e-option>
+                ${this._getAvailableParents().map(
+                  (p) =>
+                    html`
+                      <m3e-option value="${p
+                        .id}" ?selected="${this.form.parent_project_id ===
+                        p.id}">${p.name}</m3e-option>
+                    `,
+                )}
+              </m3e-select>
+            </m3e-form-field>
+          </div>
+
+          <div class="form-group">
+            <m3e-form-field
+              variant="outlined"
+              float-label="always"
+              hide-subscript="always"
+            >
               <label slot="label" for="project-name">Name</label>
               <input
                 id="project-name"
@@ -194,22 +253,11 @@ export class ProjectForm extends LitElement {
           </div>
 
           <div class="form-group">
-            <label>Color</label>
-            <div class="color-picker">
-              <input
-                type="color"
-                .value="${this.form.color}"
-                @input="${(e: Event) => (this.form = {
-                  ...this.form,
-                  color: (e.target as HTMLInputElement).value,
-                })}"
-              />
-              <span class="color-value">${this.form.color}</span>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <m3e-form-field variant="outlined" hide-subscript="always">
+            <m3e-form-field
+              variant="outlined"
+              float-label="always"
+              hide-subscript="always"
+            >
               <label slot="label" for="context-select">Context</label>
               <m3e-select
                 id="context-select"
@@ -217,7 +265,9 @@ export class ProjectForm extends LitElement {
                   const select = e.target as HTMLElement & { value: string };
                   this.form = {
                     ...this.form,
-                    context_id: select.value || null,
+                    context_id: select.value === "none"
+                      ? null
+                      : select.value || null,
                   };
                 }}"
               >
@@ -226,7 +276,8 @@ export class ProjectForm extends LitElement {
                   name="arrow_drop_down_circle"
                   variant="rounded"
                 ></m3e-icon>
-                <m3e-option value="" selected>${this
+                <m3e-option value="none" ?selected="${!this.form.context_id}"
+                >${this
                   ._getInheritedContextLabel()}</m3e-option>
                 ${store.contexts.map(
                   (c) =>
@@ -241,34 +292,17 @@ export class ProjectForm extends LitElement {
           </div>
 
           <div class="form-group">
-            <m3e-form-field variant="outlined" hide-subscript="always">
-              <label slot="label" for="parent-select">Parent Project</label>
-              <m3e-select
-                id="parent-select"
-                @change="${(e: Event) => {
-                  const select = e.target as HTMLElement & { value: string };
-                  this.form = {
-                    ...this.form,
-                    parent_project_id: select.value || null,
-                  };
-                }}"
-              >
-                <m3e-icon
-                  slot="arrow"
-                  name="arrow_drop_down_circle"
-                  variant="rounded"
-                ></m3e-icon>
-                <m3e-option value="" selected>None</m3e-option>
-                ${this._getAvailableParents().map(
-                  (p) =>
-                    html`
-                      <m3e-option value="${p
-                        .id}" ?selected="${this.form.parent_project_id ===
-                        p.id}">${p.name}</m3e-option>
-                    `,
-                )}
-              </m3e-select>
-            </m3e-form-field>
+            <label class="color-pill" style="background: ${this.form.color}">
+              <span>${this.form.color}</span>
+              <input
+                type="color"
+                .value="${this.form.color}"
+                @input="${(e: Event) => (this.form = {
+                  ...this.form,
+                  color: (e.target as HTMLInputElement).value,
+                })}"
+              />
+            </label>
           </div>
 
           <div class="actions">

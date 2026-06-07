@@ -367,7 +367,13 @@ export class TaskForm extends LitElement {
         }}"
       >
         <h2>${isEditing ? "edit task" : "new task"}</h2>
-        <form @submit="${this.handleSubmit}" @input="${this.handleFieldInput}">
+        <form @submit="${this.handleSubmit}" @input="${this
+          .handleFieldInput}" @keydown="${(e: KeyboardEvent) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            this.handleSubmit(e);
+          }
+        }}">
           <div class="form-group">
             <m3e-form-field
               variant="outlined"
@@ -414,6 +420,7 @@ export class TaskForm extends LitElement {
           <div class="form-group">
             <m3e-form-field
               variant="outlined"
+              float-label="always"
               hide-subscript="${ifDefined(this.hideSubscript("due-date"))}"
             >
               <label slot="label" for="due-date">Due Date</label>
@@ -457,6 +464,7 @@ export class TaskForm extends LitElement {
           <div class="form-group">
             <m3e-form-field
               variant="outlined"
+              float-label="always"
               hide-subscript="${ifDefined(
                 this.hideSubscript("project-select"),
               )}"
@@ -497,6 +505,7 @@ export class TaskForm extends LitElement {
           <div class="form-group">
             <m3e-form-field
               variant="outlined"
+              float-label="always"
               hide-subscript="${ifDefined(
                 this.hideSubscript("recurrence-select"),
               )}"
@@ -549,6 +558,7 @@ export class TaskForm extends LitElement {
                 <div class="recurrence-interval">
                   <m3e-form-field
                     variant="outlined"
+                    float-label="always"
                     hide-subscript="${ifDefined(
                       this.hideSubscript("interval"),
                     )}"

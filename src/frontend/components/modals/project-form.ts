@@ -219,8 +219,9 @@ export class ProjectForm extends LitElement {
                   const select = e.target as HTMLElement & { value: string };
                   this.form = {
                     ...this.form,
-                    parent_project_id:
-                      select.value === "none" ? null : select.value || null,
+                    parent_project_id: select.value === "none"
+                      ? null
+                      : select.value || null,
                   };
                 }}"
               >
@@ -232,16 +233,15 @@ export class ProjectForm extends LitElement {
                 <m3e-option
                   value="none"
                   ?selected="${!this.form.parent_project_id}"
-                  >None</m3e-option
-                >
+                >None</m3e-option>
                 ${this._getAvailableParents().map(
-                  (p) => html`
-                    <m3e-option
-                      value="${p.id}"
-                      ?selected="${this.form.parent_project_id === p.id}"
-                      >${p.name}</m3e-option
-                    >
-                  `,
+                  (p) =>
+                    html`
+                      <m3e-option
+                        value="${p.id}"
+                        ?selected="${this.form.parent_project_id === p.id}"
+                      >${p.name}</m3e-option>
+                    `,
                 )}
               </m3e-select>
             </m3e-form-field>
@@ -258,11 +258,10 @@ export class ProjectForm extends LitElement {
                 id="project-name"
                 type="text"
                 .value="${this.form.name}"
-                @input="${(e: Event) =>
-                  (this.form = {
-                    ...this.form,
-                    name: (e.target as HTMLInputElement).value,
-                  })}"
+                @input="${(e: Event) => (this.form = {
+                  ...this.form,
+                  name: (e.target as HTMLInputElement).value,
+                })}"
                 required
                 placeholder="Project name"
               />
@@ -282,8 +281,9 @@ export class ProjectForm extends LitElement {
                   const select = e.target as HTMLElement & { value: string };
                   this.form = {
                     ...this.form,
-                    context_id:
-                      select.value === "none" ? null : select.value || null,
+                    context_id: select.value === "none"
+                      ? null
+                      : select.value || null,
                   };
                 }}"
               >
@@ -293,16 +293,15 @@ export class ProjectForm extends LitElement {
                   variant="rounded"
                 ></m3e-icon>
                 <m3e-option value="none" ?selected="${!this.form.context_id}"
-                  >${this._getInheritedContextLabel()}</m3e-option
-                >
+                >${this._getInheritedContextLabel()}</m3e-option>
                 ${store.contexts.map(
-                  (c) => html`
-                    <m3e-option
-                      value="${c.id}"
-                      ?selected="${this.form.context_id === c.id}"
-                      >${c.name}</m3e-option
-                    >
-                  `,
+                  (c) =>
+                    html`
+                      <m3e-option
+                        value="${c.id}"
+                        ?selected="${this.form.context_id === c.id}"
+                      >${c.name}</m3e-option>
+                    `,
                 )}
               </m3e-select>
             </m3e-form-field>
@@ -314,11 +313,10 @@ export class ProjectForm extends LitElement {
               <input
                 type="color"
                 .value="${this.form.color}"
-                @input="${(e: Event) =>
-                  (this.form = {
-                    ...this.form,
-                    color: (e.target as HTMLInputElement).value,
-                  })}"
+                @input="${(e: Event) => (this.form = {
+                  ...this.form,
+                  color: (e.target as HTMLInputElement).value,
+                })}"
               />
             </label>
           </div>
@@ -327,20 +325,20 @@ export class ProjectForm extends LitElement {
             <div>
               ${isEditing
                 ? html`
-                    <m3e-button
-                      class="delete-button"
-                      variant="text"
-                      type="button"
-                      @click="${this.handleDelete}"
-                    >
-                      <m3e-icon
-                        slot="icon"
-                        name="delete"
-                        variant="rounded"
-                      ></m3e-icon>
-                      Delete
-                    </m3e-button>
-                  `
+                  <m3e-button
+                    class="delete-button"
+                    variant="text"
+                    type="button"
+                    @click="${this.handleDelete}"
+                  >
+                    <m3e-icon
+                      slot="icon"
+                      name="delete"
+                      variant="rounded"
+                    ></m3e-icon>
+                    Delete
+                  </m3e-button>
+                `
                 : null}
             </div>
             <m3e-button variant="filled" type="submit">

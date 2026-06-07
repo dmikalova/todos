@@ -323,13 +323,12 @@ export class TaskForm extends LitElement {
       },
       this.form.recurrence_type
         ? {
-            frequency: this.form.recurrence_type,
-            interval: this.form.recurrence_interval,
-            daysOfWeek:
-              this.form.recurrence_type === "weekly"
-                ? this.form.recurrence_days
-                : undefined,
-          }
+          frequency: this.form.recurrence_type,
+          interval: this.form.recurrence_interval,
+          daysOfWeek: this.form.recurrence_type === "weekly"
+            ? this.form.recurrence_days
+            : undefined,
+        }
         : null,
     );
   }
@@ -395,11 +394,10 @@ export class TaskForm extends LitElement {
                 id="task-title"
                 rows="1"
                 .value="${this.form.title}"
-                @input="${(e: Event) =>
-                  (this.form = {
-                    ...this.form,
-                    title: (e.target as HTMLTextAreaElement).value,
-                  })}"
+                @input="${(e: Event) => (this.form = {
+                  ...this.form,
+                  title: (e.target as HTMLTextAreaElement).value,
+                })}"
                 placeholder="Task title"
               ></textarea>
             </m3e-form-field>
@@ -421,8 +419,9 @@ export class TaskForm extends LitElement {
                   const select = e.target as HTMLElement & { value: string };
                   this.form = {
                     ...this.form,
-                    project_id:
-                      select.value === "inbox" ? null : select.value || null,
+                    project_id: select.value === "inbox"
+                      ? null
+                      : select.value || null,
                   };
                 }}"
               >
@@ -431,17 +430,16 @@ export class TaskForm extends LitElement {
                   name="arrow_drop_down_circle"
                   variant="rounded"
                 ></m3e-icon>
-                <m3e-option value="inbox" ?selected="${!this.form.project_id}"
-                  >Inbox</m3e-option
-                >
+                <m3e-option value="inbox" ?selected="${!this.form
+                  .project_id}">Inbox</m3e-option>
                 ${store.projects.map(
-                  (p) => html`
-                    <m3e-option
-                      value="${p.id}"
-                      ?selected="${this.form.project_id === p.id}"
-                      >${p.name}</m3e-option
-                    >
-                  `,
+                  (p) =>
+                    html`
+                      <m3e-option
+                        value="${p.id}"
+                        ?selected="${this.form.project_id === p.id}"
+                      >${p.name}</m3e-option>
+                    `,
                 )}
               </m3e-select>
             </m3e-form-field>
@@ -459,8 +457,8 @@ export class TaskForm extends LitElement {
                 autocomplete="off"
                 .value="${this.form.due_date
                   ? new Date(
-                      this.form.due_date + "T00:00:00",
-                    ).toLocaleDateString()
+                    this.form.due_date + "T00:00:00",
+                  ).toLocaleDateString()
                   : ""}"
                 readonly
               />
@@ -506,8 +504,9 @@ export class TaskForm extends LitElement {
                   const select = e.target as HTMLElement & { value: string };
                   this.form = {
                     ...this.form,
-                    recurrence_type:
-                      select.value === "none" ? null : select.value || null,
+                    recurrence_type: select.value === "none"
+                      ? null
+                      : select.value || null,
                   };
                 }}"
               >
@@ -519,95 +518,85 @@ export class TaskForm extends LitElement {
                 <m3e-option
                   value="none"
                   ?selected="${!this.form.recurrence_type}"
-                  >None</m3e-option
-                >
+                >None</m3e-option>
                 <m3e-option
                   value="daily"
                   ?selected="${this.form.recurrence_type === "daily"}"
-                  >Daily</m3e-option
-                >
+                >Daily</m3e-option>
                 <m3e-option
                   value="weekly"
                   ?selected="${this.form.recurrence_type === "weekly"}"
-                  >Weekly</m3e-option
-                >
+                >Weekly</m3e-option>
                 <m3e-option
                   value="monthly"
                   ?selected="${this.form.recurrence_type === "monthly"}"
-                  >Monthly</m3e-option
-                >
+                >Monthly</m3e-option>
                 <m3e-option
                   value="yearly"
                   ?selected="${this.form.recurrence_type === "yearly"}"
-                  >Yearly</m3e-option
-                >
+                >Yearly</m3e-option>
               </m3e-select>
             </m3e-form-field>
           </div>
 
           ${this.form.recurrence_type
             ? html`
-                <div class="form-group">
-                  <div class="recurrence-interval">
-                    <m3e-form-field
-                      variant="outlined"
-                      float-label="always"
-                      hide-subscript="${ifDefined(
-                        this.hideSubscript("interval"),
-                      )}"
-                    >
-                      <label slot="label" for="interval">Every</label>
-                      <input
-                        id="interval"
-                        type="number"
-                        min="1"
-                        .value="${String(this.form.recurrence_interval)}"
-                        @input="${(e: Event) =>
-                          (this.form = {
-                            ...this.form,
-                            recurrence_interval:
-                              parseInt((e.target as HTMLInputElement).value) ||
-                              1,
-                          })}"
-                      />
-                      <span slot="suffix-text">
-                        ${this.form.recurrence_type === "daily"
-                          ? this.form.recurrence_interval === 1
-                            ? "day"
-                            : "days"
-                          : this.form.recurrence_type === "weekly"
-                            ? this.form.recurrence_interval === 1
-                              ? "week"
-                              : "weeks"
-                            : this.form.recurrence_type === "monthly"
-                              ? this.form.recurrence_interval === 1
-                                ? "month"
-                                : "months"
-                              : this.form.recurrence_interval === 1
-                                ? "year"
-                                : "years"}
-                      </span>
-                    </m3e-form-field>
-                  </div>
+              <div class="form-group">
+                <div class="recurrence-interval">
+                  <m3e-form-field
+                    variant="outlined"
+                    float-label="always"
+                    hide-subscript="${ifDefined(
+                      this.hideSubscript("interval"),
+                    )}"
+                  >
+                    <label slot="label" for="interval">Every</label>
+                    <input
+                      id="interval"
+                      type="number"
+                      min="1"
+                      .value="${String(this.form.recurrence_interval)}"
+                      @input="${(e: Event) => (this.form = {
+                        ...this.form,
+                        recurrence_interval:
+                          parseInt((e.target as HTMLInputElement).value) ||
+                          1,
+                      })}"
+                    />
+                    <span slot="suffix-text">
+                      ${this.form.recurrence_type === "daily"
+                        ? this.form.recurrence_interval === 1 ? "day" : "days"
+                        : this.form.recurrence_type === "weekly"
+                        ? this.form.recurrence_interval === 1 ? "week" : "weeks"
+                        : this.form.recurrence_type === "monthly"
+                        ? this.form.recurrence_interval === 1
+                          ? "month"
+                          : "months"
+                        : this.form.recurrence_interval === 1
+                        ? "year"
+                        : "years"}
+                    </span>
+                  </m3e-form-field>
                 </div>
-              `
-            : null}
-          ${this.form.recurrence_type === "weekly"
+              </div>
+            `
+            : null} ${this.form.recurrence_type === "weekly"
             ? html`
-                <div class="form-group">
-                  <div class="day-buttons">
-                    <m3e-segmented-button
-                      multi
-                      @change="${(e: Event) => {
-                        const segment = e.target as HTMLElement;
-                        const idx = [
-                          ...segment.parentElement!.children,
-                        ].indexOf(segment);
-                        if (idx !== -1) this.toggleDay(idx);
-                      }}"
-                    >
-                      ${weekDays.map(
-                        (day) => html`
+              <div class="form-group">
+                <div class="day-buttons">
+                  <m3e-segmented-button
+                    multi
+                    @change="${(e: Event) => {
+                      const segment = e.target as HTMLElement;
+                      const idx = [
+                        ...segment.parentElement!.children,
+                      ].indexOf(segment);
+                      if (idx !== -1) this.toggleDay(idx);
+                    }}"
+                  >
+                    ${weekDays.map(
+                      (day) =>
+                        html`
                           <m3e-button-segment
                             .checked="${this.form.recurrence_days.includes(
                               day.value,
@@ -616,28 +605,29 @@ export class TaskForm extends LitElement {
                             ${day.label}
                           </m3e-button-segment>
                         `,
-                      )}
-                    </m3e-segmented-button>
-                  </div>
+                    )}
+                  </m3e-segmented-button>
                 </div>
-              `
+              </div>
+            `
             : null}
 
           <div class="form-group">
             <m3e-segmented-button class="priority">
               ${[1, 2, 3].map(
-                (p) => html`
-                  <m3e-button-segment
-                    class="p${p}"
-                    value="${p}"
-                    .checked="${this.form.priority === p}"
-                    @click="${() => {
-                      this.form = { ...this.form, priority: p };
-                    }}"
-                  >
-                    P${p}
-                  </m3e-button-segment>
-                `,
+                (p) =>
+                  html`
+                    <m3e-button-segment
+                      class="p${p}"
+                      value="${p}"
+                      .checked="${this.form.priority === p}"
+                      @click="${() => {
+                        this.form = { ...this.form, priority: p };
+                      }}"
+                    >
+                      P${p}
+                    </m3e-button-segment>
+                  `,
               )}
             </m3e-segmented-button>
           </div>
@@ -646,20 +636,20 @@ export class TaskForm extends LitElement {
             <div>
               ${isEditing
                 ? html`
-                    <m3e-button
-                      class="delete-button"
-                      variant="text"
-                      type="button"
-                      @click="${this.handleDelete}"
-                    >
-                      <m3e-icon
-                        slot="icon"
-                        name="delete"
-                        variant="rounded"
-                      ></m3e-icon>
-                      Delete
-                    </m3e-button>
-                  `
+                  <m3e-button
+                    class="delete-button"
+                    variant="text"
+                    type="button"
+                    @click="${this.handleDelete}"
+                  >
+                    <m3e-icon
+                      slot="icon"
+                      name="delete"
+                      variant="rounded"
+                    ></m3e-icon>
+                    Delete
+                  </m3e-button>
+                `
                 : null}
             </div>
             <m3e-button variant="filled" type="submit">
@@ -672,36 +662,36 @@ export class TaskForm extends LitElement {
 
       ${this.showConfirmDiscard
         ? html`
-            <dialog
-              class="confirm-dialog"
-              @click="${(e: Event) => {
-                if (
-                  (e.target as HTMLElement).classList.contains("confirm-dialog")
-                ) {
-                  this.cancelDiscard();
-                }
-              }}"
-            >
-              <h3>Discard unsaved changes?</h3>
-              <div class="confirm-actions">
-                <m3e-button
-                  variant="text"
-                  type="button"
-                  @click="${this.cancelDiscard}"
-                >
-                  Continue editing
-                </m3e-button>
-                <m3e-button
-                  class="discard-button"
-                  variant="filled"
-                  type="button"
-                  @click="${this.confirmDiscard}"
-                >
-                  Discard
-                </m3e-button>
-              </div>
-            </dialog>
-          `
+          <dialog
+            class="confirm-dialog"
+            @click="${(e: Event) => {
+              if (
+                (e.target as HTMLElement).classList.contains("confirm-dialog")
+              ) {
+                this.cancelDiscard();
+              }
+            }}"
+          >
+            <h3>Discard unsaved changes?</h3>
+            <div class="confirm-actions">
+              <m3e-button
+                variant="text"
+                type="button"
+                @click="${this.cancelDiscard}"
+              >
+                Continue editing
+              </m3e-button>
+              <m3e-button
+                class="discard-button"
+                variant="filled"
+                type="button"
+                @click="${this.confirmDiscard}"
+              >
+                Discard
+              </m3e-button>
+            </div>
+          </dialog>
+        `
         : null}
     `;
   }

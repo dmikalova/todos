@@ -138,7 +138,9 @@ export async function withTransaction<T>(
       const result = (await connection.begin(async (tx) => {
         // Cast through unknown to break TypeScript's type tracking
         const sqlQuery: SqlQuery = tx as unknown as SqlQuery;
-        await sqlQuery`SELECT set_config('search_path', ${schema + ', public'}, true)`;
+        await sqlQuery`SELECT set_config('search_path', ${
+          schema + ", public"
+        }, true)`;
         if (userId) {
           await sqlQuery`SELECT set_config('app.user_id', ${userId}, true)`;
         }
@@ -195,7 +197,9 @@ export async function query<T>(
       return (await connection.begin(async (tx) => {
         // Cast through unknown to break TypeScript's type tracking
         const sqlQuery: SqlQuery = tx as unknown as SqlQuery;
-        await sqlQuery`SELECT set_config('search_path', ${schema + ', public'}, true)`;
+        await sqlQuery`SELECT set_config('search_path', ${
+          schema + ", public"
+        }, true)`;
         if (userId) {
           await sqlQuery`SELECT set_config('app.user_id', ${userId}, true)`;
         }

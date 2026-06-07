@@ -453,9 +453,7 @@ export class TodoSidebar extends StoreElement {
       align-items: center;
       justify-content: center;
       opacity: 0;
-      transition:
-        opacity 0.15s,
-        background-color 0.15s;
+      transition: opacity 0.15s, background-color 0.15s;
       color: var(--md-sys-color-outline);
       flex-shrink: 0;
       cursor: pointer;
@@ -525,30 +523,30 @@ export class TodoSidebar extends StoreElement {
         <div
           class="resize-handle ${this._isResizing ? "active" : ""}"
           @mousedown="${this._startResize}"
-        ></div>
+        >
+        </div>
 
         <!-- User Section -->
         <div class="user-section">
           <div class="user-info">
             ${store.user?.picture
               ? html`
-                  <img
-                    class="avatar"
-                    src="${store.user.picture}"
-                    alt="${store.user.name || store.user.email}"
-                    referrerpolicy="no-referrer"
-                  />
-                `
+                <img
+                  class="avatar"
+                  src="${store.user.picture}"
+                  alt="${store.user.name || store.user.email}"
+                  referrerpolicy="no-referrer"
+                />
+              `
               : html`
-                  <div class="avatar">
-                    ${(store.user?.name || store.user?.email || "U")
-                      .charAt(0)
-                      .toUpperCase()}
-                  </div>
-                `}
-            <span class="user-name"
-              >${store.user?.name || store.user?.email || "User"}</span
-            >
+                <div class="avatar">
+                  ${(store.user?.name || store.user?.email || "U")
+                    .charAt(0)
+                    .toUpperCase()}
+                </div>
+              `}
+            <span class="user-name">${store.user?.name || store.user?.email ||
+              "User"}</span>
           </div>
         </div>
 
@@ -571,7 +569,9 @@ export class TodoSidebar extends StoreElement {
             <m3e-icon name="inbox" variant="rounded"></m3e-icon>
             <span class="nav-button-label">${NAV_LABELS.inbox}</span>
             ${store.inboxCount > 0
-              ? html` <span class="count">${store.inboxCount}</span> `
+              ? html`
+                <span class="count">${store.inboxCount}</span>
+              `
               : null}
           </button>
 
@@ -617,22 +617,22 @@ export class TodoSidebar extends StoreElement {
           </div>
           ${!store.collapsedSections.has("filters")
             ? html`
-                <button
-                  class="nav-button ${store.currentTab === "due"
-                    ? "active"
-                    : ""}"
-                  @click="${() => store.navigate("due")}"
-                >
-                  <span
-                    class="color-dot"
-                    style="--dot-color: var(--md-sys-color-tertiary)"
-                  ></span>
-                  <span class="nav-button-label">${NAV_LABELS.due}</span>
-                  ${store.dueCount > 0
-                    ? html` <span class="count">${store.dueCount}</span> `
-                    : null}
-                </button>
-              `
+              <button
+                class="nav-button ${store.currentTab === "due" ? "active" : ""}"
+                @click="${() => store.navigate("due")}"
+              >
+                <span
+                  class="color-dot"
+                  style="--dot-color: var(--md-sys-color-tertiary)"
+                ></span>
+                <span class="nav-button-label">${NAV_LABELS.due}</span>
+                ${store.dueCount > 0
+                  ? html`
+                    <span class="count">${store.dueCount}</span>
+                  `
+                  : null}
+              </button>
+            `
             : null}
         </div>
 
@@ -661,23 +661,25 @@ export class TodoSidebar extends StoreElement {
           </div>
           ${!store.collapsedSections.has("projects")
             ? html`
-                <div
-                  class="project-list"
-                  @dragover="${(e: DragEvent) =>
-                    this._handleProjectListDragOver(e)}"
-                  @dragleave="${(e: DragEvent) =>
-                    this._handleProjectListDragLeave(e)}"
-                  @drop="${(e: DragEvent) => this._handleProjectListDrop(e)}"
-                >
-                  ${store.projectTree.map(
-                    ({ project, depth }, index) => html`
+              <div
+                class="project-list"
+                @dragover="${(e: DragEvent) =>
+                  this._handleProjectListDragOver(e)}"
+                @dragleave="${(e: DragEvent) =>
+                  this._handleProjectListDragLeave(e)}"
+                @drop="${(e: DragEvent) => this._handleProjectListDrop(e)}"
+              >
+                ${store.projectTree.map(
+                  ({ project, depth }, index) =>
+                    html`
                       ${this._dropIndex === index
                         ? html`
-                            <div
-                              class="drop-indicator"
-                              style="margin-left: ${indent(this._dropDepth)}px"
-                            ></div>
-                          `
+                          <div
+                            class="drop-indicator"
+                            style="margin-left: ${indent(this._dropDepth)}px"
+                          >
+                          </div>
+                        `
                         : null}
                       <div
                         class="item-row ${this._draggingId === project.id
@@ -691,7 +693,7 @@ export class TodoSidebar extends StoreElement {
                       >
                         <button
                           class="nav-button ${store.currentTab === "project" &&
-                          store.selectedProjectId === project.id
+                              store.selectedProjectId === project.id
                             ? "active"
                             : ""}"
                           @click="${() =>
@@ -704,43 +706,43 @@ export class TodoSidebar extends StoreElement {
                           <span class="nav-button-label">${project.name}</span>
                           ${store.hasChildren(project.id)
                             ? html`
-                                <button
-                                  class="collapse-indicator ${store.collapsedProjectIds.has(
-                                    project.id,
-                                  )
-                                    ? "collapsed"
-                                    : ""}"
-                                  @click="${(e: Event) => {
-                                    e.stopPropagation();
-                                    store.toggleCollapse(project.id);
-                                  }}"
-                                >
-                                  <m3e-icon
-                                    name="expand_more"
-                                    variant="rounded"
-                                  ></m3e-icon>
-                                </button>
-                              `
-                            : null}
-                          ${project.task_count
+                              <button
+                                class="collapse-indicator ${store
+                                    .collapsedProjectIds.has(
+                                      project.id,
+                                    )
+                                  ? "collapsed"
+                                  : ""}"
+                                @click="${(e: Event) => {
+                                  e.stopPropagation();
+                                  store.toggleCollapse(project.id);
+                                }}"
+                              >
+                                <m3e-icon
+                                  name="expand_more"
+                                  variant="rounded"
+                                ></m3e-icon>
+                              </button>
+                            `
+                            : null} ${project.task_count
                             ? html`
-                                <span class="count">${project.task_count}</span>
-                              `
+                              <span class="count">${project.task_count}</span>
+                            `
                             : null}
                         </button>
                       </div>
                     `,
-                  )}
-                  ${this._dropIndex === store.projectTree.length
-                    ? html`
-                        <div
-                          class="drop-indicator"
-                          style="margin-left: ${indent(this._dropDepth)}px"
-                        ></div>
-                      `
-                    : null}
-                </div>
-              `
+                )} ${this._dropIndex === store.projectTree.length
+                  ? html`
+                    <div
+                      class="drop-indicator"
+                      style="margin-left: ${indent(this._dropDepth)}px"
+                    >
+                    </div>
+                  `
+                  : null}
+              </div>
+            `
             : null}
 
           <hr class="divider" />
@@ -767,12 +769,13 @@ export class TodoSidebar extends StoreElement {
           </div>
           ${!store.collapsedSections.has("contexts")
             ? html`
-                ${store.contexts.map(
-                  (context) => html`
+              ${store.contexts.map(
+                (context) =>
+                  html`
                     <div class="item-row">
                       <button
                         class="nav-button ${store.currentTab === "context" &&
-                        store.selectedContextId === context.id
+                            store.selectedContextId === context.id
                           ? "active"
                           : ""}"
                         @click="${() => store.navigate("context", context.id)}"
@@ -785,8 +788,8 @@ export class TodoSidebar extends StoreElement {
                       </button>
                     </div>
                   `,
-                )}
-              `
+              )}
+            `
             : null}
         </div>
 

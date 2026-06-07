@@ -782,7 +782,7 @@ export class TodoSidebar extends StoreElement {
                       >
                         <span
                           class="color-dot"
-                          style="--dot-color: ${context.color || "#2196f3"}"
+                          style="--dot-color: ${context.color || "#F48FB1"}"
                         ></span>
                         <span class="nav-button-label">${context.name}</span>
                       </button>

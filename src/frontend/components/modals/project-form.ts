@@ -1,12 +1,12 @@
 // Project form modal
 
+import { css, html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import "npm:@m3e/web@2/button";
 import "npm:@m3e/web@2/form-field";
 import "npm:@m3e/web@2/icon";
 import "npm:@m3e/web@2/option";
 import "npm:@m3e/web@2/select";
-import { css, html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
 import { store } from "../../store.ts";
 
 @customElement("project-form")
@@ -111,9 +111,13 @@ export class ProjectForm extends LitElement {
     }
   }
 
-  override firstUpdated() {
+  override async firstUpdated() {
     const dialog = this.renderRoot.querySelector("dialog");
     dialog?.showModal();
+    await this.updateComplete;
+    requestAnimationFrame(() => {
+      this.renderRoot.querySelector<HTMLInputElement>("#project-name")?.focus();
+    });
     dialog?.addEventListener("close", () => this.close());
   }
 
@@ -186,17 +190,22 @@ export class ProjectForm extends LitElement {
     const isEditing = !!store.editingProject;
 
     return html`
-      <dialog @click="${(e: Event) => {
-        if ((e.target as HTMLElement).nodeName === "DIALOG") this.close();
-      }}">
+      <dialog
+        @click="${(e: Event) => {
+          if ((e.target as HTMLElement).nodeName === "DIALOG") this.close();
+        }}"
+      >
         <h2>${isEditing ? "Edit Project" : "New Project"}</h2>
 
-        <form @submit="${this.handleSubmit}" @keydown="${(e: KeyboardEvent) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            this.handleSubmit(e);
-          }
-        }}">
+        <form
+          @submit="${this.handleSubmit}"
+          @keydown="${(e: KeyboardEvent) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              this.handleSubmit(e);
+            }
+          }}"
+        >
           <div class="form-group">
             <m3e-form-field
               variant="outlined"
@@ -210,9 +219,8 @@ export class ProjectForm extends LitElement {
                   const select = e.target as HTMLElement & { value: string };
                   this.form = {
                     ...this.form,
-                    parent_project_id: select.value === "none"
-                      ? null
-                      : select.value || null,
+                    parent_project_id:
+                      select.value === "none" ? null : select.value || null,
                   };
                 }}"
               >
@@ -221,15 +229,19 @@ export class ProjectForm extends LitElement {
                   name="arrow_drop_down_circle"
                   variant="rounded"
                 ></m3e-icon>
-                <m3e-option value="none" ?selected="${!this.form
-                  .parent_project_id}">None</m3e-option>
+                <m3e-option
+                  value="none"
+                  ?selected="${!this.form.parent_project_id}"
+                  >None</m3e-option
+                >
                 ${this._getAvailableParents().map(
-                  (p) =>
-                    html`
-                      <m3e-option value="${p
-                        .id}" ?selected="${this.form.parent_project_id ===
-                        p.id}">${p.name}</m3e-option>
-                    `,
+                  (p) => html`
+                    <m3e-option
+                      value="${p.id}"
+                      ?selected="${this.form.parent_project_id === p.id}"
+                      >${p.name}</m3e-option
+                    >
+                  `,
                 )}
               </m3e-select>
             </m3e-form-field>
@@ -246,10 +258,11 @@ export class ProjectForm extends LitElement {
                 id="project-name"
                 type="text"
                 .value="${this.form.name}"
-                @input="${(e: Event) => (this.form = {
-                  ...this.form,
-                  name: (e.target as HTMLInputElement).value,
-                })}"
+                @input="${(e: Event) =>
+                  (this.form = {
+                    ...this.form,
+                    name: (e.target as HTMLInputElement).value,
+                  })}"
                 required
                 placeholder="Project name"
               />
@@ -269,9 +282,8 @@ export class ProjectForm extends LitElement {
                   const select = e.target as HTMLElement & { value: string };
                   this.form = {
                     ...this.form,
-                    context_id: select.value === "none"
-                      ? null
-                      : select.value || null,
+                    context_id:
+                      select.value === "none" ? null : select.value || null,
                   };
                 }}"
               >
@@ -281,15 +293,16 @@ export class ProjectForm extends LitElement {
                   variant="rounded"
                 ></m3e-icon>
                 <m3e-option value="none" ?selected="${!this.form.context_id}"
-                >${this
-                  ._getInheritedContextLabel()}</m3e-option>
+                  >${this._getInheritedContextLabel()}</m3e-option
+                >
                 ${store.contexts.map(
-                  (c) =>
-                    html`
-                      <m3e-option value="${c
-                        .id}" ?selected="${this.form.context_id === c.id}">${c
-                        .name}</m3e-option>
-                    `,
+                  (c) => html`
+                    <m3e-option
+                      value="${c.id}"
+                      ?selected="${this.form.context_id === c.id}"
+                      >${c.name}</m3e-option
+                    >
+                  `,
                 )}
               </m3e-select>
             </m3e-form-field>
@@ -301,10 +314,11 @@ export class ProjectForm extends LitElement {
               <input
                 type="color"
                 .value="${this.form.color}"
-                @input="${(e: Event) => (this.form = {
-                  ...this.form,
-                  color: (e.target as HTMLInputElement).value,
-                })}"
+                @input="${(e: Event) =>
+                  (this.form = {
+                    ...this.form,
+                    color: (e.target as HTMLInputElement).value,
+                  })}"
               />
             </label>
           </div>
@@ -313,20 +327,20 @@ export class ProjectForm extends LitElement {
             <div>
               ${isEditing
                 ? html`
-                  <m3e-button
-                    class="delete-button"
-                    variant="text"
-                    type="button"
-                    @click="${this.handleDelete}"
-                  >
-                    <m3e-icon
-                      slot="icon"
-                      name="delete"
-                      variant="rounded"
-                    ></m3e-icon>
-                    Delete
-                  </m3e-button>
-                `
+                    <m3e-button
+                      class="delete-button"
+                      variant="text"
+                      type="button"
+                      @click="${this.handleDelete}"
+                    >
+                      <m3e-icon
+                        slot="icon"
+                        name="delete"
+                        variant="rounded"
+                      ></m3e-icon>
+                      Delete
+                    </m3e-button>
+                  `
                 : null}
             </div>
             <m3e-button variant="filled" type="submit">

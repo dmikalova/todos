@@ -28,7 +28,7 @@
   "tasks": {
     // Development: start postgres, apply schema, run server with hot reload (frontend bundled on startup)
     // App connects as tasks_app (non-superuser) so RLS policies are enforced
-    "dev": "docker compose up -d && sleep 1 && deno task db:apply && deno run --permission-set --watch=src/,db/ src/main.ts",
+    "dev": "docker compose up -d --wait && deno task db:apply && deno run --permission-set --watch=src/,db/ src/main.ts",
     // Production start
     "start": "DENO_ENV=production deno run --permission-set src/main.ts",
     // Type-check API and frontend

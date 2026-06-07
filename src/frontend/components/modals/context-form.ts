@@ -131,7 +131,7 @@ export class ContextForm extends LitElement {
   @state()
   accessor form = {
     name: "",
-    color: "#2196f3",
+    color: "#CE93D8",
     timeWindows: [] as TimeWindow[],
   };
 
@@ -150,7 +150,7 @@ export class ContextForm extends LitElement {
     if (store.editingContext) {
       this.form = {
         name: store.editingContext.name,
-        color: store.editingContext.color || "#2196f3",
+        color: store.editingContext.color || "#CE93D8",
         timeWindows: store.editingContext.time_windows
           ? JSON.parse(JSON.stringify(store.editingContext.time_windows))
           : [],
@@ -158,9 +158,13 @@ export class ContextForm extends LitElement {
     }
   }
 
-  override firstUpdated() {
+  override async firstUpdated() {
     const dialog = this.renderRoot.querySelector("dialog");
     dialog?.showModal();
+    await this.updateComplete;
+    requestAnimationFrame(() => {
+      this.renderRoot.querySelector<HTMLInputElement>("#context-name")?.focus();
+    });
     dialog?.addEventListener("close", () => this.close());
   }
 
@@ -200,9 +204,8 @@ export class ContextForm extends LitElement {
     await store.saveContext({
       name: this.form.name.trim(),
       color: this.form.color,
-      time_windows: this.form.timeWindows.length > 0
-        ? this.form.timeWindows
-        : undefined,
+      time_windows:
+        this.form.timeWindows.length > 0 ? this.form.timeWindows : undefined,
     });
   }
 
@@ -219,17 +222,22 @@ export class ContextForm extends LitElement {
     const isEditing = !!store.editingContext;
 
     return html`
-      <dialog @click="${(e: Event) => {
-        if ((e.target as HTMLElement).nodeName === "DIALOG") this.close();
-      }}">
+      <dialog
+        @click="${(e: Event) => {
+          if ((e.target as HTMLElement).nodeName === "DIALOG") this.close();
+        }}"
+      >
         <h2>${isEditing ? "Edit Context" : "New Context"}</h2>
 
-        <form @submit="${this.handleSubmit}" @keydown="${(e: KeyboardEvent) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            this.handleSubmit(e);
-          }
-        }}">
+        <form
+          @submit="${this.handleSubmit}"
+          @keydown="${(e: KeyboardEvent) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              this.handleSubmit(e);
+            }
+          }}"
+        >
           <div class="form-group">
             <m3e-form-field
               variant="outlined"
@@ -241,10 +249,11 @@ export class ContextForm extends LitElement {
                 id="context-name"
                 type="text"
                 .value="${this.form.name}"
-                @input="${(e: Event) => (this.form = {
-                  ...this.form,
-                  name: (e.target as HTMLInputElement).value,
-                })}"
+                @input="${(e: Event) =>
+                  (this.form = {
+                    ...this.form,
+                    name: (e.target as HTMLInputElement).value,
+                  })}"
                 required
                 placeholder="Context name"
               />
@@ -257,10 +266,11 @@ export class ContextForm extends LitElement {
               <input
                 type="color"
                 .value="${this.form.color}"
-                @input="${(e: Event) => (this.form = {
-                  ...this.form,
-                  color: (e.target as HTMLInputElement).value,
-                })}"
+                @input="${(e: Event) =>
+                  (this.form = {
+                    ...this.form,
+                    color: (e.target as HTMLInputElement).value,
+                  })}"
               />
               <span class="color-value">${this.form.color}</span>
             </div>
@@ -283,11 +293,10 @@ export class ContextForm extends LitElement {
 
             ${this.form.timeWindows.length === 0
               ? html`
-                <p class="empty-windows">No time windows (always active)</p>
-              `
+                  <p class="empty-windows">No time windows (always active)</p>
+                `
               : this.form.timeWindows.map(
-                (tw, i) =>
-                  html`
+                  (tw, i) => html`
                     <div class="time-window">
                       <m3e-select
                         @change="${(e: Event) => {
@@ -307,13 +316,13 @@ export class ContextForm extends LitElement {
                           variant="rounded"
                         ></m3e-icon>
                         ${this.dayNames.map(
-                          (name, idx) =>
-                            html`
-                              <m3e-option
-                                value="${idx}"
-                                ?selected="${tw.dayOfWeek === idx}"
-                              >${name}</m3e-option>
-                            `,
+                          (name, idx) => html`
+                            <m3e-option
+                              value="${idx}"
+                              ?selected="${tw.dayOfWeek === idx}"
+                              >${name}</m3e-option
+                            >
+                          `,
                         )}
                       </m3e-select>
                       <input
@@ -345,27 +354,27 @@ export class ContextForm extends LitElement {
                       </m3e-icon-button>
                     </div>
                   `,
-              )}
+                )}
           </div>
 
           <div class="actions">
             <div>
               ${isEditing
                 ? html`
-                  <m3e-button
-                    class="delete-button"
-                    variant="text"
-                    type="button"
-                    @click="${this.handleDelete}"
-                  >
-                    <m3e-icon
-                      slot="icon"
-                      name="delete"
-                      variant="rounded"
-                    ></m3e-icon>
-                    Delete
-                  </m3e-button>
-                `
+                    <m3e-button
+                      class="delete-button"
+                      variant="text"
+                      type="button"
+                      @click="${this.handleDelete}"
+                    >
+                      <m3e-icon
+                        slot="icon"
+                        name="delete"
+                        variant="rounded"
+                      ></m3e-icon>
+                      Delete
+                    </m3e-button>
+                  `
                 : null}
             </div>
             <m3e-button variant="filled" type="submit"> Save </m3e-button>

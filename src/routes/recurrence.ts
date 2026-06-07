@@ -6,7 +6,6 @@ import { type SqlQuery, withDb, withTransaction } from "../db/index.ts";
 import { logTaskActionTx } from "../services/history.ts";
 import {
   calculateNextOccurrence,
-  formatLocalDate,
   type RecurrenceRule,
   validateRecurrenceRule,
 } from "../services/recurrence.ts";
@@ -315,7 +314,6 @@ recurrence.post("/:taskId/complete", async (c) => {
 
       // Calculate next occurrence
       const nextDueDate = calculateNextOccurrence(rule, completionDate);
-      const nextDueDateStr = formatLocalDate(nextDueDate);
 
       // Create next task instance
       const [newTask] = await tx<Task[]>`
@@ -325,7 +323,7 @@ recurrence.post("/:taskId/complete", async (c) => {
         ${task.title},
         ${task.project_id},
         ${task.priority},
-        ${nextDueDateStr},
+        ${nextDueDate},
         ${task.must_do}
       )
       RETURNING *

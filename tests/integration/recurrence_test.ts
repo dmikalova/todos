@@ -321,11 +321,14 @@ Deno.test({
         `;
         assertExists(nextTask);
 
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        // Expected: tomorrow's local calendar date
+        const now = new Date();
+        const tomorrowUTC = new Date(
+          Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12),
+        );
         assertEquals(
           nextTask.due_date.toISOString().split("T")[0],
-          tomorrow.toISOString().split("T")[0],
+          tomorrowUTC.toISOString().split("T")[0],
         );
       },
     );
@@ -408,11 +411,14 @@ Deno.test({
         `;
 
         if (nextTask) {
-          const expectedDate = new Date();
-          expectedDate.setDate(expectedDate.getDate() + 7);
+          // Expected: 7 days from today's local calendar date
+          const now = new Date();
+          const expectedUTC = new Date(
+            Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + 7, 12),
+          );
           assertEquals(
             nextTask.due_date.toISOString().split("T")[0],
-            expectedDate.toISOString().split("T")[0],
+            expectedUTC.toISOString().split("T")[0],
           );
         }
       },

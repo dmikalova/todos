@@ -18,19 +18,40 @@ export interface RecurrenceRule {
 
 /**
  * Calculate the next occurrence date for a recurrence rule.
+ * Normalizes the input to UTC noon of the local calendar date, then performs
+ * all arithmetic in UTC. This ensures consistent results regardless of time-of-day
+ * and avoids day-boundary shifts during serialization.
  *
  * @param rule - The recurrence rule
  * @param fromDate - The reference date (completion date for completion-based, or current date for fixed)
- * @returns The next occurrence date
+ * @returns The next occurrence date (at UTC noon)
  */
 export function calculateNextOccurrence(
   rule: RecurrenceRule,
   fromDate: Date,
 ): Date {
+  // Extract the local calendar date and represent it as UTC noon.
+  // This prevents both:
+  // - Local midnight dates (from `new Date("YYYY-MM-DD")`) shifting when local != UTC
+  // - Late-night local times shifting forward when converted to UTC
+  const normalized = toUTCNoon(fromDate);
+
   if (rule.schedule_type === "completion") {
-    return calculateCompletionBased(rule, fromDate);
+    return calculateCompletionBased(rule, normalized);
   }
-  return calculateFixed(rule, fromDate);
+  return calculateFixed(rule, normalized);
+}
+
+/**
+ * Convert a Date to UTC noon of its local calendar date.
+ */
+function toUTCNoon(date: Date): Date {
+  return new Date(Date.UTC(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    12,
+  ));
 }
 
 /**
@@ -48,7 +69,7 @@ function calculateCompletionBased(
   }
 
   const next = new Date(completionDate);
-  next.setDate(next.getDate() + rule.days_after_completion);
+  next.setUTCDate(next.getUTCDate() + rule.days_after_completion);
   return next;
 }
 
@@ -79,7 +100,7 @@ function calculateFixed(rule: RecurrenceRule, fromDate: Date): Date {
  */
 function calculateDaily(rule: RecurrenceRule, fromDate: Date): Date {
   const next = new Date(fromDate);
-  next.setDate(next.getDate() + rule.interval);
+  next.setUTCDate(next.getUTCDate() + rule.interval);
   return next;
 }
 
@@ -94,23 +115,23 @@ function calculateWeekly(rule: RecurrenceRule, fromDate: Date): Date {
   if (rule.days_of_week && rule.days_of_week.length > 0) {
     // Sort days for easier processing
     const sortedDays = [...rule.days_of_week].sort((a, b) => a - b);
-    const currentDay = next.getDay();
+    const currentDay = next.getUTCDay();
 
     // Find next matching day this week
     const nextDayThisWeek = sortedDays.find((d) => d > currentDay);
 
     if (nextDayThisWeek !== undefined) {
       // Found a matching day later this week
-      next.setDate(next.getDate() + (nextDayThisWeek - currentDay));
+      next.setUTCDate(next.getUTCDate() + (nextDayThisWeek - currentDay));
     } else {
       // No matching day this week, go to first day of next interval week
       const daysUntilFirstDay = 7 - currentDay + sortedDays[0];
       const additionalWeeks = (rule.interval - 1) * 7;
-      next.setDate(next.getDate() + daysUntilFirstDay + additionalWeeks);
+      next.setUTCDate(next.getUTCDate() + daysUntilFirstDay + additionalWeeks);
     }
   } else {
     // Simple weekly: add interval weeks
-    next.setDate(next.getDate() + 7 * rule.interval);
+    next.setUTCDate(next.getUTCDate() + 7 * rule.interval);
   }
 
   return next;
@@ -126,14 +147,14 @@ function calculateMonthly(rule: RecurrenceRule, fromDate: Date): Date {
   // Store target year/month/day before manipulation
   // Set day to 1 first to avoid overflow when changing months
   // (e.g., Jan 31 -> setMonth(Feb) would overflow to Mar 3)
-  const targetMonth = next.getMonth() + rule.interval;
-  next.setDate(1);
-  next.setMonth(targetMonth);
+  const targetMonth = next.getUTCMonth() + rule.interval;
+  next.setUTCDate(1);
+  next.setUTCMonth(targetMonth);
 
   // Set day of month, clamping to month length
-  const targetDay = rule.day_of_month || fromDate.getDate();
-  const daysInMonth = getDaysInMonth(next.getFullYear(), next.getMonth());
-  next.setDate(Math.min(targetDay, daysInMonth));
+  const targetDay = rule.day_of_month || fromDate.getUTCDate();
+  const daysInMonth = getDaysInMonth(next.getUTCFullYear(), next.getUTCMonth());
+  next.setUTCDate(Math.min(targetDay, daysInMonth));
 
   return next;
 }
@@ -145,18 +166,21 @@ function calculateYearly(rule: RecurrenceRule, fromDate: Date): Date {
   const next = new Date(fromDate);
 
   // Move to next interval year
-  next.setFullYear(next.getFullYear() + rule.interval);
+  next.setUTCFullYear(next.getUTCFullYear() + rule.interval);
 
   // Set month if specified (1-indexed in rule, 0-indexed in Date)
   if (rule.month_of_year) {
-    next.setMonth(rule.month_of_year - 1);
+    next.setUTCMonth(rule.month_of_year - 1);
   }
 
   // Set day of month, clamping to month length
   if (rule.day_of_month) {
     const targetDay = rule.day_of_month;
-    const daysInMonth = getDaysInMonth(next.getFullYear(), next.getMonth());
-    next.setDate(Math.min(targetDay, daysInMonth));
+    const daysInMonth = getDaysInMonth(
+      next.getUTCFullYear(),
+      next.getUTCMonth(),
+    );
+    next.setUTCDate(Math.min(targetDay, daysInMonth));
   }
 
   return next;
@@ -167,18 +191,7 @@ function calculateYearly(rule: RecurrenceRule, fromDate: Date): Date {
  */
 function getDaysInMonth(year: number, month: number): number {
   // Month is 0-indexed, so we go to the 0th day of next month
-  return new Date(year, month + 1, 0).getDate();
-}
-
-/**
- * Format a Date as YYYY-MM-DD in local time.
- * Avoids toISOString() which uses UTC and can shift the date in negative-offset timezones.
- */
-export function formatLocalDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
 }
 
 /**

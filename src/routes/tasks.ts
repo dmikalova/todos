@@ -8,7 +8,6 @@ import { logTaskActionTx } from "../services/history.ts";
 import { assertOwnership } from "../services/ownership.ts";
 import {
   calculateNextOccurrence,
-  formatLocalDate,
   type RecurrenceRule,
 } from "../services/recurrence.ts";
 import type { AppEnv, SessionData } from "../types.ts";
@@ -345,7 +344,6 @@ tasks.post("/:id/complete", async (c) => {
       // If task has recurrence, create next instance
       if (rule) {
         const nextDueDate = calculateNextOccurrence(rule, completionDate);
-        const nextDueDateStr = formatLocalDate(nextDueDate);
 
         // Create next task instance
         [newTask] = await tx<Task[]>`
@@ -355,7 +353,7 @@ tasks.post("/:id/complete", async (c) => {
           ${existing.title},
           ${existing.project_id},
           ${existing.priority},
-          ${nextDueDateStr},
+          ${nextDueDate},
           ${existing.must_do}
         )
         RETURNING *

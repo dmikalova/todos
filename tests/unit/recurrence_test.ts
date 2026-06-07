@@ -29,21 +29,21 @@ function createRule(overrides: Partial<RecurrenceRule>): RecurrenceRule {
 
 Deno.test("daily recurrence - adds interval days", () => {
   const rule = createRule({ frequency: "daily", interval: 1 });
-  const from = new Date("2026-02-21");
+  const from = new Date("2026-02-21T12:00:00Z");
   const next = calculateNextOccurrence(rule, from);
   assertEquals(next.toISOString().split("T")[0], "2026-02-22");
 });
 
 Deno.test("daily recurrence - respects interval > 1", () => {
   const rule = createRule({ frequency: "daily", interval: 3 });
-  const from = new Date("2026-02-21");
+  const from = new Date("2026-02-21T12:00:00Z");
   const next = calculateNextOccurrence(rule, from);
   assertEquals(next.toISOString().split("T")[0], "2026-02-24");
 });
 
 Deno.test("daily recurrence - crosses month boundary", () => {
   const rule = createRule({ frequency: "daily", interval: 1 });
-  const from = new Date("2026-02-28");
+  const from = new Date("2026-02-28T12:00:00Z");
   const next = calculateNextOccurrence(rule, from);
   assertEquals(next.toISOString().split("T")[0], "2026-03-01");
 });
@@ -54,14 +54,14 @@ Deno.test("daily recurrence - crosses month boundary", () => {
 
 Deno.test("weekly recurrence - simple week interval", () => {
   const rule = createRule({ frequency: "weekly", interval: 1 });
-  const from = new Date("2026-02-21"); // Saturday
+  const from = new Date("2026-02-21T12:00:00Z"); // Saturday
   const next = calculateNextOccurrence(rule, from);
   assertEquals(next.toISOString().split("T")[0], "2026-02-28");
 });
 
 Deno.test("weekly recurrence - biweekly", () => {
   const rule = createRule({ frequency: "weekly", interval: 2 });
-  const from = new Date("2026-02-21"); // Saturday
+  const from = new Date("2026-02-21T12:00:00Z"); // Saturday
   const next = calculateNextOccurrence(rule, from);
   assertEquals(next.toISOString().split("T")[0], "2026-03-07");
 });
@@ -110,7 +110,7 @@ Deno.test("monthly recurrence - specific day of month", () => {
     interval: 1,
     day_of_month: 15,
   });
-  const from = new Date("2026-02-21");
+  const from = new Date("2026-02-21T12:00:00Z");
   const next = calculateNextOccurrence(rule, from);
   assertEquals(next.toISOString().split("T")[0], "2026-03-15");
 });
@@ -162,7 +162,7 @@ Deno.test("monthly recurrence - 31st in month with 30 days", () => {
 
 Deno.test("yearly recurrence - simple year interval", () => {
   const rule = createRule({ frequency: "yearly", interval: 1 });
-  const from = new Date("2026-02-21");
+  const from = new Date("2026-02-21T12:00:00Z");
   const next = calculateNextOccurrence(rule, from);
   assertEquals(next.toISOString().split("T")[0], "2027-02-21");
 });
@@ -202,7 +202,7 @@ Deno.test("completion-based - adds days after completion", () => {
     frequency: null,
     days_after_completion: 3,
   });
-  const completionDate = new Date("2026-02-21");
+  const completionDate = new Date("2026-02-21T12:00:00Z");
   const next = calculateNextOccurrence(rule, completionDate);
   assertEquals(next.toISOString().split("T")[0], "2026-02-24");
 });

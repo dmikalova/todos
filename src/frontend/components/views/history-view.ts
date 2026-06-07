@@ -21,7 +21,7 @@ export class HistoryView extends StoreElement {
     .history-item {
       background: var(--md-sys-color-surface);
       border-radius: var(--md-sys-shape-corner-medium);
-      padding: 16px;
+      padding: 12px;
       cursor: pointer;
       transition: box-shadow 0.15s;
       box-shadow: var(--md-sys-elevation-level1);
@@ -39,6 +39,7 @@ export class HistoryView extends StoreElement {
 
     .history-text {
       color: var(--md-sys-color-on-surface);
+      margin: 0;
     }
 
     .history-text strong {

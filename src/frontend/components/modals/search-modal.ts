@@ -1,14 +1,14 @@
 // Search modal for finding tasks
 
-import { css, html, LitElement } from "lit";
+import { css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import "npm:@m3e/web@2/form-field";
 import "npm:@m3e/web@2/icon";
-import "npm:@m3e/web@2/icon-button";
+import "../task-item.ts";
 import { store, type Task } from "../../store.ts";
+import { StoreElement } from "../../base.ts";
 
 @customElement("search-modal")
-export class SearchModal extends LitElement {
+export class SearchModal extends StoreElement {
   static override styles = css`
     :host {
       position: fixed;
@@ -28,7 +28,8 @@ export class SearchModal extends LitElement {
 
     .modal {
       position: relative;
-      background: var(--md-sys-color-surface);
+      background: var(--md-sys-color-surface-container);
+      border-radius: 28px;
       box-shadow: var(--md-sys-elevation-level4);
       width: 100%;
       max-width: 36rem;
@@ -42,111 +43,47 @@ export class SearchModal extends LitElement {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 12px 16px;
+      padding: 16px 16px 12px;
       border-bottom: 1px solid var(--md-sys-color-outline-variant);
     }
 
     .search-header m3e-icon {
       color: var(--md-sys-color-outline);
       flex-shrink: 0;
-    }
-
-    .search-header m3e-form-field {
-      flex: 1;
-      --m3e-form-field-container-color: transparent;
+      font-size: 22px;
     }
 
     .search-header input {
-      font-size: 18px;
+      flex: 1;
+      font-size: 16px;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--md-sys-color-on-surface);
+      font-family: inherit;
     }
 
-    .search-header m3e-icon-button {
-      flex-shrink: 0;
+    .search-header input::placeholder {
+      color: var(--md-sys-color-outline);
     }
 
     .results {
       flex: 1;
       overflow-y: auto;
-      padding: 8px 0;
-    }
-
-    .result-item {
+      padding: 16px;
       display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-
-    .result-item:hover {
-      background: var(--md-sys-color-surface-container);
-    }
-
-    .result-item.completed {
-      opacity: 0.6;
-    }
-
-    .result-icon {
-      width: 20px;
-      height: 20px;
-      border: 2px solid var(--md-sys-color-outline);
-      flex-shrink: 0;
-    }
-
-    .result-item.completed .result-icon {
-      background: var(--md-sys-color-primary);
-      border-color: var(--md-sys-color-primary);
-    }
-
-    .result-content {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .result-title {
-      font-size: 14px;
-      color: var(--md-sys-color-on-surface);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .result-item.completed .result-title {
-      text-decoration: line-through;
-    }
-
-    .result-meta {
-      display: flex;
-      align-items: center;
+      flex-direction: column;
       gap: 8px;
-      margin-top: 4px;
     }
 
-    .meta-tag {
-      font-size: 11px;
-      padding: 2px 6px;
-      background: var(--md-sys-color-surface-container-high);
-      color: var(--md-sys-color-on-surface-variant);
+    .result-wrapper {
+      border-radius: var(--md-sys-shape-corner-medium);
+      transition: outline 0.15s;
+      outline: 2px solid transparent;
     }
 
-    .meta-tag.project {
-      background: var(--tag-color, var(--md-sys-color-primary-container));
-      color: var(--md-sys-color-on-primary-container);
-    }
-
-    .meta-tag.context {
-      background: var(--tag-color, var(--md-sys-color-secondary-container));
-      color: var(--md-sys-color-on-secondary-container);
-    }
-
-    .meta-tag.due {
-      font-size: 11px;
-    }
-
-    .meta-tag.overdue {
-      background: var(--md-sys-color-error-container);
-      color: var(--md-sys-color-on-error-container);
+    .result-wrapper.focused {
+      outline: 2px solid var(--md-sys-color-primary);
     }
 
     .no-results {
@@ -154,39 +91,54 @@ export class SearchModal extends LitElement {
       text-align: center;
       color: var(--md-sys-color-outline);
     }
-
-    .hint {
-      font-size: 13px;
-      color: var(--md-sys-color-outline);
-      padding: 12px 16px;
-      border-top: 1px solid var(--md-sys-color-outline-variant);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .kbd {
-      font-size: 11px;
-      padding: 2px 6px;
-      background: var(--md-sys-color-surface-container-high);
-      font-family: monospace;
-    }
   `;
 
   @state()
   accessor query = "";
   @state()
-  accessor results: Task[] = [];
+  accessor focusedIndex = 0;
 
-  private inputRef: HTMLInputElement | null = null;
+  // Cached result IDs to keep stable ordering when tasks are toggled
+  private _cachedQuery: string | null = null;
+  private _cachedIds: string[] = [];
+
+  private get results(): Task[] {
+    const q = this.query.toLowerCase().trim();
+
+    // Recompute order only when query changes
+    if (q !== this._cachedQuery) {
+      this._cachedQuery = q;
+      if (!q) {
+        this._cachedIds = [...store.tasks]
+          .sort(
+            (a, b) =>
+              new Date(b.updated_at).getTime() -
+              new Date(a.updated_at).getTime(),
+          )
+          .slice(0, 10)
+          .map((t) => t.id);
+      } else {
+        this._cachedIds = store.tasks
+          .filter((t) => t.title.toLowerCase().includes(q))
+          .map((t) => t.id);
+      }
+    }
+
+    // Return current task objects in cached order
+    return this._cachedIds
+      .map((id) => store.tasks.find((t) => t.id === id))
+      .filter((t): t is Task => !!t);
+  }
 
   override connectedCallback() {
     super.connectedCallback();
-    this.search();
-    // Focus input when modal opens
-    setTimeout(() => this.inputRef?.focus(), 100);
-    // Listen for Escape key
+    // Listen for keyboard
     document.addEventListener("keydown", this.handleKeydown);
+    // Focus input after first render
+    this.updateComplete.then(() => {
+      const input = this.shadowRoot?.querySelector("input");
+      input?.focus();
+    });
   }
 
   override disconnectedCallback() {
@@ -197,69 +149,55 @@ export class SearchModal extends LitElement {
   private handleKeydown = (e: KeyboardEvent) => {
     if (e.key === "Escape") {
       this.close();
+    } else if (e.key === "Tab") {
+      // Trap focus in input + toggle complete on highlighted task
+      e.preventDefault();
+      const task = this.results[this.focusedIndex];
+      if (task) store.toggleComplete(task);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      this.focusedIndex = Math.min(
+        this.focusedIndex + 1,
+        this.results.length - 1,
+      );
+      this.scrollFocusedIntoView();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      this.focusedIndex = Math.max(this.focusedIndex - 1, 0);
+      this.scrollFocusedIntoView();
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const task = this.results[this.focusedIndex];
+      if (task) this.selectTask(task);
     }
   };
+
+  private scrollFocusedIntoView() {
+    this.updateComplete.then(() => {
+      const el = this.shadowRoot?.querySelector(".result-wrapper.focused");
+      el?.scrollIntoView({ block: "nearest" });
+    });
+  }
 
   private close() {
     store.setShowSearch(false);
   }
 
-  private search() {
-    const q = this.query.toLowerCase().trim();
-    if (!q) {
-      // Show recent tasks when no query
-      this.results = store.tasks
-        .sort(
-          (a, b) =>
-            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
-        )
-        .slice(0, 10);
-    } else {
-      // Filter tasks by title
-      this.results = store.tasks.filter((t) =>
-        t.title.toLowerCase().includes(q)
-      );
-    }
-  }
-
   private handleInput(e: Event) {
     this.query = (e.target as HTMLInputElement).value;
-    this.search();
+    this.focusedIndex = 0;
+  }
+
+  private handleResultClick() {
+    // Close search if the task form was opened (card click, not checkbox)
+    if (store.showTaskForm) {
+      this.close();
+    }
   }
 
   private selectTask(task: Task) {
     store.setShowTaskForm(true, task);
     this.close();
-  }
-
-  private getProject(task: Task) {
-    return task.project_id
-      ? store.projects.find((p) => p.id === task.project_id)
-      : null;
-  }
-
-  private getContext(task: Task) {
-    if (!task.project_id) return null;
-    const project = store.projects.find((p) => p.id === task.project_id);
-    if (!project) return null;
-    const contextId = store.resolveProjectContext(project);
-    return contextId ? store.contexts.find((c) => c.id === contextId) : null;
-  }
-
-  private formatDate(date: string | null) {
-    if (!date) return null;
-    const d = new Date(date);
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const dOnly = new Date(d);
-    dOnly.setHours(0, 0, 0, 0);
-    const isOverdue = dOnly < now;
-
-    const formatted = d.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-    return { text: formatted, isOverdue };
   }
 
   override render() {
@@ -268,18 +206,12 @@ export class SearchModal extends LitElement {
       <div class="modal">
         <div class="search-header">
           <m3e-icon name="search" variant="rounded"></m3e-icon>
-          <m3e-form-field variant="filled" hide-subscript="always">
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              .value="${this.query}"
-              @input="${this.handleInput}"
-              @ref="${(el: HTMLInputElement) => (this.inputRef = el)}"
-            />
-          </m3e-form-field>
-          <m3e-icon-button @click="${this.close}">
-            <m3e-icon name="close" variant="rounded"></m3e-icon>
-          </m3e-icon-button>
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            .value="${this.query}"
+            @input="${this.handleInput}"
+          />
         </div>
 
         <div class="results">
@@ -291,62 +223,14 @@ export class SearchModal extends LitElement {
                   : "No tasks yet"}
               </div>
             `
-            : this.results.map((task) => {
-              const project = this.getProject(task);
-              const context = this.getContext(task);
-              const due = this.formatDate(task.due_date ?? null);
-
-              return html`
-                <div
-                  class="result-item ${task.completed_at ? "completed" : ""}"
-                  @click="${() => this.selectTask(task)}"
-                >
-                  <div class="result-icon"></div>
-                  <div class="result-content">
-                    <div class="result-title">${task.title}</div>
-                    ${project || context || due
-                      ? html`
-                        <div class="result-meta">
-                          ${project
-                            ? html`
-                              <span
-                                class="meta-tag project"
-                                style="--tag-color: ${project.color}22"
-                              >
-                                ${project.name}
-                              </span>
-                            `
-                            : null} ${context
-                            ? html`
-                              <span
-                                class="meta-tag context"
-                                style="--tag-color: ${context.color}22"
-                              >
-                                @${context.name}
-                              </span>
-                            `
-                            : null} ${due
-                            ? html`
-                              <span
-                                class="meta-tag due ${due.isOverdue
-                                  ? "overdue"
-                                  : ""}"
-                              >
-                                ${due.text}
-                              </span>
-                            `
-                            : null}
-                        </div>
-                      `
-                      : null}
-                  </div>
-                </div>
-              `;
-            })}
-        </div>
-
-        <div class="hint">
-          <span class="kbd">↵</span> to select <span class="kbd">Esc</span> to close
+            : this.results.map((task, i) => html`
+              <div
+                class="result-wrapper ${i === this.focusedIndex ? "focused" : ""}"
+                @click="${() => this.handleResultClick()}"
+              >
+                <task-item .task="${task}"></task-item>
+              </div>
+            `)}
         </div>
       </div>
     `;

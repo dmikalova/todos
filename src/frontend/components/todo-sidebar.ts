@@ -342,7 +342,7 @@ export class TodoSidebar extends StoreElement {
     }
 
     .nav-button.add-task {
-      color: var(--md-sys-color-primary);
+      color: var(--md-sys-color-on-surface-variant);
     }
 
     .nav-button m3e-icon {
@@ -545,25 +545,11 @@ export class TodoSidebar extends StoreElement {
         <!-- Quick Actions -->
         <div class="quick-actions">
           <button
-            class="nav-button add-task"
-            @click="${() => {
-              store.setShowTaskForm(true);
-              store.setSidebarOpen(false);
-            }}"
+            class="nav-button ${store.currentTab === "next" ? "active" : ""}"
+            @click="${() => store.navigate("next")}"
           >
-            <m3e-icon name="add" variant="rounded"></m3e-icon>
-            <span class="nav-button-label">${NAV_LABELS.addTask}</span>
-          </button>
-
-          <button
-            class="nav-button"
-            @click="${() => {
-              store.setShowSearch(true);
-              store.setSidebarOpen(false);
-            }}"
-          >
-            <m3e-icon name="search" variant="rounded"></m3e-icon>
-            <span class="nav-button-label">${NAV_LABELS.search}</span>
+            <m3e-icon name="chevron_right" variant="rounded"></m3e-icon>
+            <span class="nav-button-label">${NAV_LABELS.next}</span>
           </button>
 
           <button
@@ -580,11 +566,25 @@ export class TodoSidebar extends StoreElement {
           </button>
 
           <button
-            class="nav-button ${store.currentTab === "next" ? "active" : ""}"
-            @click="${() => store.navigate("next")}"
+            class="nav-button"
+            @click="${() => {
+              store.setShowSearch(true);
+              store.setSidebarOpen(false);
+            }}"
           >
-            <m3e-icon name="chevron_right" variant="rounded"></m3e-icon>
-            <span class="nav-button-label">${NAV_LABELS.next}</span>
+            <m3e-icon name="search" variant="rounded"></m3e-icon>
+            <span class="nav-button-label">${NAV_LABELS.search}</span>
+          </button>
+
+          <button
+            class="nav-button add-task"
+            @click="${() => {
+              store.setShowTaskForm(true);
+              store.setSidebarOpen(false);
+            }}"
+          >
+            <m3e-icon name="add" variant="rounded"></m3e-icon>
+            <span class="nav-button-label">${NAV_LABELS.addTask}</span>
           </button>
         </div>
 

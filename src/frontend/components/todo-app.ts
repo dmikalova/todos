@@ -148,6 +148,9 @@ export class TodoApp extends StoreElement {
     if (e.key === "a" && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault();
       store.setShowTaskForm(true);
+    } else if (e.key === "s" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      store.setShowSearch(true);
     }
   };
 

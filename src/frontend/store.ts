@@ -335,9 +335,11 @@ class Store {
     return this._tasks.filter(
       (t) =>
         t.project_id === this._selectedProjectId &&
-        (this._taskFilter.completed === "true"
-          ? t.completed_at
-          : !t.completed_at),
+        (this._taskFilter.completed === ""
+          ? true
+          : this._taskFilter.completed === "true"
+            ? t.completed_at
+            : !t.completed_at),
     );
   }
 
@@ -351,9 +353,11 @@ class Store {
       (t) =>
         t.project_id &&
         projectIds.includes(t.project_id) &&
-        (this._taskFilter.completed === "true"
-          ? t.completed_at
-          : !t.completed_at),
+        (this._taskFilter.completed === ""
+          ? true
+          : this._taskFilter.completed === "true"
+            ? t.completed_at
+            : !t.completed_at),
     );
   }
 
@@ -444,6 +448,8 @@ class Store {
       this._selectedContextId = id;
       history.pushState({}, "", `/contexts/${id}`);
     } else {
+      this._selectedProjectId = null;
+      this._selectedContextId = null;
       history.pushState({}, "", `/${tab}`);
     }
     this.notify();

@@ -14,7 +14,7 @@ export class TaskItem extends LitElement {
     .task-card {
       background: var(--md-sys-color-surface);
       border-radius: var(--md-sys-shape-corner-medium);
-      padding: 16px;
+      padding: 12px;
       display: flex;
       align-items: center;
       gap: 16px;
@@ -40,6 +40,7 @@ export class TaskItem extends LitElement {
       transition: all 0.15s;
       background: transparent;
       padding: 0;
+      outline: none;
     }
 
     .checkbox:hover {

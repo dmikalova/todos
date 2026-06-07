@@ -14,6 +14,8 @@
 const APP_NAME = "todos";
 const SCHEMA_NAME = "todos";
 const GCP_PROJECT = "mklv-infrastructure";
+const DEV_DATABASE_URL_SESSION =
+  "postgres://todos:todos@localhost:5432/todos?search_path=todos&sslmode=disable";
 
 async function getDatabaseUrl(): Promise<string> {
   // Check environment variable first
@@ -21,6 +23,12 @@ async function getDatabaseUrl(): Promise<string> {
   if (envUrl) {
     console.log("Using DATABASE_URL_SESSION from environment");
     return envUrl;
+  }
+
+  // In local dev (no DENO_ENV=production), use default local URL
+  if (Deno.env.get("DENO_ENV") !== "production") {
+    console.log("Using local dev database URL");
+    return DEV_DATABASE_URL_SESSION;
   }
 
   // Fetch app config JSON from Secret Manager

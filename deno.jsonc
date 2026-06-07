@@ -28,17 +28,17 @@
   "tasks": {
     // Development: start postgres, apply schema, run server with hot reload (frontend bundled on startup)
     // App connects as todos_app (non-superuser) so RLS policies are enforced
-    "dev": "docker compose up -d && sleep 1 && deno task db:local && export DATABASE_URL_TRANSACTION='postgres://todos_app:todos_app@localhost:5432/todos?search_path=todos&sslmode=disable' && deno run --permission-set --watch=src/,db/ src/main.ts",
+    "dev": "docker compose up -d && sleep 1 && deno task db:local && deno run --permission-set --watch=src/,db/ src/main.ts",
     // Production start
-    "start": "deno run --permission-set src/main.ts",
+    "start": "DENO_ENV=production deno run --permission-set src/main.ts",
     // Type-check API and frontend
-    "check": "deno check src/*.ts src/db/**/*.ts src/routes/**/*.ts src/services/**/*.ts src/frontend/**/*.ts",
-    // Apply schema to local database
-    "db:local": "deno run --permission-set=scripts scripts/db.ts apply",
+    "check": "deno check src/**/*.ts",
     // Apply schema to remote database (fetches URL from Secret Manager)
     "db:apply": "deno run --permission-set=scripts scripts/db.ts apply",
     // Show planned schema changes
     "db:diff": "deno run --permission-set=scripts scripts/db.ts diff",
+    // Apply schema to local database
+    "db:local": "deno run --permission-set=scripts scripts/db.ts apply",
     // Reset local database (deletes all data)
     "db:reset": "docker compose down -v && docker compose up -d && sleep 1 && deno task db:local",
     // Stop local postgres

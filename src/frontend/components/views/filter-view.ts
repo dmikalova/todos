@@ -20,8 +20,7 @@ export class FilterView extends StoreElement {
     }
 
     .empty {
-      text-align: center;
-      padding: 32px;
+      padding: 32px 0;
       color: var(--md-sys-color-outline);
     }
   `;
@@ -39,7 +38,7 @@ export class FilterView extends StoreElement {
       <div class="task-list">
         ${tasks.length === 0
           ? html`
-            <div class="empty">no tasks match this filter</div>
+            <div class="empty">this filter has no tasks</div>
           `
           : tasks.map(
             (task) =>

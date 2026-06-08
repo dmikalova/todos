@@ -37,6 +37,18 @@ Deno.test({
       });
     });
 
+    await t.step(
+      "GET /api/filters returns empty array when none exist",
+      async () => {
+        // Ensure no filters exist (seed data may have created some)
+        await ctx.db`DELETE FROM tasks.saved_filters WHERE user_id = ${ctx.userId}`;
+        const res = await apiCall(ctx.app, "GET", "/api/filters");
+        assertEquals(res.status, 200);
+        const body = await res.json();
+        assertEquals(body, []);
+      },
+    );
+
     await t.step("POST /api/filters creates filter", async () => {
       const res = await apiCall(ctx.app, "POST", "/api/filters", {
         name: "Test Filter",
@@ -51,6 +63,20 @@ Deno.test({
       assertEquals(body.name, "Test Filter");
       filterId = body.id;
     });
+
+    await t.step(
+      "POST /api/filters with priorities and dueDateWithin",
+      async () => {
+        const res = await apiCall(ctx.app, "POST", "/api/filters", {
+          name: "Priority Filter",
+          criteria: {
+            priorities: [1, 2],
+            dueDateWithin: { amount: 30, unit: "days" },
+          },
+        });
+        assertEquals(res.status, 201);
+      },
+    );
 
     await t.step("POST /api/filters returns 400 for invalid body", async () => {
       const res = await apiCall(ctx.app, "POST", "/api/filters", {

@@ -11,8 +11,8 @@ export const contexts = new Hono<AppEnv>();
 
 const timeWindowSchema = z.object({
   dayOfWeek: z.number().int().min(0).max(6),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/),
+  startTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
+  endTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
 });
 
 const createContextSchema = z.object({
@@ -72,8 +72,8 @@ async function getContextWithWindows(
     ...context,
     time_windows: windows.map((w) => ({
       dayOfWeek: w.day_of_week,
-      startTime: w.start_time,
-      endTime: w.end_time,
+      startTime: w.start_time.slice(0, 5),
+      endTime: w.end_time.slice(0, 5),
     })),
   };
 }
@@ -124,11 +124,20 @@ contexts.get("/", async (c) => {
   const session = c.get("session") as SessionData;
 
   const contextList = await withDb(async (sql: SqlQuery) => {
-    const allContexts = await sql<Context[]>`
-      SELECT * FROM contexts ORDER BY sort_order, created_at
+    const allContexts = await sql<(Context & { task_count: number })[]>`
+      SELECT c.*,
+        (
+          SELECT COUNT(DISTINCT t.id)::int FROM tasks t
+          LEFT JOIN task_contexts tc ON tc.task_id = t.id
+          LEFT JOIN project_contexts pc ON pc.project_id = t.project_id
+          WHERE t.deleted_at IS NULL AND t.completed_at IS NULL
+            AND (tc.context_id = c.id OR pc.context_id = c.id)
+        ) as task_count
+      FROM contexts c
+      ORDER BY c.sort_order, c.created_at
     `;
 
-    const result: ContextWithWindows[] = [];
+    const result: (ContextWithWindows & { task_count: number })[] = [];
     for (const ctx of allContexts) {
       const windows = await sql<TimeWindow[]>`
         SELECT * FROM context_time_windows WHERE context_id = ${ctx.id}
@@ -138,8 +147,8 @@ contexts.get("/", async (c) => {
         ...ctx,
         time_windows: windows.map((w) => ({
           dayOfWeek: w.day_of_week,
-          startTime: w.start_time,
-          endTime: w.end_time,
+          startTime: w.start_time.slice(0, 5),
+          endTime: w.end_time.slice(0, 5),
         })),
       });
     }
@@ -255,8 +264,8 @@ contexts.patch("/:id", async (c) => {
       ...updated,
       time_windows: windows.map((w: TimeWindow) => ({
         dayOfWeek: w.day_of_week,
-        startTime: w.start_time,
-        endTime: w.end_time,
+        startTime: w.start_time.slice(0, 5),
+        endTime: w.end_time.slice(0, 5),
       })),
     };
   }, { userId: session.userId });

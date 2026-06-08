@@ -593,6 +593,11 @@ export class TodoSidebar extends StoreElement {
           >
             <m3e-icon name="double_arrow" variant="rounded"></m3e-icon>
             <span class="nav-button-label">${NAV_LABELS.next}</span>
+            ${store.nextCount > 0
+              ? html`
+                <span class="count">${store.nextCount}</span>
+              `
+              : null}
           </button>
 
           <button
@@ -673,6 +678,11 @@ export class TodoSidebar extends StoreElement {
                           "var(--md-sys-color-tertiary)"}"
                       ></span>
                       <span class="nav-button-label">${f.name}</span>
+                      ${f.task_count
+                        ? html`
+                          <span class="count">${f.task_count}</span>
+                        `
+                        : null}
                     </button>
                   `,
               )}
@@ -827,6 +837,11 @@ export class TodoSidebar extends StoreElement {
                           style="--dot-color: ${context.color || "#F48FB1"}"
                         ></span>
                         <span class="nav-button-label">${context.name}</span>
+                        ${context.task_count
+                          ? html`
+                            <span class="count">${context.task_count}</span>
+                          `
+                          : null}
                       </button>
                       <span class="rank-controls">
                         <button

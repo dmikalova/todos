@@ -85,12 +85,62 @@ filters.get("/", async (c) => {
 
   const filterList = await withDb(
     async (sql: SqlQuery) => {
-      const result = await sql<SavedFilter[]>`
+      const filters = await sql<SavedFilter[]>`
       SELECT * FROM saved_filters
       WHERE user_id = ${session.userId}
       ORDER BY name
     `;
-      return result;
+
+      if (filters.length === 0) return [];
+
+      // Fetch all active tasks once to compute counts for each filter
+      interface TaskRow {
+        id: string;
+        priority: number;
+        due_date: Date | null;
+        completed_at: Date | null;
+        project_id: string | null;
+      }
+      const allTasks = await sql<TaskRow[]>`
+        SELECT id, priority, due_date, completed_at, project_id
+        FROM tasks WHERE deleted_at IS NULL
+      `;
+
+      return filters.map((f) => {
+        const criteria = f.filter as {
+          contexts?: string[];
+          projects?: string[];
+          priorities?: number[];
+          dueDateWithin?: { amount: number; unit: string };
+          completed?: boolean;
+        };
+
+        let tasks: TaskRow[] = [...allTasks];
+
+        if (criteria.projects && criteria.projects.length > 0) {
+          tasks = tasks.filter((t) =>
+            criteria.projects!.includes(t.project_id || "")
+          );
+        }
+        if (criteria.priorities && criteria.priorities.length > 0) {
+          tasks = tasks.filter((t) =>
+            criteria.priorities!.includes(t.priority)
+          );
+        }
+        if (criteria.completed !== undefined) {
+          tasks = tasks.filter(
+            (t) => (t.completed_at !== null) === criteria.completed,
+          );
+        }
+        if (criteria.dueDateWithin) {
+          const cutoff = computeCutoffDate(criteria.dueDateWithin);
+          tasks = tasks.filter(
+            (t) => t.due_date && new Date(t.due_date) <= cutoff,
+          );
+        }
+
+        return { ...f, task_count: tasks.length };
+      });
     },
     { userId: session.userId },
   );

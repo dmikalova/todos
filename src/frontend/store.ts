@@ -43,6 +43,7 @@ export interface Context {
   id: string;
   name: string;
   color?: string;
+  task_count?: number;
   time_windows?: Array<{
     dayOfWeek: number;
     startTime: string;
@@ -95,6 +96,7 @@ export interface SavedFilter {
   name: string;
   color: string | null;
   filter: FilterCriteria;
+  task_count?: number;
   created_at: string;
 }
 
@@ -352,6 +354,38 @@ class Store {
 
   get inboxCount(): number {
     return this._tasks.filter((t) => !t.project_id && !t.completed_at).length;
+  }
+
+  get nextCount(): number {
+    const activeContextIds = new Set(
+      this._contexts.filter((c) => this.isContextActive(c)).map((c) => c.id),
+    );
+    return this._tasks.filter(
+      (t) =>
+        !t.completed_at &&
+        (!t.deferred_until || new Date(t.deferred_until) <= new Date()) &&
+        (t.context_ids.some((id) => activeContextIds.has(id)) ||
+          (t.project_id &&
+            this._projects.find((p) => p.id === t.project_id)?.context_ids
+              ?.some((id) => activeContextIds.has(id)))),
+    ).length;
+  }
+
+  // Check if a context is currently active based on its time windows.
+  // No time windows = always active. Otherwise, must match current day/time.
+  isContextActive(context: Context): boolean {
+    if (!context.time_windows || context.time_windows.length === 0) {
+      return true;
+    }
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const currentTime = now.toTimeString().slice(0, 8); // HH:MM:SS
+    return context.time_windows.some(
+      (tw) =>
+        tw.dayOfWeek === dayOfWeek &&
+        tw.startTime <= currentTime &&
+        tw.endTime > currentTime,
+    );
   }
 
   get dueTasks(): Task[] {
@@ -832,6 +866,8 @@ class Store {
         this.fetchTasks(),
         this.fetchNext(),
         this.fetchHistory(),
+        this.fetchContexts(),
+        this._selectedContextId ? this.fetchContextTasks() : Promise.resolve(),
       ]);
     } catch (_e) {
       this.showToast("failed to update task", "error");
@@ -881,6 +917,8 @@ class Store {
         this.fetchTasks(),
         this.fetchNext(),
         this.fetchProjects(),
+        this.fetchContexts(),
+        this._selectedContextId ? this.fetchContextTasks() : Promise.resolve(),
       ]);
     } catch (_e) {
       this.showToast("failed to save task", "error");
@@ -933,6 +971,8 @@ class Store {
         this.fetchTasks(),
         this.fetchNext(),
         this.fetchProjects(),
+        this.fetchContexts(),
+        this._selectedContextId ? this.fetchContextTasks() : Promise.resolve(),
       ]);
     } catch (_e) {
       this.showToast("failed to delete task", "error");
@@ -979,7 +1019,13 @@ class Store {
   }
 
   // Context operations
-  async saveContext(data: Partial<Context>) {
+  async saveContext(data: {
+    name?: string;
+    color?: string;
+    timeWindows?: Array<
+      { dayOfWeek: number; startTime: string; endTime: string }
+    >;
+  }) {
     try {
       if (this._editingContext) {
         await this.api(`/contexts/${this._editingContext.id}`, {

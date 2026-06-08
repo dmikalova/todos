@@ -144,7 +144,47 @@ export class ContextForm extends LitElement {
     .delete-button {
       --md-sys-color-primary: var(--md-sys-color-error);
     }
+
+    .confirm-dialog {
+      position: fixed;
+      inset: 0;
+      margin: auto;
+      border: none;
+      padding: 24px;
+      width: min(24rem, calc(100vw - 48px));
+      background: var(--md-sys-color-surface-container-lowest);
+      color: var(--md-sys-color-on-surface);
+      border-radius: var(--md-sys-shape-corner-extra-large);
+      box-shadow: var(--md-sys-elevation-level5);
+      outline: none;
+      z-index: 100;
+    }
+
+    .confirm-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    .confirm-dialog h3 {
+      margin: 0 0 12px;
+      font-size: 20px;
+      font-weight: 400;
+    }
+
+    .confirm-dialog p {
+      margin: 0 0 24px;
+      color: var(--md-sys-color-on-surface-variant);
+      font-size: 14px;
+    }
+
+    .confirm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
   `;
+
+  @state()
+  accessor showConfirmDelete = false;
 
   @state()
   accessor form = {
@@ -177,13 +217,30 @@ export class ContextForm extends LitElement {
   }
 
   override async firstUpdated() {
-    const dialog = this.renderRoot.querySelector("dialog");
+    const dialog = this.renderRoot.querySelector(
+      "dialog:not(.confirm-dialog)",
+    ) as HTMLDialogElement | null;
     dialog?.showModal();
     await this.updateComplete;
     requestAnimationFrame(() => {
       this.renderRoot.querySelector<HTMLInputElement>("#context-name")?.focus();
     });
     dialog?.addEventListener("close", () => this.close());
+  }
+
+  override updated(changed: Map<string, unknown>) {
+    if (changed.has("showConfirmDelete") && this.showConfirmDelete) {
+      const confirmDialog = this.renderRoot.querySelector(
+        ".confirm-dialog",
+      ) as HTMLDialogElement | null;
+      if (confirmDialog && !confirmDialog.open) {
+        confirmDialog.showModal();
+        confirmDialog.addEventListener("cancel", (e) => {
+          e.preventDefault();
+          this.showConfirmDelete = false;
+        });
+      }
+    }
   }
 
   private close() {
@@ -222,17 +279,20 @@ export class ContextForm extends LitElement {
     await store.saveContext({
       name: this.form.name.trim(),
       color: this.form.color,
-      time_windows: this.form.timeWindows.length > 0
+      timeWindows: this.form.timeWindows.length > 0
         ? this.form.timeWindows
-        : undefined,
+        : [],
     });
   }
 
-  private async handleDelete() {
-    if (
-      store.editingContext &&
-      confirm("delete this context? tasks will have their context removed.")
-    ) {
+  private handleDelete() {
+    if (store.editingContext) {
+      this.showConfirmDelete = true;
+    }
+  }
+
+  private async confirmDelete() {
+    if (store.editingContext) {
       await store.deleteContext(store.editingContext.id);
     }
   }
@@ -397,6 +457,42 @@ export class ContextForm extends LitElement {
           </div>
         </form>
       </dialog>
+      ${this.showConfirmDelete
+        ? html`
+          <dialog
+            class="confirm-dialog"
+            @click="${(e: Event) => {
+              if (
+                (e.target as HTMLElement).classList.contains("confirm-dialog")
+              ) {
+                this.showConfirmDelete = false;
+              }
+            }}"
+          >
+            <h3>delete this context?</h3>
+            <p>tasks will have their context removed.</p>
+            <div class="confirm-actions">
+              <m3e-button
+                variant="text"
+                type="button"
+                @click="${() => {
+                  this.showConfirmDelete = false;
+                }}"
+              >
+                cancel
+              </m3e-button>
+              <m3e-button
+                class="delete-button"
+                variant="filled"
+                type="button"
+                @click="${this.confirmDelete}"
+              >
+                delete
+              </m3e-button>
+            </div>
+          </dialog>
+        `
+        : null}
     `;
   }
 }

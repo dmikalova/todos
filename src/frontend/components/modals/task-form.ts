@@ -255,6 +255,8 @@ export class TaskForm extends LitElement {
         recurrence_interval: t.recurrence_interval || 1,
         recurrence_days: t.recurrence_days || [],
       };
+    } else if (store.currentTab === "context" && store.selectedContextId) {
+      this.form.context_ids = [store.selectedContextId];
     } else if (store.selectedProjectId) {
       this.form.project_id = store.selectedProjectId;
     }

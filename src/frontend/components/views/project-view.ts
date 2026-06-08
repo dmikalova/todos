@@ -20,8 +20,7 @@ export class ProjectView extends StoreElement {
     }
 
     .empty {
-      text-align: center;
-      padding: 32px;
+      padding: 32px 0;
       color: var(--md-sys-color-outline);
     }
 
@@ -64,12 +63,16 @@ export class ProjectView extends StoreElement {
   override render() {
     return html`
       <div class="task-list">
-        ${store.projectTasks.map(
-          (task) =>
-            html`
-              <task-item .task="${task}"></task-item>
-            `,
-        )}
+        ${store.projectTasks.length === 0
+          ? html`
+            <div class="empty">this project has no tasks</div>
+          `
+          : store.projectTasks.map(
+            (task) =>
+              html`
+                <task-item .task="${task}"></task-item>
+              `,
+          )}
         <div class="add-task-row" @click="${() => store.setShowTaskForm(true)}">
           <span class="add-circle">+</span>
           <span class="add-task-label">add task</span>

@@ -13,7 +13,7 @@ Conventions specific to this Deno + Hono + Lit web application.
 | Unit tests           | `deno task test`                |
 | All tests + coverage | `deno task test:all --coverage` |
 | Integration tests    | `deno task test:integration`    |
-| Apply schema (local) | `deno task db:local`            |
+| Apply schema (local) | `deno task db:apply`            |
 | Apply schema (prod)  | `deno task db:apply`            |
 | Schema diff          | `deno task db:diff`             |
 | Reset local DB       | `deno task db:reset`            |

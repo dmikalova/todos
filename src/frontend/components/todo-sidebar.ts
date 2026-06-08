@@ -600,8 +600,9 @@ export class TodoSidebar extends StoreElement {
 
         <hr class="divider" />
 
-        <!-- Filters -->
-        <div class="section">
+        <!-- Scrollable middle: Filters + Projects + Contexts -->
+        <div class="section scrollable">
+          <!-- Filters -->
           <div class="section-header">
             <span class="section-title">${SECTION_LABELS.filters}</span>
             <div class="section-actions">
@@ -644,12 +645,10 @@ export class TodoSidebar extends StoreElement {
               )}
             `
             : null}
-        </div>
 
-        <hr class="divider" />
+          <hr class="divider" />
 
-        <!-- Projects -->
-        <div class="section scrollable">
+          <!-- Projects -->
           <div class="section-header">
             <span class="section-title">${SECTION_LABELS.projects}</span>
             <div class="section-actions">

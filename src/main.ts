@@ -55,7 +55,7 @@ async function initialize() {
     // In development, apply DB migrations on each restart (supports --watch=db/)
     if (isDev) {
       const cmd = new Deno.Command("deno", {
-        args: ["task", "db:local"],
+        args: ["task", "db:apply"],
         stdout: "inherit",
         stderr: "inherit",
       });

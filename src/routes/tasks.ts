@@ -149,7 +149,7 @@ tasks.get("/", async (c) => {
       ${completed === "true" ? sql`AND t.completed_at IS NOT NULL` : sql``}
       ${completed === "false" ? sql`AND t.completed_at IS NULL` : sql``}
       ${deleted === "true" ? sql`AND t.deleted_at IS NOT NULL` : sql``}
-      ${deleted === "false" ? sql`AND t.deleted_at IS NULL` : sql``}
+      ${deleted !== "true" ? sql`AND t.deleted_at IS NULL` : sql``}
       ${dueBefore ? sql`AND t.due_date <= ${dueBefore}` : sql``}
       ${dueAfter ? sql`AND t.due_date >= ${dueAfter}` : sql``}
       ORDER BY t.created_at DESC

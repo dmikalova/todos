@@ -1,6 +1,4 @@
-# Next Page Spec
-
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Smart task selection
 
@@ -41,7 +39,7 @@ influence which task is selected next.
 
 #### Scenario: No eligible tasks
 
-- **WHEN** no tasks match the selection criteria (all context tasks are done)
+- **WHEN** no tasks match the selection criteria (all context tasks done)
 - **THEN** system displays an empty state
 
 ### Requirement: Stable task across sessions
@@ -77,48 +75,6 @@ completed or deferred.
 - **AND** the current next task is no longer in an active context
 - **THEN** system selects a new task from the now-active contexts
 
-### Requirement: Defer action
-
-The system SHALL allow users to defer tasks from the "Next" page. Deferring sets
-`deferred_until` timestamp and logs to task history.
-
-Defer options:
-
-- Later today: +4 hours
-- Tomorrow: next day 9:00 AM
-- Next week: following Monday 9:00 AM
-- Next occurrence: skip to next recurrence date (recurring tasks only)
-
-#### Scenario: Defer until later today
-
-- **WHEN** user defers a task "later today" at 2:00 PM
-- **THEN** system sets `deferred_until = 6:00 PM today`
-
-#### Scenario: Defer until tomorrow
-
-- **WHEN** user defers a task to "tomorrow"
-- **THEN** system sets `deferred_until = tomorrow 9:00 AM`
-
-#### Scenario: Defer to next occurrence
-
-- **WHEN** user defers a recurring task to "next occurrence"
-- **THEN** system sets `deferred_until` to the next recurrence date
-
-### Requirement: Undo defer
-
-The system SHALL allow users to clear a task's deferral, making it immediately
-eligible again.
-
-#### Scenario: Undo recent defer
-
-- **WHEN** user defers a task, then clicks "Undo" in the confirmation toast
-- **THEN** system clears `deferred_until` and task becomes eligible again
-
-#### Scenario: Clear defer from task list
-
-- **WHEN** user views a deferred task in the task list and clicks "Clear defer"
-- **THEN** system clears `deferred_until` and logs the undo to history
-
 ### Requirement: Deferred tasks respect contexts
 
 When a deferred task's `deferred_until` time passes, the task SHALL only appear
@@ -136,23 +92,17 @@ if at least one of its effective contexts is currently active.
 - **AND** evening context is 5pm-10pm all days
 - **THEN** task appears at 6:00 PM (evening context is active)
 
-### Requirement: Quick complete from Next page
+## REMOVED Requirements
 
-The system SHALL allow users to mark a task complete directly from the "Next"
-page without navigating to task details.
+### Requirement: Must-do task priority
 
-#### Scenario: Complete from Next page
+**Reason**: `must_do` is removed from the system. Priority handles urgency.
 
-- **WHEN** user clicks "Complete" on a task in the Next page
-- **THEN** system marks task complete, logs it, and refreshes with the next top
-  task
+**Migration**: Drop `must_do` column from tasks table. No production data uses
+this field.
 
-### Requirement: Manual context override
+### Requirement: Must-do cannot be deferred
 
-The "Next" page SHALL include a context selector allowing users to manually
-activate any context, showing tasks from that context regardless of time.
+**Reason**: `must_do` is removed from the system entirely.
 
-#### Scenario: Enter work context manually
-
-- **WHEN** user selects "work" context on Saturday
-- **THEN** Next page shows work tasks even though work hours aren't active
+**Migration**: No migration needed — feature was not in active use.

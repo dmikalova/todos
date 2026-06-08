@@ -1,6 +1,4 @@
-# Contexts Spec
-
-## ADDED Requirements
+k## MODIFIED Requirements
 
 ### Requirement: User-defined contexts
 
@@ -57,89 +55,21 @@ editor (which shows neighboring contexts for reference).
 - **THEN** the context moves up one position
 - **AND** the editor shows the context now above and below for reference
 
-### Requirement: Multi-context assignment on projects and tasks
+### Requirement: Multi-context task assignment
 
-The system SHALL allow projects and tasks to have zero, one, or multiple
-contexts assigned. Contexts are assigned via a join table for both projects and
-tasks.
+The system SHALL allow tasks to have zero, one, or multiple contexts assigned
+(either directly or inherited from projects). Tasks appear in Next page when ANY
+of their effective contexts are active.
 
-#### Scenario: Assign multiple contexts to a task
+#### Scenario: Assign multiple contexts
 
 - **WHEN** user assigns contexts "tuesday cleanup" and "weekend" to a task
 - **THEN** task is eligible during both tuesday cleanup hours AND weekend hours
 
-#### Scenario: Task with no context (and no inherited context)
+#### Scenario: Task with no effective context
 
 - **WHEN** a task has no contexts assigned and inherits none from its project
 - **THEN** task does not appear in Next (only visible in project/filter views)
-
-### Requirement: CSS-style context inheritance and override
-
-Contexts follow a CSS-style cascade: most-specific assignment wins.
-
-- A task with its own context(s) uses those, ignoring project contexts.
-- A task with no contexts inherits from its project.
-- A project with no contexts inherits from its nearest ancestor project that has
-  context(s).
-- If no ancestor has a context, the entity is contextless.
-
-#### Scenario: Task overrides project context
-
-- **WHEN** a task has context "weekend" and its project has context "work"
-- **THEN** the task's effective contexts are only "weekend"
-
-#### Scenario: Task inherits project context
-
-- **WHEN** a task has no contexts and its project has context "work"
-- **THEN** the task's effective contexts are "work"
-
-#### Scenario: Sub-project overrides parent context
-
-- **WHEN** a sub-project has context "evening" and its parent has "work"
-- **THEN** tasks in the sub-project inherit "evening" (not "work")
-
-#### Scenario: Sub-project inherits ancestor context
-
-- **WHEN** a sub-project has no contexts and its grandparent has "work"
-- **THEN** tasks in the sub-project inherit "work"
-
-### Requirement: Context detection via local time
-
-The system SHALL use the client's local time to determine which contexts are
-currently active.
-
-#### Scenario: Timezone travel
-
-- **WHEN** user travels from EST to PST and opens app at 10:00 AM PST
-- **THEN** system detects work context (10am local is within 9-5)
-
-#### Scenario: Multiple contexts active
-
-- **WHEN** user has both "morning" (6-9am) and "work" (9-5) contexts
-- **AND** current time is 8:30 AM
-- **THEN** system reports both "morning" and "work" as active (overlapping)
-
-### Requirement: Manual context override
-
-The system SHALL allow users to manually select any context to view tasks from
-that context, regardless of current time.
-
-#### Scenario: Enter work context on weekend
-
-- **WHEN** user clicks "work" context on Saturday
-- **THEN** system shows work tasks even though work context isn't time-active
-
-### Requirement: Context as a navigation view
-
-When a user clicks on a context, the system SHALL display all tasks with that
-context (effective, including inherited) in a view similar to project or filter
-presentation, with edit functionality and done/all/next toggle in the top right.
-
-#### Scenario: View context tasks
-
-- **WHEN** user clicks on "weekend" context in the sidebar
-- **THEN** system shows all tasks whose effective context includes "weekend"
-- **AND** the view includes edit and done/all/next controls
 
 ### Requirement: Deferred tasks respect contexts
 
@@ -157,3 +87,13 @@ in Next if at least one of its effective contexts is currently active.
 - **WHEN** user defers a work task to 6:00 PM
 - **AND** user manually enters work context at 7:00 PM
 - **THEN** task appears (context manually active)
+
+## REMOVED Requirements
+
+### Requirement: Default context
+
+**Reason**: Removed to simplify onboarding. Users create their own contexts as
+needed. No pre-seeded defaults.
+
+**Migration**: No migration needed — the default context was never implemented
+in production.

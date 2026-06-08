@@ -2,90 +2,110 @@
 
 ## Purpose
 
-Define how contexts are assigned to projects and inherited by tasks. Contexts
-are named, reusable labels (e.g., "morning", "evening") set on projects. Tasks
-inherit context implicitly through their project.
+Define how contexts are assigned to projects and tasks, and how inheritance
+works through the project hierarchy. Contexts can be set on projects,
+sub-projects, or individual tasks. Inheritance follows CSS-style cascade:
+most-specific assignment wins.
 
 ## Requirements
 
-## Requirement: Projects have a context
+## Requirement: Projects support multiple contexts
 
-A project SHALL support assignment of a single named context. The system MUST
-persist the context assignment when a project is saved and return it when the
-project is fetched. Tasks within the project inherit this context implicitly.
+A project SHALL support assignment of zero or more contexts via a join table.
+The system MUST persist context assignments when a project is saved and return
+them when the project is fetched.
 
-### Scenario: Save a project with a context
+### Scenario: Save a project with contexts
 
-- **WHEN** a user saves a project with a context selected
-- **THEN** the backend persists the context assignment on the project
-- **AND** subsequent fetch of the project includes the assigned context
+- **WHEN** a user saves a project with one or more contexts selected
+- **THEN** the backend persists the context assignments on the project
+- **AND** subsequent fetch of the project includes the assigned contexts
 
-### Scenario: Save a project with no context
+### Scenario: Save a project with no contexts
 
-- **WHEN** a user saves a project with no context selected
-- **THEN** the backend stores null for context on that project
-- **AND** the project inherits context from its parent project if one exists
+- **WHEN** a user saves a project with no contexts selected
+- **THEN** the backend stores no context associations for that project
+- **AND** the project inherits contexts from its nearest ancestor project that
+  has contexts
 
-### Scenario: Update context on an existing project
+### Scenario: Update contexts on an existing project
 
-- **WHEN** a user changes the context on an already-saved project and saves
-- **THEN** the backend replaces the previous context assignment with the new one
+- **WHEN** a user changes the contexts on an already-saved project and saves
+- **THEN** the backend replaces the previous context assignments with the new
+  ones
 
-## Requirement: Tasks have no direct context
+## Requirement: Tasks support multiple contexts (override)
 
-Tasks SHALL NOT have a `context_id` field. A task's context is determined solely
-by its parent project.
+Tasks SHALL support assignment of zero or more contexts via a join table. When a
+task has its own contexts, those override any inherited project contexts
+(CSS-style cascade).
 
-### Scenario: Task context is derived from project
+### Scenario: Task with own contexts overrides project
 
-- **WHEN** the system evaluates which context a task belongs to
-- **THEN** it uses the context of the task's project (or nearest ancestor
-  project with a context)
-- **AND** the task record itself contains no context field
+- **WHEN** a task has contexts assigned directly
+- **THEN** its effective contexts are its own (project contexts ignored)
+
+### Scenario: Task with no contexts inherits from project
+
+- **WHEN** a task has no direct context assignments
+- **THEN** its effective contexts come from its project (or nearest ancestor
+  project with contexts)
 
 ## Requirement: Nested project context inheritance
 
-A project with no context assigned SHALL inherit the context from its nearest
-ancestor project that has a context set.
+A project with no contexts assigned SHALL inherit contexts from its nearest
+ancestor project that has contexts set. Most-specific wins (CSS cascade).
 
-### Scenario: Child project inherits parent context
+### Scenario: Child project inherits parent contexts
 
-- **WHEN** a child project has no context set and its parent project has a
-  context
-- **THEN** the child project's effective context is the parent's context
+- **WHEN** a child project has no contexts set and its parent project has
+  contexts
+- **THEN** the child project's effective contexts are the parent's contexts
+
+### Scenario: Child project overrides parent contexts
+
+- **WHEN** a child project has its own contexts and its parent also has contexts
+- **THEN** the child project's effective contexts are its own (parent ignored)
 
 ### Scenario: Multi-level inheritance
 
-- **WHEN** a project has no context and its parent also has no context, but the
-  grandparent does
-- **THEN** the project's effective context is the grandparent's context
+- **WHEN** a project has no contexts and its parent also has no contexts, but
+  the grandparent does
+- **THEN** the project's effective contexts are the grandparent's contexts
 
-### Scenario: No ancestor has a context
+### Scenario: No ancestor has contexts
 
-- **WHEN** a project and all its ancestors have no context set
-- **THEN** the project's effective context is null and its tasks do not appear
-  in Next
+- **WHEN** a project and all its ancestors have no contexts set
+- **THEN** the project's effective contexts are empty and its tasks are
+  contextless (do not appear in Next)
 
 ## Requirement: Context field in project form
 
-The project form SHALL display a context selector showing all available named
-contexts. The selector MUST reflect the project's current context assignment on
-load.
+The project form SHALL display a multi-select context picker showing all
+available contexts. The picker MUST reflect the project's current context
+assignments on load.
 
 ### Scenario: Context field pre-populated on edit
 
-- **WHEN** the user opens an existing project that has a context assigned
-- **THEN** the context selector shows that context as selected
+- **WHEN** the user opens an existing project that has contexts assigned
+- **THEN** the context picker shows those contexts as selected
 
 ### Scenario: Context field empty for new project
 
 - **WHEN** the user opens the form to create a new project
-- **THEN** the context selector shows no context selected
+- **THEN** the context picker shows no contexts selected
 
-### Scenario: Context selector submits correct ID
+## Requirement: Context field in task form
 
-- **WHEN** the user selects a context and saves the project
-- **THEN** the form submits the context ID to the backend
+The task form SHALL display an optional multi-select context picker. When empty,
+the task inherits from its project. When populated, the task's contexts override
+inheritance.
+
+### Scenario: Task context picker shows inheritance hint
+
+- **WHEN** the user opens a task form with no direct contexts
+- **THEN** the picker shows inherited contexts as a hint (greyed/placeholder)
+- **AND** the user can override by selecting explicit contexts
 
 ## Requirement: Project task count shows only open tasks
 

@@ -33,19 +33,31 @@ cases MUST be added.
 
 ### Scenario: Project context inheritance — nearest ancestor wins
 
-- **WHEN** a project has no context but its grandparent has one
-- **THEN** `resolveProjectContext(project, projects)` returns the grandparent's
-  context
+- **WHEN** a project has no contexts but its grandparent has contexts
+- **THEN** `resolveEffectiveContexts(project, projects)` returns the
+  grandparent's contexts
 
 ### Scenario: Project context inheritance — direct assignment beats ancestor
 
-- **WHEN** a project has its own context and a parent project also has a context
-- **THEN** `resolveProjectContext` returns the child project's own context
+- **WHEN** a project has its own contexts and a parent project also has contexts
+- **THEN** `resolveEffectiveContexts` returns the child project's own contexts
 
-### Scenario: No ancestor has a context
+### Scenario: No ancestor has contexts
 
-- **WHEN** a project and all ancestors have no context
-- **THEN** `resolveProjectContext` returns null
+- **WHEN** a project and all ancestors have no contexts
+- **THEN** `resolveEffectiveContexts` returns empty array
+
+### Scenario: Task with direct contexts overrides project
+
+- **WHEN** a task has direct context assignments
+- **THEN** `resolveTaskContexts(task, project, projects)` returns the task's own
+  contexts, ignoring project contexts
+
+### Scenario: Task with no contexts inherits from project
+
+- **WHEN** a task has no direct context assignments
+- **THEN** `resolveTaskContexts(task, project, projects)` returns the project's
+  effective contexts
 
 ## Requirement: Next view pipeline unit tests
 
@@ -58,27 +70,30 @@ view pipeline in isolation.
   and inactive windows
 - **THEN** only context IDs with at least one active window are returned
 
-### Scenario: Projects filtered by active context IDs
+### Scenario: Tasks filtered by effective contexts matching active contexts
 
-- **WHEN** `getNextProjects(projects, activeContextIds)` is called
-- **THEN** only projects whose effective context is in `activeContextIds` are
-  returned
+- **WHEN** `getNextTasks(tasks, projects, activeContextIds)` is called
+- **THEN** only tasks whose effective contexts overlap with active context IDs
+  are returned
 
-### Scenario: Inherited context counts for project filtering
+### Scenario: Task with direct context overrides project for Next
 
-- **WHEN** a project has no direct context but its parent's context is active
-- **THEN** the project is included in `getNextProjects` results
+- **WHEN** a task has direct context "evening" and project has "work"
+- **AND** "evening" is active but "work" is not
+- **THEN** the task appears in Next results
 
-### Scenario: Next task list sorted by due date
+### Scenario: Next task list sorted by context rank then task priority
 
-- **WHEN** `sortNextTasks(tasks)` is called with mixed dated/undated tasks
-- **THEN** tasks are returned sorted by due date ascending, undated tasks last
+- **WHEN** `sortNextTasks(tasks, activeContexts)` is called
+- **THEN** tasks are sorted by highest-rank active context (lowest sort_order),
+  then task priority descending, then due date ascending (undated last), then
+  title alphabetically
 
-### Scenario: Inbox tasks excluded from Next
+### Scenario: Contextless tasks excluded from Next
 
-- **WHEN** `filterNextTasks(tasks)` is called and some tasks have no
-  `project_id`
-- **THEN** tasks without a project are excluded from the result
+- **WHEN** `getNextTasks(tasks)` is called and some tasks have no effective
+  contexts
+- **THEN** those tasks are excluded from the result
 
 ## Requirement: Project task count unit tests
 
@@ -144,15 +159,15 @@ infinite scroll logic.
 `tests/integration/project_test.ts` SHALL test all project API endpoints
 including context and nesting.
 
-### Scenario: POST /api/projects creates project with context_id
+### Scenario: POST /api/projects creates project with contexts
 
-- **WHEN** a POST is made with `{ name, contextId }`
-- **THEN** the response is 201 with the project including `context_id`
+- **WHEN** a POST is made with `{ name, contextIds: [...] }`
+- **THEN** the response is 201 with the project including its contexts
 
-### Scenario: PATCH /api/projects/:id updates context_id
+### Scenario: PATCH /api/projects/:id updates contexts
 
-- **WHEN** a PATCH sets a new `contextId`
-- **THEN** the project's `context_id` is updated
+- **WHEN** a PATCH sets new `contextIds`
+- **THEN** the project's context associations are replaced
 
 ### Scenario: GET /api/projects/:id task_count excludes completed tasks
 
@@ -180,25 +195,31 @@ pagination.
 - **THEN** at most 100 completed tasks are returned ordered by
   `completed_at desc`
 
-## Requirement: Next integration tests reflect project-based context
+## Requirement: Next integration tests reflect context inheritance
 
-`tests/integration/next_test.ts` SHALL be updated to reflect that contexts are
-now on projects, not tasks.
+`tests/integration/next_test.ts` SHALL test that effective contexts (CSS-style
+cascade) drive Next visibility.
 
-### Scenario: Next returns tasks from projects with active context
+### Scenario: Next returns tasks inheriting project context
 
-- **WHEN** a project is assigned a context with an active time window, and tasks
-  belong to that project
+- **WHEN** a project has contexts with an active time window, and tasks belong
+  to that project with no direct contexts
 - **THEN** GET /api/next returns those tasks
 
-### Scenario: Next excludes tasks from projects with inactive context
+### Scenario: Next returns tasks with direct context overriding project
 
-- **WHEN** a project's context has no active window at the test time
-- **THEN** those tasks do not appear in GET /api/next
+- **WHEN** a task has direct context "evening" (active) and project has "work"
+  (inactive)
+- **THEN** GET /api/next returns that task
 
-### Scenario: Next excludes inbox tasks (no project)
+### Scenario: Next excludes tasks with all effective contexts inactive
 
-- **WHEN** tasks exist with no `project_id`
+- **WHEN** a task's effective contexts (direct or inherited) are all inactive
+- **THEN** that task does not appear in GET /api/next
+
+### Scenario: Next excludes contextless tasks
+
+- **WHEN** tasks have no effective contexts (no direct, no inherited)
 - **THEN** GET /api/next does not include them
 
 ## Requirement: Store unit tests
@@ -254,15 +275,15 @@ Frontend tests for `todo-sidebar.ts` SHALL verify the lowercase label tenet.
 Frontend tests for the context selector in `project-form.ts` SHALL verify
 correct load and submit behavior.
 
-### Scenario: Context selector pre-populates on edit
+### Scenario: Context multi-select pre-populates on edit
 
-- **WHEN** the form is opened with an existing project that has a `context_id`
-- **THEN** the selector shows that context as selected
+- **WHEN** the form is opened with an existing project that has contexts
+- **THEN** the multi-select shows those contexts as selected
 
-### Scenario: Context selector submits correct ID
+### Scenario: Context multi-select submits correct IDs
 
-- **WHEN** the user selects a context and submits
-- **THEN** the submitted payload includes the correct `contextId`
+- **WHEN** the user selects multiple contexts and submits
+- **THEN** the submitted payload includes the correct `contextIds` array
 
 ## Requirement: History view infinite scroll tests
 
@@ -277,3 +298,52 @@ Frontend tests for `history-view.ts` SHALL verify infinite scroll behavior.
 
 - **WHEN** the last fetch returned fewer items than the page size
 - **THEN** subsequent scroll events do not trigger additional fetches
+
+## Requirement: Project nesting unit tests
+
+Unit tests SHALL cover the store's tree computation, descendant calculation, and
+collapse state logic.
+
+### Scenario: projectTree computes correct depths
+
+- **WHEN** `projectTree` is called with nested projects
+- **THEN** each entry has the correct depth value matching its nesting level
+
+### Scenario: projectTree orders children after parent
+
+- **WHEN** `projectTree` is called with parent and child projects
+- **THEN** children appear immediately after their parent in the output
+
+### Scenario: getDescendantIds returns all recursive descendants
+
+- **WHEN** `getDescendantIds(projectId)` is called
+- **THEN** it returns all recursive descendant project IDs
+
+### Scenario: Collapse state filters tree correctly
+
+- **WHEN** `projectTree` is called with collapsed parent IDs
+- **THEN** children of collapsed parents are excluded from the output
+
+### Scenario: Alphabetical ordering within siblings
+
+- **WHEN** siblings exist with different names
+- **THEN** `projectTree` orders them alphabetically by name
+
+## Requirement: Project nesting integration tests
+
+Integration tests SHALL cover the nested project API behavior.
+
+### Scenario: Create nested project via API
+
+- **WHEN** POST /api/projects is called with `parentProjectId`
+- **THEN** the response includes the correct `parent_project_id`
+
+### Scenario: Update parent prevents circular reference
+
+- **WHEN** PATCH /api/projects/:id sets `parentProjectId` to a descendant
+- **THEN** the API returns 400 Bad Request
+
+### Scenario: Delete parent orphans children
+
+- **WHEN** a parent project is deleted
+- **THEN** child projects have `parent_project_id` set to null

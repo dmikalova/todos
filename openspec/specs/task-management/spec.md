@@ -11,8 +11,8 @@ The system SHALL allow users to create a task with the following fields:
 - Due date (optional, date)
 - Priority (required, enum: low, medium, high)
 - Project (optional, foreign key to project; null = Inbox)
-- Contexts (optional, multi-select from user-defined contexts)
-- Must-do flag (optional, boolean, default false)
+- Contexts (optional, multi-select from user-defined contexts; overrides
+  inherited project contexts when set)
 
 Basic markdown support includes: links `[text](url)`, bold `**text**`, italic
 `*text*`, and inline code `` `code` ``. No block-level elements (headers, lists,
@@ -21,7 +21,7 @@ code blocks) in titles.
 #### Scenario: Create minimal task
 
 - **WHEN** user submits a task with only title and priority
-- **THEN** system creates the task in Inbox with no contexts
+- **THEN** system creates the task in Inbox with no direct contexts
 
 #### Scenario: Create full task
 
@@ -101,7 +101,8 @@ The system SHALL display tasks with filtering and sorting options.
 #### Scenario: Sort by due date
 
 - **WHEN** user sorts by due date
-- **THEN** system orders tasks by due date ascending (nulls last)
+- **THEN** system orders tasks by priority descending, then due date ascending
+  (nulls last), then title alphabetically
 
 ### Requirement: Task history
 

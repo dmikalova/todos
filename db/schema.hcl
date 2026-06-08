@@ -460,6 +460,11 @@ table "saved_filters" {
     null = false
   }
 
+  column "color" {
+    type = text
+    null = true
+  }
+
   # JSON filter definition
   column "filter" {
     type = jsonb

@@ -16,9 +16,9 @@ test("Next Page - displays up to 2 tasks", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/tasks");
 
   for (let i = 1; i <= 3; i++) {
-    await clickButton(page, "New Task");
-    await fillField(page, "Title", testTaskTitle(`E2E Next Task ${i}`));
-    await clickButton(page, "Save");
+    await clickButton(page, "add task");
+    await fillField(page, "task", testTaskTitle(`E2E Next Task ${i}`));
+    await clickButton(page, "save");
     await waitForNetworkIdle(page);
   }
 
@@ -36,10 +36,10 @@ test("Next Page - displays up to 2 tasks", async ({ page, baseUrl }) => {
 test("Next Page - complete task", async ({ page, baseUrl }) => {
   // Ensure there's a task
   await navigateTo(page, baseUrl, "/tasks");
-  await clickButton(page, "New Task");
+  await clickButton(page, "add task");
   const taskTitle = testTaskTitle("E2E Next Complete");
-  await fillField(page, "Title", taskTitle);
-  await clickButton(page, "Save");
+  await fillField(page, "task", taskTitle);
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Go to Next page
@@ -64,10 +64,10 @@ test("Next Page - complete task", async ({ page, baseUrl }) => {
 test("Next Page - defer task", async ({ page, baseUrl }) => {
   // Create task
   await navigateTo(page, baseUrl, "/tasks");
-  await clickButton(page, "New Task");
+  await clickButton(page, "add task");
   const taskTitle = testTaskTitle("E2E Next Defer");
-  await fillField(page, "Title", taskTitle);
-  await clickButton(page, "Save");
+  await fillField(page, "task", taskTitle);
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Go to Next page
@@ -110,10 +110,10 @@ test("Next Page - refresh button gets new tasks", async ({ page, baseUrl }) => {
 test("Next Page - click task opens details", async ({ page, baseUrl }) => {
   // Create task
   await navigateTo(page, baseUrl, "/tasks");
-  await clickButton(page, "New Task");
+  await clickButton(page, "add task");
   const taskTitle = testTaskTitle("E2E Next Details");
-  await fillField(page, "Title", taskTitle);
-  await clickButton(page, "Save");
+  await fillField(page, "task", taskTitle);
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Go to Next page
@@ -126,7 +126,7 @@ test("Next Page - click task opens details", async ({ page, baseUrl }) => {
 
     // Should open a detail view or modal
     // Look for edit form fields
-    const titleInput = page.getByLabel("Title");
+    const titleInput = page.getByLabel("task");
     expect(await titleInput.count()).toBeGreaterThan(0);
   }
 });

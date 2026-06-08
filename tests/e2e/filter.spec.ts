@@ -15,10 +15,10 @@ test("Filters - toggle show completed", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/tasks");
 
   // Create and complete a task
-  await clickButton(page, "New Task");
+  await clickButton(page, "add task");
   const taskTitle = testTaskTitle("E2E Filter Completed");
-  await fillField(page, "Title", taskTitle);
-  await clickButton(page, "Save");
+  await fillField(page, "task", taskTitle);
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Complete the task
@@ -29,7 +29,7 @@ test("Filters - toggle show completed", async ({ page, baseUrl }) => {
 
   // By default, completed tasks may be hidden
   // Toggle "Show completed" filter
-  const showCompletedToggle = page.locator("text=Show completed");
+  const showCompletedToggle = page.locator("text=show completed");
   if ((await showCompletedToggle.count()) > 0) {
     await showCompletedToggle.click();
     await waitForNetworkIdle(page);
@@ -44,24 +44,24 @@ test("Filters - toggle show completed", async ({ page, baseUrl }) => {
 test("Filters - filter by project", async ({ page, baseUrl }) => {
   // First create a project
   await navigateTo(page, baseUrl, "/projects");
-  await clickButton(page, "New Project");
+  await clickButton(page, "add project");
   const projectName = testTaskTitle("E2E Project");
-  await fillField(page, "Name", projectName);
-  await clickButton(page, "Save");
+  await fillField(page, "name", projectName);
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Create a task in that project
   await navigateTo(page, baseUrl, "/tasks");
-  await clickButton(page, "New Task");
+  await clickButton(page, "add task");
   const taskTitle = testTaskTitle("E2E Project Task");
-  await fillField(page, "Title", taskTitle);
+  await fillField(page, "task", taskTitle);
   // Select project in dropdown
   const projectSelect = page.locator('[aria-label="Project"]');
   if ((await projectSelect.count()) > 0) {
     await projectSelect.click();
     await page.locator(`text=${projectName}`).click();
   }
-  await clickButton(page, "Save");
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Apply project filter
@@ -82,17 +82,17 @@ test("Filters - create saved filter", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/tasks");
 
   // Open filter creation
-  const saveFilterButton = page.locator("text=Save Filter");
+  const saveFilterButton = page.locator("text=save filter");
   if ((await saveFilterButton.count()) > 0) {
     await saveFilterButton.click();
 
     // Fill filter form
     const filterName = testTaskTitle("E2E Saved Filter");
-    await fillField(page, "Filter Name", filterName);
+    await fillField(page, "name", filterName);
 
     // Set some filter criteria
     // (Implementation depends on exact UI)
-    await clickButton(page, "Save");
+    await clickButton(page, "save");
     await waitForNetworkIdle(page);
 
     // Verify filter appears in saved filters list
@@ -130,14 +130,14 @@ test("Filters - clear all filters", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/tasks");
 
   // Apply some filter first
-  const showCompletedToggle = page.locator("text=Show completed");
+  const showCompletedToggle = page.locator("text=show completed");
   if ((await showCompletedToggle.count()) > 0) {
     await showCompletedToggle.click();
     await waitForNetworkIdle(page);
   }
 
   // Click clear filters
-  const clearButton = page.locator("text=Clear Filters");
+  const clearButton = page.locator("text=clear filters");
   if ((await clearButton.count()) > 0) {
     await clearButton.click();
     await waitForNetworkIdle(page);

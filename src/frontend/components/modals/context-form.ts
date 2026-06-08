@@ -32,7 +32,7 @@ export class ContextForm extends LitElement {
       width: min(36rem, calc(100vw - 48px));
       max-height: min(90vh, calc(100dvh - 48px));
       overflow-y: auto;
-      background: var(--md-sys-color-surface-container);
+      background: var(--md-sys-color-surface-container-lowest);
       color: var(--md-sys-color-on-surface);
       border-radius: var(--md-sys-shape-corner-extra-large);
       box-shadow: var(--md-sys-elevation-level4);
@@ -44,9 +44,16 @@ export class ContextForm extends LitElement {
     }
 
     dialog h2 {
-      margin: 0 0 16px;
+      margin: 0;
       font-size: 24px;
       font-weight: 400;
+    }
+
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
     }
 
     .form-group {
@@ -57,22 +64,33 @@ export class ContextForm extends LitElement {
       width: 100%;
     }
 
-    .color-picker {
-      display: flex;
+    .color-pill {
+      display: inline-flex;
       align-items: center;
-      gap: 12px;
-    }
-
-    input[type="color"] {
-      width: 40px;
-      height: 40px;
-      border: 1px solid var(--md-sys-color-outline-variant);
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      border: none;
       cursor: pointer;
+      font-size: 14px;
+      color: #fff;
+      font-weight: 500;
+      position: relative;
+      overflow: hidden;
+      transition: opacity 0.15s;
     }
 
-    .color-value {
-      font-size: 14px;
-      color: var(--md-sys-color-outline);
+    .color-pill:hover {
+      opacity: 0.85;
+    }
+
+    .color-pill input[type="color"] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
     }
 
     .section-header {
@@ -136,13 +154,13 @@ export class ContextForm extends LitElement {
   };
 
   private dayNames = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
   ];
 
   override connectedCallback() {
@@ -150,7 +168,7 @@ export class ContextForm extends LitElement {
     if (store.editingContext) {
       this.form = {
         name: store.editingContext.name,
-        color: store.editingContext.color || "#CE93D8",
+        color: (store.editingContext.color || "#CE93D8").toUpperCase(),
         timeWindows: store.editingContext.time_windows
           ? JSON.parse(JSON.stringify(store.editingContext.time_windows))
           : [],
@@ -213,7 +231,7 @@ export class ContextForm extends LitElement {
   private async handleDelete() {
     if (
       store.editingContext &&
-      confirm("Delete this context? Tasks will have their context removed.")
+      confirm("delete this context? tasks will have their context removed.")
     ) {
       await store.deleteContext(store.editingContext.id);
     }
@@ -228,7 +246,20 @@ export class ContextForm extends LitElement {
           if ((e.target as HTMLElement).nodeName === "DIALOG") this.close();
         }}"
       >
-        <h2>${isEditing ? "Edit Context" : "New Context"}</h2>
+        <div class="dialog-header">
+          <h2>${isEditing ? "edit context" : "create context"}</h2>
+          <label class="color-pill" style="background: ${this.form.color}">
+            <span>${this.form.color.toUpperCase()}</span>
+            <input
+              type="color"
+              .value="${this.form.color}"
+              @input="${(e: Event) => (this.form = {
+                ...this.form,
+                color: (e.target as HTMLInputElement).value.toUpperCase(),
+              })}"
+            />
+          </label>
+        </div>
 
         <form
           @submit="${this.handleSubmit}"
@@ -245,7 +276,7 @@ export class ContextForm extends LitElement {
               float-label="always"
               hide-subscript="always"
             >
-              <label slot="label" for="context-name">Name</label>
+              <label slot="label" for="context-name">context name</label>
               <input
                 id="context-name"
                 type="text"
@@ -255,44 +286,29 @@ export class ContextForm extends LitElement {
                   name: (e.target as HTMLInputElement).value,
                 })}"
                 required
-                placeholder="Context name"
+                placeholder="context name"
               />
             </m3e-form-field>
           </div>
 
           <div class="form-group">
-            <label>Color</label>
-            <div class="color-picker">
-              <input
-                type="color"
-                .value="${this.form.color}"
-                @input="${(e: Event) => (this.form = {
-                  ...this.form,
-                  color: (e.target as HTMLInputElement).value,
-                })}"
-              />
-              <span class="color-value">${this.form.color}</span>
-            </div>
-          </div>
-
-          <div class="form-group">
             <div class="section-header">
-              <span class="section-title">Time Windows</span>
+              <span class="section-title">time windows</span>
               <m3e-button
                 variant="text"
                 type="button"
                 @click="${this.addTimeWindow}"
               >
-                + Add Window
+                + add window
               </m3e-button>
             </div>
             <p class="description">
-              Define when this context is active (e.g., work hours)
+              define when this context is active (e.g., work hours)
             </p>
 
             ${this.form.timeWindows.length === 0
               ? html`
-                <p class="empty-windows">No time windows (always active)</p>
+                <p class="empty-windows">no time windows (always active)</p>
               `
               : this.form.timeWindows.map(
                 (tw, i) =>
@@ -372,12 +388,12 @@ export class ContextForm extends LitElement {
                       name="delete"
                       variant="rounded"
                     ></m3e-icon>
-                    Delete
+                    delete
                   </m3e-button>
                 `
                 : null}
             </div>
-            <m3e-button variant="filled" type="submit"> Save </m3e-button>
+            <m3e-button variant="filled" type="submit"> save </m3e-button>
           </div>
         </form>
       </dialog>

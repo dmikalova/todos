@@ -9,23 +9,30 @@ export const filters = new Hono<AppEnv>();
 
 // Zod schemas
 
+const dueDateWithinSchema = z.object({
+  amount: z.number().int(),
+  unit: z.enum(["days", "weeks", "months", "years"]),
+});
+
 const filterCriteriaSchema = z.object({
   contexts: z.array(z.string().uuid()).optional(),
   projects: z.array(z.string().uuid()).optional(),
+  priorities: z.array(z.number().int().min(1).max(4)).optional(),
+  dueDateWithin: dueDateWithinSchema.optional(),
   tags: z.array(z.string()).optional(),
-  dueBefore: z.string().datetime().optional(),
-  dueAfter: z.string().datetime().optional(),
   completed: z.boolean().optional(),
   hasRecurrence: z.boolean().optional(),
 });
 
 const createFilterSchema = z.object({
   name: z.string().min(1).max(100),
+  color: z.string().max(20).optional(),
   criteria: filterCriteriaSchema,
 });
 
 const updateFilterSchema = z.object({
   name: z.string().min(1).max(100).optional(),
+  color: z.string().max(20).nullable().optional(),
   criteria: filterCriteriaSchema.optional(),
 });
 
@@ -35,6 +42,7 @@ interface SavedFilter {
   id: string;
   user_id: string;
   name: string;
+  color: string | null;
   filter: Record<string, unknown>;
   created_at: Date;
 }
@@ -52,13 +60,15 @@ filters.post("/", async (c) => {
     );
   }
 
-  const { name, criteria } = result.data;
+  const { name, color, criteria } = result.data;
 
   const filter = await withDb(
     async (sql: SqlQuery) => {
       const [created] = await sql<SavedFilter[]>`
-      INSERT INTO saved_filters (user_id, name, filter)
-      VALUES (${session.userId}, ${name}, ${sql.json(criteria)})
+      INSERT INTO saved_filters (user_id, name, color, filter)
+      VALUES (${session.userId}, ${name}, ${color ?? null}, ${
+        sql.json(criteria)
+      })
       RETURNING *
     `;
       return created;
@@ -137,6 +147,7 @@ filters.patch("/:id", async (c) => {
       const [updated] = await sql<SavedFilter[]>`
       UPDATE saved_filters SET
         name = COALESCE(${updates.name ?? null}, name),
+        color = ${updates.color !== undefined ? updates.color : existing.color},
         filter = COALESCE(${
         updates.criteria ? sql.json(updates.criteria) : null
       }, filter)
@@ -195,9 +206,9 @@ filters.post("/:id/apply", async (c) => {
       const criteria = filter.filter as {
         contexts?: string[];
         projects?: string[];
+        priorities?: number[];
+        dueDateWithin?: { amount: number; unit: string };
         tags?: string[];
-        dueBefore?: string;
-        dueAfter?: string;
         completed?: boolean;
         hasRecurrence?: boolean;
       };
@@ -206,6 +217,7 @@ filters.post("/:id/apply", async (c) => {
       interface TaskRow {
         id: string;
         title: string;
+        priority: number;
         due_date: Date | null;
         completed_at: Date | null;
         project_id: string | null;
@@ -228,23 +240,20 @@ filters.post("/:id/apply", async (c) => {
         );
       }
 
+      if (criteria.priorities && criteria.priorities.length > 0) {
+        tasks = tasks.filter((t) => criteria.priorities!.includes(t.priority));
+      }
+
       if (criteria.completed !== undefined) {
         tasks = tasks.filter(
           (t) => (t.completed_at !== null) === criteria.completed,
         );
       }
 
-      if (criteria.dueBefore) {
-        const before = new Date(criteria.dueBefore);
+      if (criteria.dueDateWithin) {
+        const cutoff = computeCutoffDate(criteria.dueDateWithin);
         tasks = tasks.filter((t) => {
-          return t.due_date && new Date(t.due_date) <= before;
-        });
-      }
-
-      if (criteria.dueAfter) {
-        const after = new Date(criteria.dueAfter);
-        tasks = tasks.filter((t) => {
-          return t.due_date && new Date(t.due_date) >= after;
+          return t.due_date && new Date(t.due_date) <= cutoff;
         });
       }
 
@@ -259,3 +268,32 @@ filters.post("/:id/apply", async (c) => {
 
   return c.json(result);
 });
+
+/** Compute a cutoff date from a relative duration. amount=0 with unit=days means end of today. */
+function computeCutoffDate(within: { amount: number; unit: string }): Date {
+  const now = new Date();
+  const cutoff = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
+  switch (within.unit) {
+    case "days":
+      cutoff.setDate(cutoff.getDate() + within.amount);
+      break;
+    case "weeks":
+      cutoff.setDate(cutoff.getDate() + within.amount * 7);
+      break;
+    case "months":
+      cutoff.setMonth(cutoff.getMonth() + within.amount);
+      break;
+    case "years":
+      cutoff.setFullYear(cutoff.getFullYear() + within.amount);
+      break;
+  }
+  return cutoff;
+}

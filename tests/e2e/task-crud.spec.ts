@@ -14,16 +14,16 @@ import { expect, test } from "./run.ts";
 test("Task CRUD - create task via form", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/tasks");
 
-  // Click "New Task" button
-  await clickButton(page, "New Task");
+  // Click "add task" button
+  await clickButton(page, "add task");
 
   // Fill task form
   const taskTitle = testTaskTitle("E2E Create Task");
-  await fillField(page, "Title", taskTitle);
-  await fillField(page, "Description", "Test description from E2E");
+  await fillField(page, "task", taskTitle);
+  await fillField(page, "description", "Test description from E2E");
 
   // Submit form
-  await clickButton(page, "Save");
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Verify task appears in list
@@ -36,10 +36,10 @@ test("Task CRUD - edit task", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/tasks");
 
   // Create a task first
-  await clickButton(page, "New Task");
+  await clickButton(page, "add task");
   const originalTitle = testTaskTitle("E2E Edit Original");
-  await fillField(page, "Title", originalTitle);
-  await clickButton(page, "Save");
+  await fillField(page, "task", originalTitle);
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Click on the task to edit
@@ -48,8 +48,8 @@ test("Task CRUD - edit task", async ({ page, baseUrl }) => {
 
   // Update title
   const newTitle = testTaskTitle("E2E Edit Updated");
-  await fillField(page, "Title", newTitle);
-  await clickButton(page, "Save");
+  await fillField(page, "task", newTitle);
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Verify updated title appears
@@ -62,10 +62,10 @@ test("Task CRUD - complete task", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/tasks");
 
   // Create a task
-  await clickButton(page, "New Task");
+  await clickButton(page, "add task");
   const taskTitle = testTaskTitle("E2E Complete Task");
-  await fillField(page, "Title", taskTitle);
-  await clickButton(page, "Save");
+  await fillField(page, "task", taskTitle);
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Find task and click complete button
@@ -85,10 +85,10 @@ test("Task CRUD - delete task", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/tasks");
 
   // Create a task
-  await clickButton(page, "New Task");
+  await clickButton(page, "add task");
   const taskTitle = testTaskTitle("E2E Delete Task");
-  await fillField(page, "Title", taskTitle);
-  await clickButton(page, "Save");
+  await fillField(page, "task", taskTitle);
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Verify task exists
@@ -97,10 +97,10 @@ test("Task CRUD - delete task", async ({ page, baseUrl }) => {
 
   // Click on task to open edit, then delete
   await taskCard.first().click();
-  await clickButton(page, "Delete");
+  await clickButton(page, "delete");
 
   // Confirm deletion in dialog
-  await clickButton(page, "Confirm");
+  await clickButton(page, "confirm");
   await waitForNetworkIdle(page);
 
   // Verify task no longer appears
@@ -113,10 +113,10 @@ test("Task CRUD - undo complete", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/tasks");
 
   // Create and complete a task
-  await clickButton(page, "New Task");
+  await clickButton(page, "add task");
   const taskTitle = testTaskTitle("E2E Undo Complete");
-  await fillField(page, "Title", taskTitle);
-  await clickButton(page, "Save");
+  await fillField(page, "task", taskTitle);
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Complete it

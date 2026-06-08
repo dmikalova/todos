@@ -40,7 +40,7 @@ export class TaskForm extends LitElement {
       width: min(48rem, calc(100vw - 48px));
       max-height: min(90vh, calc(100dvh - 48px));
       overflow-y: auto;
-      background: var(--md-sys-color-surface-container);
+      background: var(--md-sys-color-surface-container-lowest);
       color: var(--md-sys-color-on-surface);
       border-radius: var(--md-sys-shape-corner-extra-large);
       box-shadow: var(--md-sys-elevation-level4);
@@ -63,6 +63,14 @@ export class TaskForm extends LitElement {
 
     .form-group {
       margin-bottom: 24px;
+    }
+
+    .form-group > label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--md-sys-color-on-surface-variant);
+      margin-bottom: 8px;
     }
 
     m3e-form-field {
@@ -150,7 +158,7 @@ export class TaskForm extends LitElement {
       border: none;
       padding: 24px;
       width: min(24rem, calc(100vw - 48px));
-      background: var(--md-sys-color-surface-container);
+      background: var(--md-sys-color-surface-container-lowest);
       color: var(--md-sys-color-on-surface);
       border-radius: var(--md-sys-shape-corner-extra-large);
       box-shadow: var(--md-sys-elevation-level5);
@@ -183,6 +191,9 @@ export class TaskForm extends LitElement {
 
   @state()
   accessor showConfirmDiscard = false;
+
+  @state()
+  accessor showConfirmDelete = false;
 
   @state()
   accessor form: TaskFormData = {
@@ -271,13 +282,25 @@ export class TaskForm extends LitElement {
   override updated(changed: Map<string, unknown>) {
     if (changed.has("showConfirmDiscard") && this.showConfirmDiscard) {
       const confirmDialog = this.renderRoot.querySelector(
-        ".confirm-dialog",
+        ".confirm-dialog.discard",
       ) as HTMLDialogElement | null;
       if (confirmDialog && !confirmDialog.open) {
         confirmDialog.showModal();
         confirmDialog.addEventListener("cancel", (e) => {
           e.preventDefault();
           this.cancelDiscard();
+        });
+      }
+    }
+    if (changed.has("showConfirmDelete") && this.showConfirmDelete) {
+      const confirmDialog = this.renderRoot.querySelector(
+        ".confirm-dialog.delete",
+      ) as HTMLDialogElement | null;
+      if (confirmDialog && !confirmDialog.open) {
+        confirmDialog.showModal();
+        confirmDialog.addEventListener("cancel", (e) => {
+          e.preventDefault();
+          this.showConfirmDelete = false;
         });
       }
     }
@@ -310,7 +333,7 @@ export class TaskForm extends LitElement {
       "#task-title",
     ) as HTMLTextAreaElement | null;
     if (!this.form.title.trim()) {
-      titleEl?.setCustomValidity("Title is required");
+      titleEl?.setCustomValidity("title is required");
       titleEl?.reportValidity();
       return;
     }
@@ -333,37 +356,39 @@ export class TaskForm extends LitElement {
     );
   }
 
-  private async handleDelete() {
-    if (store.editingTask && confirm("Delete this task?")) {
+  private handleDelete() {
+    this.showConfirmDelete = true;
+  }
+
+  private async confirmDelete() {
+    this.showConfirmDelete = false;
+    if (store.editingTask) {
       await store.deleteTask(store.editingTask.id);
     }
   }
 
-  private toggleDay(day: number) {
-    const idx = this.form.recurrence_days.indexOf(day);
-    if (idx === -1) {
-      this.form = {
-        ...this.form,
-        recurrence_days: [...this.form.recurrence_days, day],
-      };
-    } else {
-      this.form = {
-        ...this.form,
-        recurrence_days: this.form.recurrence_days.filter((d) => d !== day),
-      };
-    }
+  private handleDaysChange(e: Event) {
+    const segmentedButton = e.currentTarget as HTMLElement;
+    const segments = segmentedButton.querySelectorAll("m3e-button-segment");
+    const recurrence_days: number[] = [];
+    segments.forEach((seg) => {
+      if ((seg as HTMLElement & { checked: boolean }).checked) {
+        recurrence_days.push(Number(seg.getAttribute("data-value")));
+      }
+    });
+    this.form = { ...this.form, recurrence_days };
   }
 
   override render() {
     const isEditing = !!store.editingTask;
     const weekDays = [
-      { value: 0, label: "Sun" },
-      { value: 1, label: "Mon" },
-      { value: 2, label: "Tue" },
-      { value: 3, label: "Wed" },
-      { value: 4, label: "Thu" },
-      { value: 5, label: "Fri" },
-      { value: 6, label: "Sat" },
+      { value: 0, label: "sun" },
+      { value: 1, label: "mon" },
+      { value: 2, label: "tue" },
+      { value: 3, label: "wed" },
+      { value: 4, label: "thu" },
+      { value: 5, label: "fri" },
+      { value: 6, label: "sat" },
     ];
 
     return html`
@@ -372,7 +397,7 @@ export class TaskForm extends LitElement {
           if ((e.target as HTMLElement).nodeName === "DIALOG") this.close();
         }}"
       >
-        <h2>${isEditing ? "edit task" : "new task"}</h2>
+        <h2>${isEditing ? "edit task" : "create task"}</h2>
         <form
           @submit="${this.handleSubmit}"
           @input="${this.handleFieldInput}"
@@ -389,7 +414,7 @@ export class TaskForm extends LitElement {
               float-label="always"
               hide-subscript="${ifDefined(this.hideSubscript("task-title"))}"
             >
-              <label slot="label" for="task-title">Task</label>
+              <label slot="label" for="task-title">task</label>
               <textarea
                 id="task-title"
                 rows="1"
@@ -398,7 +423,7 @@ export class TaskForm extends LitElement {
                   ...this.form,
                   title: (e.target as HTMLTextAreaElement).value,
                 })}"
-                placeholder="Task title"
+                placeholder="task title"
               ></textarea>
             </m3e-form-field>
             <m3e-textarea-autosize for="task-title"></m3e-textarea-autosize>
@@ -412,7 +437,7 @@ export class TaskForm extends LitElement {
                 this.hideSubscript("project-select"),
               )}"
             >
-              <label slot="label" for="project-select">Project</label>
+              <label slot="label" for="project-select">project</label>
               <m3e-select
                 id="project-select"
                 @change="${(e: Event) => {
@@ -431,7 +456,7 @@ export class TaskForm extends LitElement {
                   variant="rounded"
                 ></m3e-icon>
                 <m3e-option value="inbox" ?selected="${!this.form
-                  .project_id}">Inbox</m3e-option>
+                  .project_id}">inbox</m3e-option>
                 ${store.projects.map(
                   (p) =>
                     html`
@@ -451,7 +476,7 @@ export class TaskForm extends LitElement {
               float-label="always"
               hide-subscript="${ifDefined(this.hideSubscript("due-date"))}"
             >
-              <label slot="label" for="due-date">Due Date</label>
+              <label slot="label" for="due-date">due date</label>
               <input
                 id="due-date"
                 autocomplete="off"
@@ -497,7 +522,7 @@ export class TaskForm extends LitElement {
                 this.hideSubscript("recurrence-select"),
               )}"
             >
-              <label slot="label" for="recurrence-select">Recurrence</label>
+              <label slot="label" for="recurrence-select">recurrence</label>
               <m3e-select
                 id="recurrence-select"
                 @change="${(e: Event) => {
@@ -518,23 +543,23 @@ export class TaskForm extends LitElement {
                 <m3e-option
                   value="none"
                   ?selected="${!this.form.recurrence_type}"
-                >None</m3e-option>
+                >none</m3e-option>
                 <m3e-option
                   value="daily"
                   ?selected="${this.form.recurrence_type === "daily"}"
-                >Daily</m3e-option>
+                >daily</m3e-option>
                 <m3e-option
                   value="weekly"
                   ?selected="${this.form.recurrence_type === "weekly"}"
-                >Weekly</m3e-option>
+                >weekly</m3e-option>
                 <m3e-option
                   value="monthly"
                   ?selected="${this.form.recurrence_type === "monthly"}"
-                >Monthly</m3e-option>
+                >monthly</m3e-option>
                 <m3e-option
                   value="yearly"
                   ?selected="${this.form.recurrence_type === "yearly"}"
-                >Yearly</m3e-option>
+                >yearly</m3e-option>
               </m3e-select>
             </m3e-form-field>
           </div>
@@ -550,7 +575,7 @@ export class TaskForm extends LitElement {
                       this.hideSubscript("interval"),
                     )}"
                   >
-                    <label slot="label" for="interval">Every</label>
+                    <label slot="label" for="interval">every</label>
                     <input
                       id="interval"
                       type="number"
@@ -586,13 +611,7 @@ export class TaskForm extends LitElement {
                 <div class="day-buttons">
                   <m3e-segmented-button
                     multi
-                    @change="${(e: Event) => {
-                      const segment = e.target as HTMLElement;
-                      const idx = [
-                        ...segment.parentElement!.children,
-                      ].indexOf(segment);
-                      if (idx !== -1) this.toggleDay(idx);
-                    }}"
+                    @change="${this.handleDaysChange}"
                   >
                     ${weekDays.map(
                       (day) =>
@@ -601,6 +620,7 @@ export class TaskForm extends LitElement {
                             .checked="${this.form.recurrence_days.includes(
                               day.value,
                             )}"
+                            data-value="${day.value}"
                           >
                             ${day.label}
                           </m3e-button-segment>
@@ -613,6 +633,7 @@ export class TaskForm extends LitElement {
             : null}
 
           <div class="form-group">
+            <label>priority</label>
             <m3e-segmented-button class="priority">
               ${[1, 2, 3].map(
                 (p) =>
@@ -647,14 +668,14 @@ export class TaskForm extends LitElement {
                       name="delete"
                       variant="rounded"
                     ></m3e-icon>
-                    Delete
+                    delete
                   </m3e-button>
                 `
                 : null}
             </div>
             <m3e-button variant="filled" type="submit">
               <m3e-icon slot="icon" name="save" variant="rounded"></m3e-icon>
-              Save
+              save
             </m3e-button>
           </div>
         </form>
@@ -663,7 +684,7 @@ export class TaskForm extends LitElement {
       ${this.showConfirmDiscard
         ? html`
           <dialog
-            class="confirm-dialog"
+            class="confirm-dialog discard"
             @click="${(e: Event) => {
               if (
                 (e.target as HTMLElement).classList.contains("confirm-dialog")
@@ -672,14 +693,14 @@ export class TaskForm extends LitElement {
               }
             }}"
           >
-            <h3>Discard unsaved changes?</h3>
+            <h3>discard unsaved changes?</h3>
             <div class="confirm-actions">
               <m3e-button
                 variant="text"
                 type="button"
                 @click="${this.cancelDiscard}"
               >
-                Continue editing
+                continue editing
               </m3e-button>
               <m3e-button
                 class="discard-button"
@@ -687,7 +708,41 @@ export class TaskForm extends LitElement {
                 type="button"
                 @click="${this.confirmDiscard}"
               >
-                Discard
+                discard
+              </m3e-button>
+            </div>
+          </dialog>
+        `
+        : null} ${this.showConfirmDelete
+        ? html`
+          <dialog
+            class="confirm-dialog delete"
+            @click="${(e: Event) => {
+              if (
+                (e.target as HTMLElement).classList.contains("confirm-dialog")
+              ) {
+                this.showConfirmDelete = false;
+              }
+            }}"
+          >
+            <h3>delete this task?</h3>
+            <div class="confirm-actions">
+              <m3e-button
+                variant="text"
+                type="button"
+                @click="${() => {
+                  this.showConfirmDelete = false;
+                }}"
+              >
+                cancel
+              </m3e-button>
+              <m3e-button
+                class="discard-button"
+                variant="filled"
+                type="button"
+                @click="${this.confirmDelete}"
+              >
+                delete
               </m3e-button>
             </div>
           </dialog>

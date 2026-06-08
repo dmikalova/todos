@@ -11,6 +11,7 @@ import { store } from "../store.ts";
 
 // Import all components
 import "./modals/context-form.ts";
+import "./modals/filter-form.ts";
 import "./modals/project-form.ts";
 import "./modals/search-modal.ts";
 import "./modals/task-form.ts";
@@ -19,6 +20,7 @@ import "./todo-sidebar.ts";
 import "./todo-toasts.ts";
 import "./views/context-view.ts";
 import "./views/due-view.ts";
+import "./views/filter-view.ts";
 import "./views/history-view.ts";
 import "./views/inbox-view.ts";
 import "./views/next-view.ts";
@@ -182,6 +184,7 @@ export class TodoApp extends StoreElement {
       store.showTaskForm ||
       store.showProjectForm ||
       store.showContextForm ||
+      store.showFilterForm ||
       store.showSearch
     ) {
       return;
@@ -211,6 +214,9 @@ export class TodoApp extends StoreElement {
         (c) => c.id === store.selectedContextId,
       );
       if (context) store.setShowContextForm(true, context);
+    } else if (store.currentTab === "filter") {
+      const filter = store.selectedFilter;
+      if (filter) store.setShowFilterForm(true, filter);
     }
   }
 
@@ -284,13 +290,21 @@ export class TodoApp extends StoreElement {
           ></span>
         `;
       }
+      case "filter":
+        return html`
+          <m3e-icon
+            class="title-icon"
+            name="filter_list"
+            variant="rounded"
+          ></m3e-icon>
+        `;
       default:
         return null;
     }
   }
 
   private get showFilter(): boolean {
-    return ["inbox", "project", "context"].includes(store.currentTab);
+    return ["inbox", "project", "context", "filter"].includes(store.currentTab);
   }
 
   private handleFilterChange(value: string) {
@@ -375,6 +389,10 @@ export class TodoApp extends StoreElement {
         return html`
           <context-view></context-view>
         `;
+      case "filter":
+        return html`
+          <filter-view></filter-view>
+        `;
       case "history":
         return html`
           <history-view></history-view>
@@ -422,6 +440,10 @@ export class TodoApp extends StoreElement {
         : null} ${store.showContextForm
         ? html`
           <context-form></context-form>
+        `
+        : null} ${store.showFilterForm
+        ? html`
+          <filter-form></filter-form>
         `
         : null} ${store.showSearch
         ? html`

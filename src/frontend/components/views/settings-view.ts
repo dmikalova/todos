@@ -105,20 +105,20 @@ export class SettingsView extends LitElement {
   override render() {
     return html`
       <div class="settings-card">
-        <h2>Data Management</h2>
+        <h2>data management</h2>
 
         <div class="section">
-          <h3>Export</h3>
+          <h3>export</h3>
           <button class="btn btn-primary" @click="${this.handleExport}">
-            Export All Data
+            export all data
           </button>
           <p class="description">
-            Download all tasks, projects, and contexts as JSON
+            download all tasks, projects, and contexts as JSON
           </p>
         </div>
 
         <div class="section">
-          <h3>Import</h3>
+          <h3>import</h3>
           <input
             type="file"
             id="import-file"
@@ -126,10 +126,10 @@ export class SettingsView extends LitElement {
             @change="${this.handleFileChange}"
           />
           <button class="btn btn-secondary" @click="${this.handleImportClick}">
-            Import Data
+            import data
           </button>
           <p class="description">
-            Import tasks and settings from a JSON export file
+            import tasks and settings from a JSON export file
           </p>
         </div>
       </div>

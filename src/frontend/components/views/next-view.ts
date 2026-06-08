@@ -224,8 +224,8 @@ export class NextView extends StoreElement {
               d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <h3 class="empty-title">All caught up!</h3>
-          <p class="empty-text">No pending tasks.</p>
+          <h3 class="empty-title">all caught up!</h3>
+          <p class="empty-text">no pending tasks.</p>
         </div>
       `;
     }
@@ -303,7 +303,7 @@ export class NextView extends StoreElement {
               d="M5 13l4 4L19 7"
             />
           </svg>
-          Complete
+          complete
         </button>
         <button
           class="btn btn-skip"
@@ -326,18 +326,18 @@ export class NextView extends StoreElement {
               d="M13 5l7 7-7 7M5 5l7 7-7 7"
             />
           </svg>
-          Skip
+          skip
         </button>
         <select
           class="defer-select"
           .value="${this.deferOption}"
           @change="${this.handleDefer}"
         >
-          <option value="">Defer...</option>
+          <option value="">defer...</option>
           <option value="1h">1 hour</option>
           <option value="3h">3 hours</option>
-          <option value="tomorrow">Tomorrow</option>
-          <option value="nextweek">Next week</option>
+          <option value="tomorrow">tomorrow</option>
+          <option value="nextweek">next week</option>
         </select>
       </div>
     `;

@@ -25,7 +25,7 @@ export class ProjectForm extends LitElement {
       width: min(32rem, calc(100vw - 48px));
       max-height: min(90vh, calc(100dvh - 48px));
       overflow-y: auto;
-      background: var(--md-sys-color-surface-container);
+      background: var(--md-sys-color-surface-container-lowest);
       color: var(--md-sys-color-on-surface);
       border-radius: var(--md-sys-shape-corner-extra-large);
       box-shadow: var(--md-sys-elevation-level4);
@@ -37,9 +37,16 @@ export class ProjectForm extends LitElement {
     }
 
     dialog h2 {
-      margin: 0 0 16px;
+      margin: 0;
       font-size: 24px;
       font-weight: 400;
+    }
+
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
     }
 
     .form-group {
@@ -94,7 +101,7 @@ export class ProjectForm extends LitElement {
   @state()
   accessor form = {
     name: "",
-    color: "#4caf50",
+    color: "#4CAF50",
     context_id: null as string | null,
     parent_project_id: null as string | null,
   };
@@ -104,7 +111,7 @@ export class ProjectForm extends LitElement {
     if (store.editingProject) {
       this.form = {
         name: store.editingProject.name,
-        color: store.editingProject.color || "#4caf50",
+        color: (store.editingProject.color || "#4CAF50").toUpperCase(),
         context_id: store.editingProject.context_id || null,
         parent_project_id: store.editingProject.parent_project_id || null,
       };
@@ -164,7 +171,7 @@ export class ProjectForm extends LitElement {
         }
       }
     }
-    return "None";
+    return "none";
   }
 
   private async handleSubmit(e: Event) {
@@ -180,7 +187,7 @@ export class ProjectForm extends LitElement {
   private async handleDelete() {
     if (
       store.editingProject &&
-      confirm("Delete this project? Tasks will be moved to Inbox.")
+      confirm("delete this project? tasks will be moved to inbox.")
     ) {
       await store.deleteProject(store.editingProject.id);
     }
@@ -195,7 +202,20 @@ export class ProjectForm extends LitElement {
           if ((e.target as HTMLElement).nodeName === "DIALOG") this.close();
         }}"
       >
-        <h2>${isEditing ? "Edit Project" : "New Project"}</h2>
+        <div class="dialog-header">
+          <h2>${isEditing ? "edit project" : "create project"}</h2>
+          <label class="color-pill" style="background: ${this.form.color}">
+            <span>${this.form.color.toUpperCase()}</span>
+            <input
+              type="color"
+              .value="${this.form.color}"
+              @input="${(e: Event) => (this.form = {
+                ...this.form,
+                color: (e.target as HTMLInputElement).value.toUpperCase(),
+              })}"
+            />
+          </label>
+        </div>
 
         <form
           @submit="${this.handleSubmit}"
@@ -212,7 +232,7 @@ export class ProjectForm extends LitElement {
               float-label="always"
               hide-subscript="always"
             >
-              <label slot="label" for="parent-select">Parent Project</label>
+              <label slot="label" for="parent-select">parent project</label>
               <m3e-select
                 id="parent-select"
                 @change="${(e: Event) => {
@@ -233,7 +253,7 @@ export class ProjectForm extends LitElement {
                 <m3e-option
                   value="none"
                   ?selected="${!this.form.parent_project_id}"
-                >None</m3e-option>
+                >none</m3e-option>
                 ${this._getAvailableParents().map(
                   (p) =>
                     html`
@@ -253,7 +273,7 @@ export class ProjectForm extends LitElement {
               float-label="always"
               hide-subscript="always"
             >
-              <label slot="label" for="project-name">Name</label>
+              <label slot="label" for="project-name">project name</label>
               <input
                 id="project-name"
                 type="text"
@@ -263,7 +283,7 @@ export class ProjectForm extends LitElement {
                   name: (e.target as HTMLInputElement).value,
                 })}"
                 required
-                placeholder="Project name"
+                placeholder="project name"
               />
             </m3e-form-field>
           </div>
@@ -274,7 +294,7 @@ export class ProjectForm extends LitElement {
               float-label="always"
               hide-subscript="always"
             >
-              <label slot="label" for="context-select">Context</label>
+              <label slot="label" for="context-select">context</label>
               <m3e-select
                 id="context-select"
                 @change="${(e: Event) => {
@@ -307,20 +327,6 @@ export class ProjectForm extends LitElement {
             </m3e-form-field>
           </div>
 
-          <div class="form-group">
-            <label class="color-pill" style="background: ${this.form.color}">
-              <span>${this.form.color}</span>
-              <input
-                type="color"
-                .value="${this.form.color}"
-                @input="${(e: Event) => (this.form = {
-                  ...this.form,
-                  color: (e.target as HTMLInputElement).value,
-                })}"
-              />
-            </label>
-          </div>
-
           <div class="actions">
             <div>
               ${isEditing
@@ -336,14 +342,14 @@ export class ProjectForm extends LitElement {
                       name="delete"
                       variant="rounded"
                     ></m3e-icon>
-                    Delete
+                    delete
                   </m3e-button>
                 `
                 : null}
             </div>
             <m3e-button variant="filled" type="submit">
               <m3e-icon slot="icon" name="save" variant="rounded"></m3e-icon>
-              Save
+              save
             </m3e-button>
           </div>
         </form>

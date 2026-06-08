@@ -126,7 +126,7 @@ export class HistoryView extends StoreElement {
       <div class="history-list">
         ${store.history.length === 0
           ? html`
-            <div class="empty">No history yet</div>
+            <div class="empty">no history yet</div>
           `
           : store.history.map(
             (entry) =>

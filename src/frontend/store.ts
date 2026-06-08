@@ -74,6 +74,29 @@ export interface UserProfile {
   picture?: string;
 }
 
+export interface DueDateWithin {
+  amount: number;
+  unit: "days" | "weeks" | "months" | "years";
+}
+
+export interface FilterCriteria {
+  priorities?: number[];
+  projects?: string[];
+  dueDateWithin?: DueDateWithin;
+  contexts?: string[];
+  tags?: string[];
+  completed?: boolean;
+  hasRecurrence?: boolean;
+}
+
+export interface SavedFilter {
+  id: string;
+  name: string;
+  color: string | null;
+  filter: FilterCriteria;
+  created_at: string;
+}
+
 type Listener = () => void;
 
 class Store {
@@ -81,6 +104,7 @@ class Store {
   private _tasks: Task[] = [];
   private _projects: Project[] = [];
   private _contexts: Context[] = [];
+  private _savedFilters: SavedFilter[] = [];
   private _history: HistoryEntry[] = [];
   private _historyTotal = 0;
   private _historyLoading = false;
@@ -93,14 +117,17 @@ class Store {
   private _currentTab = "next";
   private _selectedProjectId: string | null = null;
   private _selectedContextId: string | null = null;
+  private _selectedFilterId: string | null = null;
   private _sidebarOpen = false;
   private _showTaskForm = false;
   private _showProjectForm = false;
   private _showContextForm = false;
+  private _showFilterForm = false;
   private _showSearch = false;
   private _editingTask: Task | null = null;
   private _editingProject: Project | null = null;
   private _editingContext: Context | null = null;
+  private _editingFilter: SavedFilter | null = null;
   private _toasts: Toast[] = [];
   private _taskFilter = { completed: "false" };
   private _collapsedProjectIds: Set<string> = new Set();
@@ -175,6 +202,22 @@ class Store {
   }
   get editingContext() {
     return this._editingContext;
+  }
+  get savedFilters() {
+    return this._savedFilters;
+  }
+  get showFilterForm() {
+    return this._showFilterForm;
+  }
+  get editingFilter() {
+    return this._editingFilter;
+  }
+  get selectedFilterId() {
+    return this._selectedFilterId;
+  }
+  get selectedFilter() {
+    return this._savedFilters.find((f) => f.id === this._selectedFilterId) ||
+      null;
   }
   get toasts() {
     return this._toasts;
@@ -330,6 +373,70 @@ class Store {
     return this.dueTasks.length;
   }
 
+  get filteredTasks(): Task[] {
+    const filter = this.selectedFilter;
+    if (!filter) return [];
+    const criteria = filter.filter;
+    let tasks = this._tasks.filter((t) => !t.completed_at);
+
+    if (criteria.priorities && criteria.priorities.length > 0) {
+      tasks = tasks.filter((t) => criteria.priorities!.includes(t.priority));
+    }
+    if (criteria.projects && criteria.projects.length > 0) {
+      tasks = tasks.filter((t) =>
+        criteria.projects!.includes(t.project_id || "")
+      );
+    }
+    if (criteria.dueDateWithin) {
+      const cutoff = this.computeCutoffDate(criteria.dueDateWithin);
+      tasks = tasks.filter((t) => {
+        return t.due_date && new Date(t.due_date) <= cutoff;
+      });
+    }
+    if (criteria.completed !== undefined) {
+      tasks = tasks.filter(
+        (t) => (t.completed_at !== null) === criteria.completed,
+      );
+    }
+    return tasks.sort(
+      (a, b) =>
+        (a.due_date ? new Date(a.due_date).getTime() : Infinity) -
+        (b.due_date ? new Date(b.due_date).getTime() : Infinity),
+    );
+  }
+
+  get filteredTaskCount(): number {
+    return this.filteredTasks.length;
+  }
+
+  private computeCutoffDate(within: DueDateWithin): Date {
+    const now = new Date();
+    const cutoff = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      23,
+      59,
+      59,
+      999,
+    );
+    switch (within.unit) {
+      case "days":
+        cutoff.setDate(cutoff.getDate() + within.amount);
+        break;
+      case "weeks":
+        cutoff.setDate(cutoff.getDate() + within.amount * 7);
+        break;
+      case "months":
+        cutoff.setMonth(cutoff.getMonth() + within.amount);
+        break;
+      case "years":
+        cutoff.setFullYear(cutoff.getFullYear() + within.amount);
+        break;
+    }
+    return cutoff;
+  }
+
   get projectTasks(): Task[] {
     if (!this._selectedProjectId) return [];
     return this._tasks.filter(
@@ -381,6 +488,12 @@ class Store {
         const c = this._contexts.find((c) => c.id === this._selectedContextId);
         return c?.name || "context";
       }
+      case "filter": {
+        const f = this._savedFilters.find(
+          (f) => f.id === this._selectedFilterId,
+        );
+        return f?.name || "filter";
+      }
       default:
         return "tasks";
     }
@@ -390,19 +503,20 @@ class Store {
     switch (this._currentTab) {
       case "next":
       case "inbox":
-        return "Tasks";
+        return "tasks";
       case "project":
-        return "Projects";
+        return "projects";
       case "context":
-        return "Contexts";
-      case "due":
-        return "Filters";
+        return "contexts";
+      case "filter":
+        return "filters";
     }
     return null;
   }
 
   get currentTitleEditable(): boolean {
-    return this._currentTab === "project" || this._currentTab === "context";
+    return this._currentTab === "project" || this._currentTab === "context" ||
+      this._currentTab === "filter";
   }
 
   // Subscribe to changes
@@ -422,7 +536,7 @@ class Store {
       ...options,
     });
     if (!res.ok) {
-      const error = await res.json().catch(() => ({ error: "Unknown error" }));
+      const error = await res.json().catch(() => ({ error: "unknown error" }));
       throw new Error(error.error || `HTTP ${res.status}`);
     }
     return res.json();
@@ -445,13 +559,21 @@ class Store {
     this._sidebarOpen = false;
     if (tab === "project") {
       this._selectedProjectId = id;
+      this._selectedFilterId = null;
       history.pushState({}, "", `/projects/${id}`);
     } else if (tab === "context") {
       this._selectedContextId = id;
+      this._selectedFilterId = null;
       history.pushState({}, "", `/contexts/${id}`);
+    } else if (tab === "filter") {
+      this._selectedFilterId = id;
+      this._selectedProjectId = null;
+      this._selectedContextId = null;
+      history.pushState({}, "", `/filters/${id}`);
     } else {
       this._selectedProjectId = null;
       this._selectedContextId = null;
+      this._selectedFilterId = null;
       history.pushState({}, "", `/${tab}`);
     }
     this.notify();
@@ -468,6 +590,9 @@ class Store {
       } else if (tab === "contexts" && id) {
         this._currentTab = "context";
         this._selectedContextId = id;
+      } else if (tab === "filters" && id) {
+        this._currentTab = "filter";
+        this._selectedFilterId = id;
       } else if (
         ["inbox", "next", "due", "history", "settings"].includes(tab)
       ) {
@@ -501,6 +626,12 @@ class Store {
     this.notify();
   }
 
+  setShowFilterForm(show: boolean, filter: SavedFilter | null = null) {
+    this._showFilterForm = show;
+    this._editingFilter = filter;
+    this.notify();
+  }
+
   setShowSearch(show: boolean) {
     this._showSearch = show;
     this.notify();
@@ -517,12 +648,13 @@ class Store {
     this.notify();
     this.restoreCollapsedState();
     try {
-      const [nextResult, tasks, projects, contexts, historyResult] =
+      const [nextResult, tasks, projects, contexts, filters, historyResult] =
         await Promise.all([
           this.api<{ tasks: Task[]; totalEligible: number }>("/next"),
           this.api<Task[]>("/tasks"),
           this.api<Project[]>("/projects"),
           this.api<Context[]>("/contexts"),
+          this.api<SavedFilter[]>("/filters"),
           this.api<{ entries: HistoryEntry[]; total: number }>(
             "/history?limit=100&offset=0",
           ),
@@ -531,10 +663,11 @@ class Store {
       this._tasks = tasks;
       this._projects = projects;
       this._contexts = contexts;
+      this._savedFilters = filters;
       this._history = historyResult.entries;
       this._historyTotal = historyResult.total;
     } catch (_e) {
-      this.showToast("Failed to load data", "error");
+      this.showToast("failed to load data", "error");
     } finally {
       this._loading = false;
       this.notify();
@@ -560,7 +693,7 @@ class Store {
       this._skippedTaskIds.clear();
       this.notify();
     } catch (_e) {
-      this.showToast("Failed to load next task", "error");
+      this.showToast("failed to load next task", "error");
     }
   }
 
@@ -569,7 +702,7 @@ class Store {
       this._tasks = await this.api<Task[]>("/tasks");
       this.notify();
     } catch (_e) {
-      this.showToast("Failed to load tasks", "error");
+      this.showToast("failed to load tasks", "error");
     }
   }
 
@@ -578,7 +711,7 @@ class Store {
       this._projects = await this.api<Project[]>("/projects");
       this.notify();
     } catch (_e) {
-      this.showToast("Failed to load projects", "error");
+      this.showToast("failed to load projects", "error");
     }
   }
 
@@ -594,7 +727,7 @@ class Store {
       });
       await this.fetchProjects();
     } catch {
-      this.showToast("Failed to move project", "error");
+      this.showToast("failed to move project", "error");
     }
   }
 
@@ -603,7 +736,7 @@ class Store {
       this._contexts = await this.api<Context[]>("/contexts");
       this.notify();
     } catch (_e) {
-      this.showToast("Failed to load contexts", "error");
+      this.showToast("failed to load contexts", "error");
     }
   }
 
@@ -616,7 +749,7 @@ class Store {
       this._historyTotal = result.total;
       this.notify();
     } catch (_e) {
-      this.showToast("Failed to load history", "error");
+      this.showToast("failed to load history", "error");
     }
   }
 
@@ -633,7 +766,7 @@ class Store {
       this._history = [...this._history, ...result.entries];
       this._historyTotal = result.total;
     } catch (_e) {
-      this.showToast("Failed to load more history", "error");
+      this.showToast("failed to load more history", "error");
     } finally {
       this._historyLoading = false;
       this.notify();
@@ -647,14 +780,14 @@ class Store {
       await this.api(`/tasks/${this.currentTask.id}/complete`, {
         method: "POST",
       });
-      this.showToast("Task completed!");
+      this.showToast("task completed!");
       await Promise.all([
         this.fetchNext(),
         this.fetchTasks(),
         this.fetchHistory(),
       ]);
     } catch (_e) {
-      this.showToast("Failed to complete task", "error");
+      this.showToast("failed to complete task", "error");
     }
   }
 
@@ -671,10 +804,10 @@ class Store {
         method: "POST",
         body: JSON.stringify({ duration }),
       });
-      this.showToast("Task deferred");
+      this.showToast("task deferred");
       await this.fetchNext();
     } catch (_e) {
-      this.showToast("Failed to defer task", "error");
+      this.showToast("failed to defer task", "error");
     }
   }
 
@@ -690,7 +823,7 @@ class Store {
         this.fetchHistory(),
       ]);
     } catch (_e) {
-      this.showToast("Failed to update task", "error");
+      this.showToast("failed to update task", "error");
     }
   }
 
@@ -715,7 +848,7 @@ class Store {
         });
         console.log("Update result:", result);
         taskId = this._editingTask.id;
-        this.showToast("Task updated");
+        this.showToast("task updated");
       } else {
         console.log("Creating new task");
         const created = await this.api<{ id: string }>("/tasks", {
@@ -724,7 +857,7 @@ class Store {
         });
         console.log("Create result:", created);
         taskId = created.id;
-        this.showToast("Task created");
+        this.showToast("task created");
       }
 
       // Handle recurrence
@@ -739,7 +872,7 @@ class Store {
         this.fetchProjects(),
       ]);
     } catch (_e) {
-      this.showToast("Failed to save task", "error");
+      this.showToast("failed to save task", "error");
     }
   }
 
@@ -782,7 +915,7 @@ class Store {
   async deleteTask(id: string) {
     try {
       await this.api(`/tasks/${id}`, { method: "DELETE" });
-      this.showToast("Task deleted");
+      this.showToast("task deleted");
       this._showTaskForm = false;
       this._editingTask = null;
       await Promise.all([
@@ -791,7 +924,7 @@ class Store {
         this.fetchProjects(),
       ]);
     } catch (_e) {
-      this.showToast("Failed to delete task", "error");
+      this.showToast("failed to delete task", "error");
     }
   }
 
@@ -803,26 +936,26 @@ class Store {
           method: "PATCH",
           body: JSON.stringify(data),
         });
-        this.showToast("Project updated");
+        this.showToast("project updated");
       } else {
         await this.api("/projects", {
           method: "POST",
           body: JSON.stringify(data),
         });
-        this.showToast("Project created");
+        this.showToast("project created");
       }
       this._showProjectForm = false;
       this._editingProject = null;
       await this.fetchProjects();
     } catch (_e) {
-      this.showToast("Failed to save project", "error");
+      this.showToast("failed to save project", "error");
     }
   }
 
   async deleteProject(id: string) {
     try {
       await this.api(`/projects/${id}`, { method: "DELETE" });
-      this.showToast("Project deleted");
+      this.showToast("project deleted");
       this._showProjectForm = false;
       this._editingProject = null;
       if (this._selectedProjectId === id) {
@@ -830,7 +963,7 @@ class Store {
       }
       await Promise.all([this.fetchProjects(), this.fetchTasks()]);
     } catch (_e) {
-      this.showToast("Failed to delete project", "error");
+      this.showToast("failed to delete project", "error");
     }
   }
 
@@ -842,26 +975,26 @@ class Store {
           method: "PATCH",
           body: JSON.stringify(data),
         });
-        this.showToast("Context updated");
+        this.showToast("context updated");
       } else {
         await this.api("/contexts", {
           method: "POST",
           body: JSON.stringify(data),
         });
-        this.showToast("Context created");
+        this.showToast("context created");
       }
       this._showContextForm = false;
       this._editingContext = null;
       await this.fetchContexts();
     } catch (_e) {
-      this.showToast("Failed to save context", "error");
+      this.showToast("failed to save context", "error");
     }
   }
 
   async deleteContext(id: string) {
     try {
       await this.api(`/contexts/${id}`, { method: "DELETE" });
-      this.showToast("Context deleted");
+      this.showToast("context deleted");
       this._showContextForm = false;
       this._editingContext = null;
       if (this._selectedContextId === id) {
@@ -869,7 +1002,59 @@ class Store {
       }
       await Promise.all([this.fetchContexts(), this.fetchTasks()]);
     } catch (_e) {
-      this.showToast("Failed to delete context", "error");
+      this.showToast("failed to delete context", "error");
+    }
+  }
+
+  // Filter operations
+  async fetchFilters() {
+    try {
+      this._savedFilters = await this.api<SavedFilter[]>("/filters");
+      this.notify();
+    } catch (_e) {
+      // Filters may not be available
+    }
+  }
+
+  async saveFilter(data: {
+    name: string;
+    color: string;
+    criteria: FilterCriteria;
+  }) {
+    try {
+      if (this._editingFilter) {
+        await this.api(`/filters/${this._editingFilter.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        });
+        this.showToast("filter updated");
+      } else {
+        await this.api("/filters", {
+          method: "POST",
+          body: JSON.stringify(data),
+        });
+        this.showToast("filter created");
+      }
+      this._showFilterForm = false;
+      this._editingFilter = null;
+      await this.fetchFilters();
+    } catch (_e) {
+      this.showToast("failed to save filter", "error");
+    }
+  }
+
+  async deleteFilter(id: string) {
+    try {
+      await this.api(`/filters/${id}`, { method: "DELETE" });
+      this.showToast("filter deleted");
+      this._showFilterForm = false;
+      this._editingFilter = null;
+      if (this._selectedFilterId === id) {
+        this.navigate("inbox");
+      }
+      await this.fetchFilters();
+    } catch (_e) {
+      this.showToast("failed to delete filter", "error");
     }
   }
 
@@ -912,7 +1097,7 @@ class Store {
           method: "POST",
           body: JSON.stringify(data),
         });
-        this.showToast("Data imported");
+        this.showToast("data imported");
         await this.fetchAll();
       } catch {
         this.showToast("Failed to import data", "error");

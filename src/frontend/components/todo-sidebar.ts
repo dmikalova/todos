@@ -606,6 +606,12 @@ export class TodoSidebar extends StoreElement {
             <span class="section-title">${SECTION_LABELS.filters}</span>
             <div class="section-actions">
               <button
+                class="section-action"
+                @click="${() => store.setShowFilterForm(true)}"
+              >
+                <m3e-icon name="add" variant="rounded"></m3e-icon>
+              </button>
+              <button
                 class="section-action ${store.collapsedSections.has("filters")
                   ? "collapsed"
                   : ""}"
@@ -617,21 +623,25 @@ export class TodoSidebar extends StoreElement {
           </div>
           ${!store.collapsedSections.has("filters")
             ? html`
-              <button
-                class="nav-button ${store.currentTab === "due" ? "active" : ""}"
-                @click="${() => store.navigate("due")}"
-              >
-                <span
-                  class="color-dot"
-                  style="--dot-color: var(--md-sys-color-tertiary)"
-                ></span>
-                <span class="nav-button-label">${NAV_LABELS.due}</span>
-                ${store.dueCount > 0
-                  ? html`
-                    <span class="count">${store.dueCount}</span>
-                  `
-                  : null}
-              </button>
+              ${store.savedFilters.map(
+                (f) =>
+                  html`
+                    <button
+                      class="nav-button ${store.currentTab === "filter" &&
+                          store.selectedFilterId === f.id
+                        ? "active"
+                        : ""}"
+                      @click="${() => store.navigate("filter", f.id)}"
+                    >
+                      <span
+                        class="color-dot"
+                        style="--dot-color: ${f.color ||
+                          "var(--md-sys-color-tertiary)"}"
+                      ></span>
+                      <span class="nav-button-label">${f.name}</span>
+                    </button>
+                  `,
+              )}
             `
             : null}
         </div>

@@ -15,7 +15,7 @@ test("Context Management - view contexts", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/settings");
 
   // Look for contexts section
-  const contextsSection = page.locator("text=Contexts");
+  const contextsSection = page.locator("text=contexts");
   expect(await contextsSection.count()).toBeGreaterThan(0);
 
   // Should see default "Work" context
@@ -27,31 +27,31 @@ test("Context Management - view contexts", async ({ page, baseUrl }) => {
 test("Context Management - create context", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/settings");
 
-  // Click "Add Context" button
-  await clickButton(page, "Add Context");
+  // Click "add context" button
+  await clickButton(page, "add context");
 
   // Fill context form
   const contextName = testTaskTitle("E2E Context");
-  await fillField(page, "Name", contextName);
+  await fillField(page, "name", contextName);
 
   // Add a time window (e.g., weekday mornings)
-  const addWindowButton = page.locator("text=Add Time Window");
+  const addWindowButton = page.locator("text=+ add window");
   if ((await addWindowButton.count()) > 0) {
     await addWindowButton.click();
 
     // Select days
-    await page.locator("text=Monday").click();
-    await page.locator("text=Tuesday").click();
-    await page.locator("text=Wednesday").click();
-    await page.locator("text=Thursday").click();
-    await page.locator("text=Friday").click();
+    await page.locator("text=monday").click();
+    await page.locator("text=tuesday").click();
+    await page.locator("text=wednesday").click();
+    await page.locator("text=thursday").click();
+    await page.locator("text=friday").click();
 
     // Set times
-    await fillField(page, "Start Time", "09:00");
-    await fillField(page, "End Time", "12:00");
+    await fillField(page, "start time", "09:00");
+    await fillField(page, "end time", "12:00");
   }
 
-  await clickButton(page, "Save");
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Verify context appears in list
@@ -69,12 +69,12 @@ test("Context Management - edit context", async ({ page, baseUrl }) => {
     await workContext.first().click();
 
     // Check current values are shown
-    const nameInput = page.getByLabel("Name");
+    const nameInput = page.getByLabel("name");
     const currentName = await nameInput.inputValue();
     expect(currentName).toBe("Work");
 
     // Close without saving
-    await clickButton(page, "Cancel");
+    await clickButton(page, "cancel");
   }
 
   expect(true).toBeTruthy();
@@ -85,10 +85,10 @@ test("Context Management - delete context", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/settings");
 
   // First create a context to delete
-  await clickButton(page, "Add Context");
+  await clickButton(page, "add context");
   const contextName = testTaskTitle("E2E Delete Context");
-  await fillField(page, "Name", contextName);
-  await clickButton(page, "Save");
+  await fillField(page, "name", contextName);
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Verify it exists
@@ -97,10 +97,10 @@ test("Context Management - delete context", async ({ page, baseUrl }) => {
 
   // Click to edit then delete
   await newContext.first().click();
-  await clickButton(page, "Delete");
+  await clickButton(page, "delete");
 
   // Confirm deletion
-  await clickButton(page, "Confirm");
+  await clickButton(page, "confirm");
   await waitForNetworkIdle(page);
 
   // Verify context is gone
@@ -129,7 +129,7 @@ test("Context Management - edit time windows", async ({ page, baseUrl }) => {
     expect(windowCount >= 1 || true).toBeTruthy();
 
     // Close form
-    await clickButton(page, "Cancel");
+    await clickButton(page, "cancel");
   }
 });
 
@@ -145,7 +145,7 @@ test("Context Management - assign to task", async ({ page, baseUrl }) => {
   await clickButton(page, "New Task");
 
   const taskTitle = testTaskTitle("E2E Context Task");
-  await fillField(page, "Title", taskTitle);
+  await fillField(page, "task", taskTitle);
 
   // Select context
   const contextSelect = page.locator('[aria-label="Contexts"]');
@@ -154,7 +154,7 @@ test("Context Management - assign to task", async ({ page, baseUrl }) => {
     await page.locator("text=Work").click();
   }
 
-  await clickButton(page, "Save");
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Task should show with context indicator

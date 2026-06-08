@@ -15,14 +15,14 @@ test("Import/Export - export button available", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/settings");
 
   // Look for export section
-  const exportSection = page.locator("text=Export");
+  const exportSection = page.locator("text=export");
   expect(await exportSection.count()).toBeGreaterThan(0);
 
   // Should have export button
-  const exportButton = page.locator("text=Download Export");
+  const exportButton = page.locator("text=export all data");
   if ((await exportButton.count()) === 0) {
     // Alternative button text
-    const altExportButton = page.locator("text=Export Data");
+    const altExportButton = page.locator("text=export all data");
     expect((await altExportButton.count()) >= 0).toBeTruthy();
   }
 });
@@ -38,7 +38,7 @@ test("Import/Export - export triggers download", async ({ page, baseUrl }) => {
 
   // Click export
   const exportButton = page
-    .locator("text=Export Data, text=Download Export")
+    .locator("text=export all data")
     .first();
   if ((await exportButton.count()) > 0) {
     await exportButton.click();
@@ -59,7 +59,7 @@ test("Import/Export - import section available", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/settings");
 
   // Look for import section
-  const importSection = page.locator("text=Import");
+  const importSection = page.locator("text=import");
   expect(await importSection.count()).toBeGreaterThan(0);
 });
 
@@ -69,7 +69,7 @@ test("Import/Export - file upload input exists", async ({ page, baseUrl }) => {
 
   // Look for file input
   const fileInput = page.locator('input[type="file"]');
-  const importButton = page.locator("text=Import Data");
+  const importButton = page.locator("text=import data");
 
   // Should have either file input or import button
   const hasFileInput = (await fileInput.count()) > 0;
@@ -83,7 +83,7 @@ test("Import/Export - conflict handling options", async ({ page, baseUrl }) => {
   await navigateTo(page, baseUrl, "/settings");
 
   // Click import button to see options
-  const importButton = page.locator("text=Import Data");
+  const importButton = page.locator("text=import data");
   if ((await importButton.count()) > 0) {
     await importButton.click();
 
@@ -107,11 +107,11 @@ test("Import/Export - conflict handling options", async ({ page, baseUrl }) => {
 test("Import/Export - round-trip data integrity", async ({ page, baseUrl }) => {
   // Create a unique task
   await navigateTo(page, baseUrl, "/tasks");
-  await clickButton(page, "New Task");
+  await clickButton(page, "add task");
   const taskTitle = testTaskTitle("E2E Export Test");
-  await fillField(page, "Title", taskTitle);
-  await fillField(page, "Description", "Unique description for export test");
-  await clickButton(page, "Save");
+  await fillField(page, "task", taskTitle);
+  await fillField(page, "description", "Unique description for export test");
+  await clickButton(page, "save");
   await waitForNetworkIdle(page);
 
   // Verify task exists

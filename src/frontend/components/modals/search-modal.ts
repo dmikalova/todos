@@ -28,7 +28,7 @@ export class SearchModal extends StoreElement {
 
     .modal {
       position: relative;
-      background: var(--md-sys-color-surface-container);
+      background: var(--md-sys-color-surface-container-lowest);
       border-radius: 28px;
       box-shadow: var(--md-sys-elevation-level4);
       width: 100%;

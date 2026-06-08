@@ -105,6 +105,15 @@ Deno.test({
       assertEquals(res.status, 200);
     });
 
+    await t.step("PATCH /api/filters/:id updates color", async () => {
+      const res = await apiCall(ctx.app, "PATCH", `/api/filters/${filterId}`, {
+        color: "blue",
+      });
+      assertEquals(res.status, 200);
+      const body = await res.json();
+      assertEquals(body.color, "blue");
+    });
+
     await t.step(
       "PATCH /api/filters/:id returns 400 for invalid body",
       async () => {
@@ -166,14 +175,13 @@ Deno.test({
     );
 
     await t.step(
-      "POST /api/filters/:id/apply with dueBefore/dueAfter criteria",
+      "POST /api/filters/:id/apply with dueDateWithin criteria",
       async () => {
-        // Create a filter with date criteria
+        // Create a filter with relative date criteria
         const createRes = await apiCall(ctx.app, "POST", "/api/filters", {
           name: "Test Filter Date",
           criteria: {
-            dueBefore: "2026-07-01T00:00:00Z",
-            dueAfter: "2026-01-01T00:00:00Z",
+            dueDateWithin: { amount: 30, unit: "days" },
           },
         });
         assertEquals(createRes.status, 201);
@@ -185,6 +193,92 @@ Deno.test({
           `/api/filters/${dateFilter.id}/apply`,
         );
         assertEquals(res.status, 200);
+      },
+    );
+
+    await t.step(
+      "POST /api/filters/:id/apply with dueDateWithin weeks",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/filters", {
+          name: "Weeks Filter",
+          criteria: {
+            dueDateWithin: { amount: 2, unit: "weeks" },
+          },
+        });
+        assertEquals(createRes.status, 201);
+        const filter = await createRes.json();
+
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/filters/${filter.id}/apply`,
+        );
+        assertEquals(res.status, 200);
+      },
+    );
+
+    await t.step(
+      "POST /api/filters/:id/apply with dueDateWithin months",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/filters", {
+          name: "Months Filter",
+          criteria: {
+            dueDateWithin: { amount: 3, unit: "months" },
+          },
+        });
+        assertEquals(createRes.status, 201);
+        const filter = await createRes.json();
+
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/filters/${filter.id}/apply`,
+        );
+        assertEquals(res.status, 200);
+      },
+    );
+
+    await t.step(
+      "POST /api/filters/:id/apply with dueDateWithin years",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/filters", {
+          name: "Years Filter",
+          criteria: {
+            dueDateWithin: { amount: 1, unit: "years" },
+          },
+        });
+        assertEquals(createRes.status, 201);
+        const filter = await createRes.json();
+
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/filters/${filter.id}/apply`,
+        );
+        assertEquals(res.status, 200);
+      },
+    );
+
+    await t.step(
+      "POST /api/filters/:id/apply with priorities criteria",
+      async () => {
+        const createRes = await apiCall(ctx.app, "POST", "/api/filters", {
+          name: "Priority Filter",
+          criteria: {
+            priorities: [1, 2],
+          },
+        });
+        assertEquals(createRes.status, 201);
+        const priorityFilter = await createRes.json();
+
+        const res = await apiCall(
+          ctx.app,
+          "POST",
+          `/api/filters/${priorityFilter.id}/apply`,
+        );
+        assertEquals(res.status, 200);
+        const body = await res.json();
+        assertExists(body.tasks);
       },
     );
 

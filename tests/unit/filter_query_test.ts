@@ -22,17 +22,19 @@ const listTasksSchema = z.object({
 });
 
 // Copy of filterCriteriaSchema from routes/filters.ts for testing
+const dueDateWithinSchema = z.object({
+  amount: z.number().int(),
+  unit: z.enum(["days", "weeks", "months", "years"]),
+});
+
 const filterCriteriaSchema = z.object({
-  projectIds: z.array(z.string().uuid()).optional(),
-  contextIds: z.array(z.string().uuid()).optional(),
+  contexts: z.array(z.string().uuid()).optional(),
+  projects: z.array(z.string().uuid()).optional(),
+  priorities: z.array(z.number().int().min(1).max(4)).optional(),
+  dueDateWithin: dueDateWithinSchema.optional(),
   tags: z.array(z.string()).optional(),
   completed: z.boolean().optional(),
-  overdue: z.boolean().optional(),
-  dueBefore: z.string().datetime().optional(),
-  dueAfter: z.string().datetime().optional(),
   hasRecurrence: z.boolean().optional(),
-  mustDo: z.boolean().optional(),
-  priorities: z.array(z.number().int().min(1).max(4)).optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -127,21 +129,21 @@ Deno.test("filterCriteriaSchema - accepts empty criteria", () => {
   assertEquals(Object.keys(result).length, 0);
 });
 
-Deno.test("filterCriteriaSchema - accepts projectIds array", () => {
+Deno.test("filterCriteriaSchema - accepts projects array", () => {
   const result = filterCriteriaSchema.parse({
-    projectIds: ["123e4567-e89b-12d3-a456-426614174000"],
+    projects: ["123e4567-e89b-12d3-a456-426614174000"],
   });
-  assertEquals(result.projectIds?.length, 1);
+  assertEquals(result.projects?.length, 1);
 });
 
-Deno.test("filterCriteriaSchema - accepts multiple contextIds", () => {
+Deno.test("filterCriteriaSchema - accepts multiple contexts", () => {
   const result = filterCriteriaSchema.parse({
-    contextIds: [
+    contexts: [
       "123e4567-e89b-12d3-a456-426614174000",
       "223e4567-e89b-12d3-a456-426614174001",
     ],
   });
-  assertEquals(result.contextIds?.length, 2);
+  assertEquals(result.contexts?.length, 2);
 });
 
 Deno.test("filterCriteriaSchema - accepts boolean completed", () => {
@@ -149,19 +151,9 @@ Deno.test("filterCriteriaSchema - accepts boolean completed", () => {
   assertEquals(result.completed, true);
 });
 
-Deno.test("filterCriteriaSchema - accepts overdue filter", () => {
-  const result = filterCriteriaSchema.parse({ overdue: true });
-  assertEquals(result.overdue, true);
-});
-
 Deno.test("filterCriteriaSchema - accepts hasRecurrence filter", () => {
   const result = filterCriteriaSchema.parse({ hasRecurrence: false });
   assertEquals(result.hasRecurrence, false);
-});
-
-Deno.test("filterCriteriaSchema - accepts mustDo filter", () => {
-  const result = filterCriteriaSchema.parse({ mustDo: true });
-  assertEquals(result.mustDo, true);
 });
 
 Deno.test("filterCriteriaSchema - accepts priorities array", () => {
@@ -179,11 +171,50 @@ Deno.test("filterCriteriaSchema - rejects priority > 4", () => {
   assertEquals(result.success, false);
 });
 
-Deno.test("filterCriteriaSchema - accepts ISO datetime for dueBefore", () => {
+Deno.test("filterCriteriaSchema - accepts dueDateWithin with days", () => {
   const result = filterCriteriaSchema.parse({
-    dueBefore: "2026-02-21T10:00:00.000Z",
+    dueDateWithin: { amount: 7, unit: "days" },
   });
-  assertEquals(result.dueBefore, "2026-02-21T10:00:00.000Z");
+  assertEquals(result.dueDateWithin?.amount, 7);
+  assertEquals(result.dueDateWithin?.unit, "days");
+});
+
+Deno.test("filterCriteriaSchema - accepts dueDateWithin with weeks", () => {
+  const result = filterCriteriaSchema.parse({
+    dueDateWithin: { amount: 2, unit: "weeks" },
+  });
+  assertEquals(result.dueDateWithin?.amount, 2);
+  assertEquals(result.dueDateWithin?.unit, "weeks");
+});
+
+Deno.test("filterCriteriaSchema - accepts dueDateWithin with months", () => {
+  const result = filterCriteriaSchema.parse({
+    dueDateWithin: { amount: 3, unit: "months" },
+  });
+  assertEquals(result.dueDateWithin?.amount, 3);
+  assertEquals(result.dueDateWithin?.unit, "months");
+});
+
+Deno.test("filterCriteriaSchema - accepts dueDateWithin with years", () => {
+  const result = filterCriteriaSchema.parse({
+    dueDateWithin: { amount: 1, unit: "years" },
+  });
+  assertEquals(result.dueDateWithin?.amount, 1);
+  assertEquals(result.dueDateWithin?.unit, "years");
+});
+
+Deno.test("filterCriteriaSchema - accepts negative amount (overdue)", () => {
+  const result = filterCriteriaSchema.parse({
+    dueDateWithin: { amount: 0, unit: "days" },
+  });
+  assertEquals(result.dueDateWithin?.amount, 0);
+});
+
+Deno.test("filterCriteriaSchema - rejects invalid unit", () => {
+  const result = filterCriteriaSchema.safeParse({
+    dueDateWithin: { amount: 1, unit: "centuries" },
+  });
+  assertEquals(result.success, false);
 });
 
 Deno.test("filterCriteriaSchema - accepts tags array", () => {
@@ -195,13 +226,13 @@ Deno.test("filterCriteriaSchema - accepts tags array", () => {
 
 Deno.test("filterCriteriaSchema - accepts combined filters", () => {
   const result = filterCriteriaSchema.parse({
-    projectIds: ["123e4567-e89b-12d3-a456-426614174000"],
+    projects: ["123e4567-e89b-12d3-a456-426614174000"],
     completed: false,
-    mustDo: true,
     priorities: [1, 2],
+    dueDateWithin: { amount: 7, unit: "days" },
   });
   assertEquals(result.completed, false);
-  assertEquals(result.mustDo, true);
   assertEquals(result.priorities, [1, 2]);
-  assertEquals(result.projectIds?.length, 1);
+  assertEquals(result.projects?.length, 1);
+  assertEquals(result.dueDateWithin?.amount, 7);
 });

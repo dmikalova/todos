@@ -96,13 +96,54 @@ export class ProjectForm extends LitElement {
     .delete-button {
       --md-sys-color-primary: var(--md-sys-color-error);
     }
+
+    .context-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .context-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border-radius: 9999px;
+      font-size: 13px;
+      border: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-on-surface);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .context-chip.selected {
+      background: var(--md-sys-color-secondary-container);
+      border-color: var(--md-sys-color-secondary);
+      color: var(--md-sys-color-on-secondary-container);
+    }
+
+    .context-chip:hover {
+      background: var(--md-sys-color-surface-container-high);
+    }
+
+    .context-chip.selected:hover {
+      background: var(--md-sys-color-secondary-container);
+      opacity: 0.85;
+    }
+
+    .inherited-hint {
+      font-size: 12px;
+      color: var(--md-sys-color-outline);
+      margin-top: 4px;
+    }
   `;
 
   @state()
   accessor form = {
     name: "",
     color: "#4CAF50",
-    context_id: null as string | null,
+    context_ids: [] as string[],
     parent_project_id: null as string | null,
   };
 
@@ -112,7 +153,7 @@ export class ProjectForm extends LitElement {
       this.form = {
         name: store.editingProject.name,
         color: (store.editingProject.color || "#4CAF50").toUpperCase(),
-        context_id: store.editingProject.context_id || null,
+        context_ids: store.editingProject.context_ids || [],
         parent_project_id: store.editingProject.parent_project_id || null,
       };
     }
@@ -147,31 +188,27 @@ export class ProjectForm extends LitElement {
   }
 
   private _getInheritedContextLabel(): string {
-    // For editing: check if parent chain has a context
-    if (store.editingProject) {
-      const inheritedId = store.resolveProjectContext({
-        ...store.editingProject,
-        context_id: null, // pretend no direct context to find inherited
-      });
-      if (inheritedId) {
-        const name = store.getContextName(inheritedId);
-        return `inherited: ${name}`;
-      }
-    }
-    // For new projects: check if selected parent has context
+    // For new projects: check if selected parent has contexts
     if (this.form.parent_project_id) {
       const parent = store.projects.find(
         (p) => p.id === this.form.parent_project_id,
       );
-      if (parent) {
-        const inheritedId = store.resolveProjectContext(parent);
-        if (inheritedId) {
-          const name = store.getContextName(inheritedId);
-          return `inherited: ${name}`;
-        }
+      if (parent && parent.context_ids.length > 0) {
+        const names = parent.context_ids
+          .map((id) => store.getContextName(id))
+          .filter(Boolean)
+          .join(", ");
+        return `inherits: ${names}`;
       }
     }
-    return "none";
+    return "";
+  }
+
+  private _toggleContext(contextId: string) {
+    const ids = this.form.context_ids.includes(contextId)
+      ? this.form.context_ids.filter((id) => id !== contextId)
+      : [...this.form.context_ids, contextId];
+    this.form = { ...this.form, context_ids: ids };
   }
 
   private async handleSubmit(e: Event) {
@@ -179,7 +216,7 @@ export class ProjectForm extends LitElement {
     await store.saveProject({
       name: this.form.name.trim(),
       color: this.form.color,
-      contextId: this.form.context_id || undefined,
+      contextIds: this.form.context_ids,
       parentProjectId: this.form.parent_project_id,
     } as Record<string, unknown>);
   }
@@ -289,42 +326,35 @@ export class ProjectForm extends LitElement {
           </div>
 
           <div class="form-group">
-            <m3e-form-field
-              variant="outlined"
-              float-label="always"
-              hide-subscript="always"
-            >
-              <label slot="label" for="context-select">context</label>
-              <m3e-select
-                id="context-select"
-                @change="${(e: Event) => {
-                  const select = e.target as HTMLElement & { value: string };
-                  this.form = {
-                    ...this.form,
-                    context_id: select.value === "none"
-                      ? null
-                      : select.value || null,
-                  };
-                }}"
-              >
-                <m3e-icon
-                  slot="arrow"
-                  name="arrow_drop_down_circle"
-                  variant="rounded"
-                ></m3e-icon>
-                <m3e-option value="none" ?selected="${!this.form.context_id}"
-                >${this._getInheritedContextLabel()}</m3e-option>
-                ${store.contexts.map(
-                  (c) =>
-                    html`
-                      <m3e-option
-                        value="${c.id}"
-                        ?selected="${this.form.context_id === c.id}"
-                      >${c.name}</m3e-option>
-                    `,
-                )}
-              </m3e-select>
-            </m3e-form-field>
+            <label
+              style="display: block; font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px;"
+            >contexts</label>
+            <div class="context-chips">
+              ${store.contexts.map(
+                (c) =>
+                  html`
+                    <button
+                      type="button"
+                      class="context-chip ${this.form.context_ids.includes(c.id)
+                        ? "selected"
+                        : ""}"
+                      @click="${() => this._toggleContext(c.id)}"
+                    >
+                      <span
+                        style="width: 8px; height: 8px; border-radius: 50%; background: ${c
+                          .color || "#F48FB1"}"
+                      ></span>
+                      ${c.name}
+                    </button>
+                  `,
+              )}
+            </div>
+            ${this._getInheritedContextLabel()
+              ? html`
+                <div class="inherited-hint">${this
+                  ._getInheritedContextLabel()}</div>
+              `
+              : null}
           </div>
 
           <div class="actions">

@@ -21,11 +21,11 @@ published API documentation. The OpenSpec artifacts serve as the documentation.
 ### Patterns
 
 - ~~**Q: How does the `GET /api/contexts/:id/tasks` endpoint resolve inheritance
-  server-side when the design says resolution is client-side?**~~ **Resolved:**
-  Resolution is now fully server-side via Postgres recursive CTE. Decision #4 in
-  design.md updated. The CTE walks down from projects with the target context,
-  finding children that inherit. Bounded by tree depth (3-4 levels), so it's
-  cheap. All view endpoints use server-side resolution.
+  server-side when the design says resolution is client-side?**~~\*\*
+  **Resolved:** Resolution is now fully server-side via Postgres recursive CTE.
+  Decision #4 in design.md updated. The CTE walks down from projects with the
+  target context, finding children that inherit. Bounded by tree depth (3-4
+  levels), so it's cheap. All view endpoints use server-side resolution.
 
 ### Scope
 
@@ -43,13 +43,13 @@ published API documentation. The OpenSpec artifacts serve as the documentation.
 ### Missing
 
 - ~~**Q: How should the frontend handle the transition from `context_id` to
-  `context_ids[]` on projects?**~~ **Resolved:** Big-bang frontend change.
+  `context_ids[]` on projects?**~~\*\* **Resolved:** Big-bang frontend change.
   Update the frontend to use new API responses (arrays instead of single
   values), remove old `resolveProjectContext` logic, and delete old API
   compatibility code. No transition period needed.
 
 - ~~**Q: What happens to the scoring service (`services/scoring.ts`) when
-  `must_do` is removed?**~~ **Resolved:** Remove `services/scoring.ts` entirely.
-  Next selection uses precedence ordering (context rank → task priority →
-  random), not numerical scoring. The scoring service has no other consumers.
-  Design updated.
+  `must_do` is removed?**~~\*\* **Resolved:** Remove `services/scoring.ts`
+  entirely. Next selection uses precedence ordering (context rank → task
+  priority → random), not numerical scoring. The scoring service has no other
+  consumers. Design updated.

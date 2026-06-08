@@ -14,7 +14,7 @@ const createProjectSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
   color: z.string().optional(),
-  contextId: z.string().uuid().optional().nullable(),
+  contextIds: z.array(z.string().uuid()).optional().default([]),
   parentProjectId: z.string().uuid().optional().nullable(),
 });
 
@@ -22,7 +22,7 @@ const updateProjectSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional().nullable(),
   color: z.string().optional().nullable(),
-  contextId: z.string().uuid().optional().nullable(),
+  contextIds: z.array(z.string().uuid()).optional(),
   parentProjectId: z.string().uuid().optional().nullable(),
   sortOrder: z.number().int().optional(),
 });
@@ -35,10 +35,10 @@ interface Project {
   name: string;
   description: string | null;
   color: string | null;
-  context_id: string | null;
   parent_project_id: string | null;
   sort_order: number;
   created_at: Date;
+  context_ids: string[];
 }
 
 interface ProjectWithCount extends Project {
@@ -58,29 +58,37 @@ projects.post("/", async (c) => {
     );
   }
 
-  const { name, description, color, contextId, parentProjectId } = result.data;
+  const { name, description, color, contextIds, parentProjectId } = result.data;
 
   const project = await withTransaction(
     async (tx) => {
-      if (contextId) {
-        await assertOwnership(tx, "contexts", contextId, session.userId);
+      for (const ctxId of contextIds) {
+        await assertOwnership(tx, "contexts", ctxId, session.userId);
       }
       if (parentProjectId) {
         await assertOwnership(tx, "projects", parentProjectId, session.userId);
       }
 
-      const [created] = await tx<Project[]>`
-      INSERT INTO projects (user_id, name, description, color, context_id, parent_project_id, sort_order)
+      const [created] = await tx<Omit<Project, "context_ids">[]>`
+      INSERT INTO projects (user_id, name, description, color, parent_project_id, sort_order)
       VALUES (${session.userId}, ${name}, ${description || null}, ${
         color || null
-      }, ${contextId || null}, ${parentProjectId || null}, (
+      }, ${parentProjectId || null}, (
         SELECT COALESCE(MAX(sort_order), 0) + 1 FROM projects WHERE user_id = ${session.userId} AND parent_project_id IS NOT DISTINCT FROM ${
         parentProjectId || null
       }
       ))
       RETURNING *
     `;
-      return created;
+
+      if (contextIds.length > 0) {
+        await tx`
+          INSERT INTO project_contexts (project_id, context_id)
+          SELECT ${created.id}, unnest(${contextIds}::uuid[])
+        `;
+      }
+
+      return { ...created, context_ids: contextIds };
     },
     { userId: session.userId },
   );
@@ -95,9 +103,12 @@ projects.get("/", async (c) => {
   const projectList = await withDb(
     async (sql: SqlQuery) => {
       const result = await sql<ProjectWithCount[]>`
-      SELECT p.*, COUNT(t.id)::int as task_count
+      SELECT p.*,
+        COUNT(t.id)::int as task_count,
+        COALESCE(array_agg(pc.context_id) FILTER (WHERE pc.context_id IS NOT NULL), '{}') as context_ids
       FROM projects p
       LEFT JOIN tasks t ON p.id = t.project_id AND t.deleted_at IS NULL AND t.completed_at IS NULL
+      LEFT JOIN project_contexts pc ON p.id = pc.project_id
       GROUP BY p.id
       ORDER BY p.sort_order, p.created_at
     `;
@@ -141,9 +152,12 @@ projects.get("/:id", async (c) => {
   const project = await withDb(
     async (sql: SqlQuery) => {
       const [result] = await sql<ProjectWithCount[]>`
-      SELECT p.*, COUNT(t.id)::int as task_count
+      SELECT p.*,
+        COUNT(t.id)::int as task_count,
+        COALESCE(array_agg(pc.context_id) FILTER (WHERE pc.context_id IS NOT NULL), '{}') as context_ids
       FROM projects p
       LEFT JOIN tasks t ON p.id = t.project_id AND t.deleted_at IS NULL AND t.completed_at IS NULL
+      LEFT JOIN project_contexts pc ON p.id = pc.project_id
       WHERE p.id = ${id}
       GROUP BY p.id
     `;
@@ -227,13 +241,10 @@ projects.patch("/:id", async (c) => {
 
   const project = await withTransaction(
     async (tx) => {
-      if (updates.contextId) {
-        await assertOwnership(
-          tx,
-          "contexts",
-          updates.contextId,
-          session.userId,
-        );
+      if (updates.contextIds) {
+        for (const ctxId of updates.contextIds) {
+          await assertOwnership(tx, "contexts", ctxId, session.userId);
+        }
       }
       if (updates.parentProjectId) {
         await assertOwnership(
@@ -245,11 +256,11 @@ projects.patch("/:id", async (c) => {
       }
 
       const [existing] = await tx<
-        Project[]
+        Omit<Project, "context_ids">[]
       >`SELECT * FROM projects WHERE id = ${id}`;
       if (!existing) return null;
 
-      const [updated] = await tx<Project[]>`
+      const [updated] = await tx<Omit<Project, "context_ids">[]>`
       UPDATE projects SET
         name = COALESCE(${updates.name ?? null}, name),
         description = ${
@@ -258,11 +269,6 @@ projects.patch("/:id", async (c) => {
           : existing.description
       },
         color = ${updates.color !== undefined ? updates.color : existing.color},
-        context_id = ${
-        updates.contextId !== undefined
-          ? updates.contextId
-          : existing.context_id
-      },
         parent_project_id = ${
         updates.parentProjectId !== undefined
           ? updates.parentProjectId
@@ -276,7 +282,26 @@ projects.patch("/:id", async (c) => {
       WHERE id = ${id}
       RETURNING *
     `;
-      return updated;
+
+      // Update context associations if provided
+      let contextIds: string[];
+      if (updates.contextIds !== undefined) {
+        await tx`DELETE FROM project_contexts WHERE project_id = ${id}`;
+        if (updates.contextIds.length > 0) {
+          await tx`
+            INSERT INTO project_contexts (project_id, context_id)
+            SELECT ${id}, unnest(${updates.contextIds}::uuid[])
+          `;
+        }
+        contextIds = updates.contextIds;
+      } else {
+        const rows = await tx<{ context_id: string }[]>`
+          SELECT context_id FROM project_contexts WHERE project_id = ${id}
+        `;
+        contextIds = rows.map((r) => r.context_id);
+      }
+
+      return { ...updated, context_ids: contextIds };
     },
     { userId: session.userId },
   );

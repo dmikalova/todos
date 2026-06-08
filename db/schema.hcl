@@ -62,11 +62,6 @@ table "projects" {
     null = true
   }
 
-  column "context_id" {
-    type = uuid
-    null = true
-  }
-
   column "parent_project_id" {
     type = uuid
     null = true
@@ -88,12 +83,6 @@ table "projects" {
     columns = [column.id]
   }
 
-  foreign_key "fk_context" {
-    columns     = [column.context_id]
-    ref_columns = [table.contexts.column.id]
-    on_delete   = SET_NULL
-  }
-
   foreign_key "fk_parent_project" {
     columns     = [column.parent_project_id]
     ref_columns = [table.projects.column.id]
@@ -107,10 +96,6 @@ table "projects" {
   index "idx_projects_user_id_name" {
     columns = [column.user_id, column.name]
     unique  = true
-  }
-
-  index "idx_projects_context_id" {
-    columns = [column.context_id]
   }
 
   index "idx_projects_parent_project_id" {
@@ -253,13 +238,6 @@ table "tasks" {
   column "due_date" {
     type = date
     null = true
-  }
-
-  # Cannot be deferred, always shows in Next
-  column "must_do" {
-    type    = boolean
-    null    = false
-    default = false
   }
 
   column "deferred_until" {
@@ -543,6 +521,107 @@ table "task_history" {
 
   index "idx_task_history_created_at" {
     columns = [column.created_at]
+  }
+
+}
+
+table "project_contexts" {
+  schema = schema.tasks
+
+  column "project_id" {
+    type = uuid
+    null = false
+  }
+
+  column "context_id" {
+    type = uuid
+    null = false
+  }
+
+  primary_key {
+    columns = [column.project_id, column.context_id]
+  }
+
+  foreign_key "fk_project" {
+    columns     = [column.project_id]
+    ref_columns = [table.projects.column.id]
+    on_delete   = CASCADE
+  }
+
+  foreign_key "fk_context" {
+    columns     = [column.context_id]
+    ref_columns = [table.contexts.column.id]
+    on_delete   = CASCADE
+  }
+
+  index "idx_project_contexts_context_id" {
+    columns = [column.context_id]
+  }
+
+}
+
+table "task_contexts" {
+  schema = schema.tasks
+
+  column "task_id" {
+    type = uuid
+    null = false
+  }
+
+  column "context_id" {
+    type = uuid
+    null = false
+  }
+
+  primary_key {
+    columns = [column.task_id, column.context_id]
+  }
+
+  foreign_key "fk_task" {
+    columns     = [column.task_id]
+    ref_columns = [table.tasks.column.id]
+    on_delete   = CASCADE
+  }
+
+  foreign_key "fk_context" {
+    columns     = [column.context_id]
+    ref_columns = [table.contexts.column.id]
+    on_delete   = CASCADE
+  }
+
+  index "idx_task_contexts_context_id" {
+    columns = [column.context_id]
+  }
+
+}
+
+table "user_next_selection" {
+  schema = schema.tasks
+
+  column "user_id" {
+    type = uuid
+    null = false
+  }
+
+  column "task_id" {
+    type = uuid
+    null = true
+  }
+
+  column "selected_at" {
+    type    = timestamptz
+    null    = false
+    default = sql("now()")
+  }
+
+  primary_key {
+    columns = [column.user_id]
+  }
+
+  foreign_key "fk_task" {
+    columns     = [column.task_id]
+    ref_columns = [table.tasks.column.id]
+    on_delete   = SET_NULL
   }
 
 }

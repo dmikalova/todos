@@ -163,15 +163,6 @@ export class NextView extends StoreElement {
       box-shadow: var(--md-sys-elevation-level2);
     }
 
-    .btn-skip {
-      background: var(--md-sys-color-surface-container);
-      color: var(--md-sys-color-on-surface);
-    }
-
-    .btn-skip:hover {
-      background: var(--md-sys-color-surface-container-high);
-    }
-
     .defer-select {
       padding: 12px 16px;
       border-radius: var(--md-sys-shape-corner-medium);
@@ -225,7 +216,7 @@ export class NextView extends StoreElement {
             />
           </svg>
           <h3 class="empty-title">all caught up!</h3>
-          <p class="empty-text">no pending tasks.</p>
+          <p class="empty-text">no active contexts have eligible tasks.</p>
         </div>
       `;
     }
@@ -304,29 +295,6 @@ export class NextView extends StoreElement {
             />
           </svg>
           complete
-        </button>
-        <button
-          class="btn btn-skip"
-          @click="${(e: Event) => {
-            e.stopPropagation();
-            store.skipTask();
-          }}"
-        >
-          <svg
-            width="20"
-            height="20"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M13 5l7 7-7 7M5 5l7 7-7 7"
-            />
-          </svg>
-          skip
         </button>
         <select
           class="defer-select"

@@ -1,5 +1,5 @@
 // Integration tests for Project CRUD
-// Tests: create with contextId, update contextId, task_count excludes completed, nested parentProjectId
+// Tests: create with contextIds, update contextIds, task_count excludes completed, nested parentProjectId
 
 import { assertEquals, assertExists } from "@std/assert";
 import {
@@ -31,11 +31,11 @@ Deno.test({
     });
 
     await t.step(
-      "POST /api/projects creates project with contextId",
+      "POST /api/projects creates project with contextIds",
       async () => {
         const res = await apiCall(ctx.app, "POST", "/api/projects", {
           name: "Test Project With Context",
-          contextId,
+          contextIds: [contextId],
         });
 
         assertEquals(res.status, 201, `Expected 201 but got ${res.status}`);
@@ -43,13 +43,13 @@ Deno.test({
 
         assertExists(body.id);
         assertEquals(body.name, "Test Project With Context");
-        assertEquals(body.context_id, contextId);
+        assertEquals(body.context_ids, [contextId]);
 
         projectId = body.id;
       },
     );
 
-    await t.step("PATCH /api/projects/:id updates contextId", async () => {
+    await t.step("PATCH /api/projects/:id updates contextIds", async () => {
       // Create a second context
       const ctxRes = await apiCall(ctx.app, "POST", "/api/contexts", {
         name: "Test Context Projects 2",
@@ -63,13 +63,13 @@ Deno.test({
         "PATCH",
         `/api/projects/${projectId}`,
         {
-          contextId: newCtx.id,
+          contextIds: [newCtx.id],
         },
       );
 
       assertEquals(res.status, 200);
       const body = await res.json();
-      assertEquals(body.context_id, newCtx.id);
+      assertEquals(body.context_ids, [newCtx.id]);
     });
 
     await t.step(
@@ -102,7 +102,7 @@ Deno.test({
     );
 
     await t.step(
-      "GET /api/projects/:id returns context_id and parent_project_id",
+      "GET /api/projects/:id returns context_ids and parent_project_id",
       async () => {
         const res = await apiCall(ctx.app, "GET", `/api/projects/${projectId}`);
         assertEquals(res.status, 200);
@@ -111,7 +111,7 @@ Deno.test({
         assertEquals(body.name, "Test Project With Context");
         assertEquals(body.description, "Updated description");
         assertEquals(body.color, "#ff0000");
-        assertEquals(typeof body.context_id, "string");
+        assertEquals(Array.isArray(body.context_ids), true);
         assertEquals(typeof body.parent_project_id, "string");
         assertEquals(typeof body.task_count, "number");
       },
@@ -125,7 +125,7 @@ Deno.test({
         const projects = await res.json();
         const proj = projects.find((p: { id: string }) => p.id === projectId);
         assertExists(proj);
-        assertEquals(typeof proj.context_id, "string");
+        assertEquals(Array.isArray(proj.context_ids), true);
         assertEquals(typeof proj.parent_project_id, "string");
       },
     );
@@ -263,20 +263,17 @@ Deno.test({
       },
     );
 
-    await t.step(
-      "PATCH /api/projects/:id updates sortOrder",
-      async () => {
-        const res = await apiCall(
-          ctx.app,
-          "PATCH",
-          `/api/projects/${projectId}`,
-          { sortOrder: 5 },
-        );
-        assertEquals(res.status, 200);
-        const body = await res.json();
-        assertEquals(body.sort_order, 5);
-      },
-    );
+    await t.step("PATCH /api/projects/:id updates sortOrder", async () => {
+      const res = await apiCall(
+        ctx.app,
+        "PATCH",
+        `/api/projects/${projectId}`,
+        { sortOrder: 5 },
+      );
+      assertEquals(res.status, 200);
+      const body = await res.json();
+      assertEquals(body.sort_order, 5);
+    });
 
     // -----------------------------------------------------------------------
     // Validation and error path tests

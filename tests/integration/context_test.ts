@@ -223,42 +223,45 @@ Deno.test({
       },
     );
 
-    await t.step("DELETE context sets project context_id to null", async () => {
-      // Create a context
-      const ctxRes = await apiCall(ctx.app, "POST", "/api/contexts", {
-        name: "Test Context Cascade",
-        timeWindows: [],
-      });
-      assertEquals(ctxRes.status, 201);
-      const context = await ctxRes.json();
+    await t.step(
+      "DELETE context removes it from project context_ids",
+      async () => {
+        // Create a context
+        const ctxRes = await apiCall(ctx.app, "POST", "/api/contexts", {
+          name: "Test Context Cascade",
+          timeWindows: [],
+        });
+        assertEquals(ctxRes.status, 201);
+        const context = await ctxRes.json();
 
-      // Create a project with that context
-      const projRes = await apiCall(ctx.app, "POST", "/api/projects", {
-        name: "Test Project Context Cascade",
-        contextId: context.id,
-      });
-      assertEquals(projRes.status, 201);
-      const project = await projRes.json();
-      assertEquals(project.context_id, context.id);
+        // Create a project with that context
+        const projRes = await apiCall(ctx.app, "POST", "/api/projects", {
+          name: "Test Project Context Cascade",
+          contextIds: [context.id],
+        });
+        assertEquals(projRes.status, 201);
+        const project = await projRes.json();
+        assertEquals(project.context_ids.includes(context.id), true);
 
-      // Delete the context
-      const delRes = await apiCall(
-        ctx.app,
-        "DELETE",
-        `/api/contexts/${context.id}`,
-      );
-      assertEquals(delRes.status, 200);
+        // Delete the context
+        const delRes = await apiCall(
+          ctx.app,
+          "DELETE",
+          `/api/contexts/${context.id}`,
+        );
+        assertEquals(delRes.status, 200);
 
-      // Verify project's context_id is now null
-      const getRes = await apiCall(
-        ctx.app,
-        "GET",
-        `/api/projects/${project.id}`,
-      );
-      assertEquals(getRes.status, 200);
-      const updatedProject = await getRes.json();
-      assertEquals(updatedProject.context_id, null);
-    });
+        // Verify project's context_ids no longer includes deleted context
+        const getRes = await apiCall(
+          ctx.app,
+          "GET",
+          `/api/projects/${project.id}`,
+        );
+        assertEquals(getRes.status, 200);
+        const updatedProject = await getRes.json();
+        assertEquals(updatedProject.context_ids.includes(context.id), false);
+      },
+    );
 
     await teardownTestContext(ctx);
   },

@@ -6,7 +6,6 @@ import {
   apiCall,
   setupTestContext,
   teardownTestContext,
-  TEST_USER_ID,
   type TestContext,
 } from "./setup.ts";
 
@@ -35,7 +34,6 @@ Deno.test({
         projectId: projectId,
         priority: 1,
         dueDate: dueDate,
-        mustDo: true,
       });
 
       assertEquals(res.status, 201, `Expected 201 but got ${res.status}`);
@@ -46,8 +44,7 @@ Deno.test({
       assertEquals(body.project_id, projectId);
       assertEquals(body.priority, 1);
       assertEquals(body.due_date.split("T")[0], dueDate);
-      assertEquals(body.must_do, true);
-      assertEquals(body.user_id, TEST_USER_ID);
+      assertEquals(body.user_id, ctx.userId);
     });
 
     await t.step(
@@ -102,7 +99,6 @@ Deno.test({
           projectId: projectId,
           priority: 2,
           dueDate: dueDateStr,
-          mustDo: true,
         },
       );
 
@@ -117,7 +113,6 @@ Deno.test({
       assertEquals(updated.project_id, projectId);
       assertEquals(updated.priority, 2);
       assertEquals(updated.due_date.split("T")[0], dueDateStr);
-      assertEquals(updated.must_do, true);
     });
 
     await t.step(
@@ -624,28 +619,6 @@ Deno.test({
         assertEquals(res.status, 400);
         const body = await res.json();
         assertEquals(body.error, "Either 'until' or 'preset' is required");
-      },
-    );
-
-    await t.step(
-      "POST /api/tasks/:id/defer returns 400 for must-do task",
-      async () => {
-        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
-          title: "Integration Test Defer Must Do",
-          priority: 1,
-          mustDo: true,
-        });
-        const task = await createRes.json();
-
-        const res = await apiCall(
-          ctx.app,
-          "POST",
-          `/api/tasks/${task.id}/defer`,
-          { preset: "tomorrow" },
-        );
-        assertEquals(res.status, 400);
-        const body = await res.json();
-        assertEquals(body.error, "Cannot defer must-do tasks");
       },
     );
 

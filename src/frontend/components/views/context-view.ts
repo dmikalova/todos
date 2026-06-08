@@ -13,6 +13,29 @@ export class ContextView extends StoreElement {
       display: block;
     }
 
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .filter-btn {
+      padding: 6px 14px;
+      border-radius: var(--md-sys-shape-corner-full);
+      font-size: 13px;
+      border: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface);
+      color: var(--md-sys-color-on-surface);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .filter-btn.active {
+      background: var(--md-sys-color-secondary-container);
+      border-color: var(--md-sys-color-secondary);
+      color: var(--md-sys-color-on-secondary-container);
+    }
+
     .task-list {
       display: flex;
       flex-direction: column;
@@ -61,15 +84,47 @@ export class ContextView extends StoreElement {
     }
   `;
 
+  private setFilter(value: string) {
+    store.setTaskFilter({ completed: value });
+    store.fetchContextTasks();
+  }
+
   override render() {
+    const filter = store.taskFilter.completed;
+
     return html`
+      <div class="filter-bar">
+        <button
+          class="filter-btn ${filter === "false" ? "active" : ""}"
+          @click="${() => this.setFilter("false")}"
+        >
+          active
+        </button>
+        <button
+          class="filter-btn ${filter === "true" ? "active" : ""}"
+          @click="${() => this.setFilter("true")}"
+        >
+          done
+        </button>
+        <button
+          class="filter-btn ${filter === "" ? "active" : ""}"
+          @click="${() => this.setFilter("")}"
+        >
+          all
+        </button>
+      </div>
+
       <div class="task-list">
-        ${store.contextTasks.map(
-          (task) =>
-            html`
-              <task-item .task="${task}"></task-item>
-            `,
-        )}
+        ${store.contextTasks.length === 0
+          ? html`
+            <div class="empty">no tasks in this context</div>
+          `
+          : store.contextTasks.map(
+            (task) =>
+              html`
+                <task-item .task="${task}"></task-item>
+              `,
+          )}
         <div class="add-task-row" @click="${() => store.setShowTaskForm(true)}">
           <span class="add-circle">+</span>
           <span class="add-task-label">add task</span>

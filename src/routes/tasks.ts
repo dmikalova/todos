@@ -25,7 +25,7 @@ const createTaskSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional()
     .nullable(),
-  mustDo: z.boolean().default(false),
+  contextIds: z.array(z.string().uuid()).optional().default([]),
 });
 
 const updateTaskSchema = z.object({
@@ -37,7 +37,7 @@ const updateTaskSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional()
     .nullable(),
-  mustDo: z.boolean().optional(),
+  contextIds: z.array(z.string().uuid()).optional(),
 });
 
 const listTasksSchema = z.object({
@@ -65,12 +65,12 @@ interface Task {
   project_id: string | null;
   priority: number;
   due_date: string | null;
-  must_do: boolean;
   deferred_until: Date | null;
   completed_at: Date | null;
   deleted_at: Date | null;
   created_at: Date;
   updated_at: Date;
+  context_ids: string[];
 }
 
 // POST /api/tasks - Create task
@@ -86,7 +86,7 @@ tasks.post("/", async (c) => {
     );
   }
 
-  const { title, projectId, priority, dueDate, mustDo } = result.data;
+  const { title, projectId, priority, dueDate, contextIds } = result.data;
 
   const task = await withTransaction(
     async (tx) => {
@@ -94,24 +94,35 @@ tasks.post("/", async (c) => {
       if (projectId) {
         await assertOwnership(tx, "projects", projectId, session.userId);
       }
+      // Validate context ownership
+      for (const ctxId of contextIds) {
+        await assertOwnership(tx, "contexts", ctxId, session.userId);
+      }
 
-      const [created] = await tx<Task[]>`
-      INSERT INTO tasks (user_id, title, project_id, priority, due_date, must_do)
+      const [created] = await tx<Omit<Task, "context_ids">[]>`
+      INSERT INTO tasks (user_id, title, project_id, priority, due_date)
       VALUES (${session.userId}, ${title}, ${projectId || null}, ${priority}, ${
         dueDate || null
-      }, ${mustDo})
+      })
       RETURNING *
     `;
+
+      if (contextIds.length > 0) {
+        await tx`
+          INSERT INTO task_contexts (task_id, context_id)
+          SELECT ${created.id}, unnest(${contextIds}::uuid[])
+        `;
+      }
 
       // Log creation
       await logTaskActionTx(tx, {
         taskId: created.id,
         userId: session.userId,
         action: "created",
-        details: { title, projectId, priority, dueDate, mustDo },
+        details: { title, projectId, priority, dueDate, contextIds },
       });
 
-      return created;
+      return { ...created, context_ids: contextIds };
     },
     { userId: session.userId },
   );
@@ -141,9 +152,11 @@ tasks.get("/", async (c) => {
       SELECT t.*,
         r.frequency as recurrence_type,
         r.interval as recurrence_interval,
-        r.days_of_week as recurrence_days
+        r.days_of_week as recurrence_days,
+        COALESCE(array_agg(tc.context_id) FILTER (WHERE tc.context_id IS NOT NULL), '{}') as context_ids
       FROM tasks t
       LEFT JOIN recurrence_rules r ON r.task_id = t.id
+      LEFT JOIN task_contexts tc ON t.id = tc.task_id
       WHERE 1=1
       ${projectId ? sql`AND t.project_id = ${projectId}` : sql``}
       ${completed === "true" ? sql`AND t.completed_at IS NOT NULL` : sql``}
@@ -152,6 +165,7 @@ tasks.get("/", async (c) => {
       ${deleted !== "true" ? sql`AND t.deleted_at IS NULL` : sql``}
       ${dueBefore ? sql`AND t.due_date <= ${dueBefore}` : sql``}
       ${dueAfter ? sql`AND t.due_date >= ${dueAfter}` : sql``}
+      GROUP BY t.id, r.frequency, r.interval, r.days_of_week
       ORDER BY t.created_at DESC
       LIMIT ${limit}
       OFFSET ${offset}
@@ -176,10 +190,13 @@ tasks.get("/:id", async (c) => {
       SELECT t.*,
         r.frequency as recurrence_type,
         r.interval as recurrence_interval,
-        r.days_of_week as recurrence_days
+        r.days_of_week as recurrence_days,
+        COALESCE(array_agg(tc.context_id) FILTER (WHERE tc.context_id IS NOT NULL), '{}') as context_ids
       FROM tasks t
       LEFT JOIN recurrence_rules r ON r.task_id = t.id
+      LEFT JOIN task_contexts tc ON t.id = tc.task_id
       WHERE t.id = ${id}
+      GROUP BY t.id, r.frequency, r.interval, r.days_of_week
     `;
       return result || null;
     },
@@ -220,15 +237,23 @@ tasks.patch("/:id", async (c) => {
           session.userId,
         );
       }
+      // Validate context ownership
+      if (updates.contextIds) {
+        for (const ctxId of updates.contextIds) {
+          await assertOwnership(tx, "contexts", ctxId, session.userId);
+        }
+      }
 
       // Get current task for history
-      const [existing] = await tx<Task[]>`SELECT * FROM tasks WHERE id = ${id}`;
+      const [existing] = await tx<
+        Omit<Task, "context_ids">[]
+      >`SELECT * FROM tasks WHERE id = ${id}`;
       if (!existing) {
         return null;
       }
 
       // Build update
-      const [updated] = await tx<Task[]>`
+      const [updated] = await tx<Omit<Task, "context_ids">[]>`
       UPDATE tasks SET
         title = COALESCE(${updates.title ?? null}, title),
         project_id = ${
@@ -240,11 +265,28 @@ tasks.patch("/:id", async (c) => {
         due_date = ${
         updates.dueDate !== undefined ? updates.dueDate : existing.due_date
       },
-        must_do = COALESCE(${updates.mustDo ?? null}, must_do),
         updated_at = NOW()
       WHERE id = ${id}
       RETURNING *
     `;
+
+      // Update context associations if provided
+      let contextIds: string[];
+      if (updates.contextIds !== undefined) {
+        await tx`DELETE FROM task_contexts WHERE task_id = ${id}`;
+        if (updates.contextIds.length > 0) {
+          await tx`
+            INSERT INTO task_contexts (task_id, context_id)
+            SELECT ${id}, unnest(${updates.contextIds}::uuid[])
+          `;
+        }
+        contextIds = updates.contextIds;
+      } else {
+        const rows = await tx<{ context_id: string }[]>`
+          SELECT context_id FROM task_contexts WHERE task_id = ${id}
+        `;
+        contextIds = rows.map((r) => r.context_id);
+      }
 
       // Log update
       await logTaskActionTx(tx, {
@@ -254,7 +296,7 @@ tasks.patch("/:id", async (c) => {
         details: { changes: updates },
       });
 
-      return updated;
+      return { ...updated, context_ids: contextIds };
     },
     { userId: session.userId },
   );
@@ -332,6 +374,12 @@ tasks.post("/:id/complete", async (c) => {
       RETURNING *
     `;
 
+      // Clear next selection so a new task is picked
+      await tx`
+        UPDATE user_next_selection SET task_id = NULL
+        WHERE user_id = ${session.userId} AND task_id = ${id}
+      `;
+
       await logTaskActionTx(tx, {
         taskId: id,
         userId: session.userId,
@@ -347,14 +395,13 @@ tasks.post("/:id/complete", async (c) => {
 
         // Create next task instance
         [newTask] = await tx<Task[]>`
-        INSERT INTO tasks (user_id, title, project_id, priority, due_date, must_do)
+        INSERT INTO tasks (user_id, title, project_id, priority, due_date)
         VALUES (
           ${session.userId},
           ${existing.title},
           ${existing.project_id},
           ${existing.priority},
-          ${nextDueDate},
-          ${existing.must_do}
+          ${nextDueDate}
         )
         RETURNING *
       `;
@@ -484,20 +531,24 @@ tasks.post("/:id/defer", async (c) => {
 
   const task = await withTransaction(
     async (tx) => {
-      const [existing] = await tx<Task[]>`SELECT * FROM tasks WHERE id = ${id}`;
+      const [existing] = await tx<
+        Omit<Task, "context_ids">[]
+      >`SELECT * FROM tasks WHERE id = ${id}`;
       if (!existing) {
         return null;
       }
 
-      if (existing.must_do) {
-        return { error: "Cannot defer must-do tasks" };
-      }
-
-      const [deferred] = await tx<Task[]>`
+      const [deferred] = await tx<Omit<Task, "context_ids">[]>`
       UPDATE tasks SET deferred_until = ${deferUntil}, updated_at = NOW()
       WHERE id = ${id}
       RETURNING *
     `;
+
+      // Clear next selection so a new task is picked
+      await tx`
+        UPDATE user_next_selection SET task_id = NULL
+        WHERE user_id = ${session.userId} AND task_id = ${id}
+      `;
 
       await logTaskActionTx(tx, {
         taskId: id,
@@ -516,10 +567,6 @@ tasks.post("/:id/defer", async (c) => {
 
   if (!task) {
     return c.json({ error: "Task not found" }, 404);
-  }
-
-  if ("error" in task) {
-    return c.json({ error: task.error }, 400);
   }
 
   return c.json(task.task);

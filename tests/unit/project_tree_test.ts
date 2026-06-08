@@ -6,7 +6,7 @@ import { assertEquals } from "@std/assert";
 interface Project {
   id: string;
   name: string;
-  context_id?: string | null;
+  context_ids?: string[];
   parent_project_id?: string | null;
 }
 

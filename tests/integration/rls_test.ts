@@ -85,10 +85,10 @@ Deno.test({
         assertEquals(res.status, 200);
         const body = await res.json();
 
-        const otherTask = body.tasks.find(
-          (t: { id: string }) => t.id === otherTaskId,
-        );
-        assertEquals(otherTask, undefined);
+        // /api/next returns { task: Task | null } — if a task is returned it must not be the other user's
+        if (body.task) {
+          assertEquals(body.task.id !== otherTaskId, true);
+        }
       },
     );
 

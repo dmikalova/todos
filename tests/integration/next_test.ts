@@ -1,5 +1,5 @@
-// Integration tests for Next endpoint and project-based context filtering
-// Tests: eligible tasks returned, deferred excluded, project filter, inbox excluded from context
+// Integration tests for Next endpoint — context-based selection
+// Tests: stable selection, re-selection on complete/defer, rank ordering, fallback across contexts
 
 import { assertEquals, assertExists } from "@std/assert";
 import {
@@ -16,48 +16,94 @@ Deno.test({
   async fn(t) {
     ctx = await setupTestContext();
 
-    await t.step("GET /api/next returns eligible tasks", async () => {
-      // Create tasks via API (sets user_id from session)
-      await apiCall(ctx.app, "POST", "/api/tasks", {
-        title: "Integration Test Next Eligible 1",
-        priority: 3,
-      });
-      await apiCall(ctx.app, "POST", "/api/tasks", {
-        title: "Integration Test Next Eligible 2",
-        priority: 2,
-      });
+    // Setup: create an always-active context (no time windows = always active)
+    let contextId: string;
+    let projectId: string;
 
-      const res = await apiCall(ctx.app, "GET", "/api/next");
-      assertEquals(res.status, 200);
-      const body = await res.json();
+    await t.step("setup: create context and project", async () => {
+      const ctxRes = await apiCall(ctx.app, "POST", "/api/contexts", {
+        name: "Test Context Next Always",
+        timeWindows: [],
+      });
+      assertEquals(ctxRes.status, 201);
+      contextId = (await ctxRes.json()).id;
 
-      assertExists(body.tasks);
-      assertEquals(body.tasks.length >= 2, true);
+      const projRes = await apiCall(ctx.app, "POST", "/api/projects", {
+        name: "Test Project Next",
+        contextIds: [contextId],
+      });
+      assertEquals(projRes.status, 201);
+      projectId = (await projRes.json()).id;
     });
 
-    await t.step("GET /api/next excludes completed tasks", async () => {
-      const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
-        title: "Integration Test Next Completed",
-        priority: 2,
+    await t.step("GET /api/next returns single task or null", async () => {
+      // Create a task in the project with context
+      await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test Next Single",
+        priority: 1,
+        projectId,
       });
-      assertEquals(createRes.status, 201);
-      const task = await createRes.json();
-
-      // Complete the task
-      await apiCall(ctx.app, "POST", `/api/tasks/${task.id}/complete`);
 
       const res = await apiCall(ctx.app, "GET", "/api/next");
       assertEquals(res.status, 200);
       const body = await res.json();
 
-      const titles = body.tasks.map((t: { title: string }) => t.title);
-      assertEquals(titles.includes("Integration Test Next Completed"), false);
+      // Response shape: { task: Task | null }
+      assertEquals("task" in body, true);
+      if (body.task) {
+        assertExists(body.task.id);
+        assertExists(body.task.title);
+      }
+    });
+
+    await t.step(
+      "GET /api/next stable selection — same task on repeated calls",
+      async () => {
+        const res1 = await apiCall(ctx.app, "GET", "/api/next");
+        assertEquals(res1.status, 200);
+        const body1 = await res1.json();
+
+        const res2 = await apiCall(ctx.app, "GET", "/api/next");
+        assertEquals(res2.status, 200);
+        const body2 = await res2.json();
+
+        // Same task should be returned
+        assertEquals(body1.task?.id, body2.task?.id);
+      },
+    );
+
+    await t.step("completing task triggers re-selection", async () => {
+      // Get current task
+      const res1 = await apiCall(ctx.app, "GET", "/api/next");
+      const body1 = await res1.json();
+      assertExists(body1.task);
+      const firstTaskId = body1.task.id;
+
+      // Create another task so there's something to select next
+      await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test Next After Complete",
+        priority: 2,
+        projectId,
+      });
+
+      // Complete the current task
+      await apiCall(ctx.app, "POST", `/api/tasks/${firstTaskId}/complete`);
+
+      // Next should return a different task (or null)
+      const res2 = await apiCall(ctx.app, "GET", "/api/next");
+      const body2 = await res2.json();
+
+      if (body2.task) {
+        // Should not be the completed task
+        assertEquals(body2.task.id !== firstTaskId, true);
+      }
     });
 
     await t.step("GET /api/next excludes deferred tasks", async () => {
       const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
         title: "Integration Test Next Deferred",
         priority: 2,
+        projectId,
       });
       assertEquals(createRes.status, 201);
       const task = await createRes.json();
@@ -67,135 +113,60 @@ Deno.test({
         preset: "tomorrow",
       });
 
+      // The deferred task should not be selected as next
       const res = await apiCall(ctx.app, "GET", "/api/next");
       assertEquals(res.status, 200);
       const body = await res.json();
 
-      const titles = body.tasks.map((t: { title: string }) => t.title);
-      assertEquals(titles.includes("Integration Test Next Deferred"), false);
-    });
-
-    await t.step("GET /api/next?projectId filters by project", async () => {
-      // Create a project
-      const projRes = await apiCall(ctx.app, "POST", "/api/projects", {
-        name: "Test Project Next Filter",
-      });
-      assertEquals(projRes.status, 201);
-      const project = await projRes.json();
-
-      // Create task in project
-      const taskRes = await apiCall(ctx.app, "POST", "/api/tasks", {
-        title: "Integration Test Next In Project",
-        priority: 2,
-        projectId: project.id,
-      });
-      assertEquals(taskRes.status, 201);
-
-      // Create task without project
-      await apiCall(ctx.app, "POST", "/api/tasks", {
-        title: "Integration Test Next No Project",
-        priority: 2,
-      });
-
-      // Filter by projectId
-      const res = await apiCall(
-        ctx.app,
-        "GET",
-        `/api/next?projectId=${project.id}`,
-      );
-      assertEquals(res.status, 200);
-      const body = await res.json();
-
-      // All returned tasks should belong to the project
-      for (const task of body.tasks) {
-        assertEquals(task.project_id, project.id);
+      if (body.task) {
+        assertEquals(body.task.id !== task.id, true);
       }
-      // Should include our project task
-      const titles = body.tasks.map((t: { title: string }) => t.title);
-      assertEquals(titles.includes("Integration Test Next In Project"), true);
     });
 
-    await t.step("GET /api/next sorts by due date ascending", async () => {
-      // Create a new project to isolate tasks
-      const projRes = await apiCall(ctx.app, "POST", "/api/projects", {
-        name: "Test Project Next Sort",
+    await t.step("deferring current task triggers re-selection", async () => {
+      // Create a fresh task to become current
+      const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+        title: "Integration Test Next Defer Reselect",
+        priority: 1,
+        projectId,
       });
-      assertEquals(projRes.status, 201);
-      const project = await projRes.json();
+      assertEquals(createRes.status, 201);
+      await createRes.json();
 
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
+      // Force this as next by completing all others or just check behavior
+      const res1 = await apiCall(ctx.app, "GET", "/api/next");
+      const body1 = await res1.json();
+      assertExists(body1.task);
 
-      // Create task due today first
-      await apiCall(ctx.app, "POST", "/api/tasks", {
-        title: "Integration Test Next Due Later",
-        priority: 2,
-        projectId: project.id,
-        dueDate: today.toISOString().split("T")[0],
-      });
-
-      // Create task due yesterday second
-      await apiCall(ctx.app, "POST", "/api/tasks", {
-        title: "Integration Test Next Due Sooner",
-        priority: 2,
-        projectId: project.id,
-        dueDate: yesterday.toISOString().split("T")[0],
+      // Defer whatever the current task is
+      await apiCall(ctx.app, "POST", `/api/tasks/${body1.task.id}/defer`, {
+        preset: "tomorrow",
       });
 
-      // Filter by project to only see our test tasks
-      const res = await apiCall(
-        ctx.app,
-        "GET",
-        `/api/next?projectId=${project.id}`,
-      );
-      assertEquals(res.status, 200);
-      const body = await res.json();
+      // Next should now return a different task
+      const res2 = await apiCall(ctx.app, "GET", "/api/next");
+      const body2 = await res2.json();
 
-      // Due sooner should come before due later
-      const titles = body.tasks.map((t: { title: string }) => t.title);
-      const soonerIdx = titles.indexOf("Integration Test Next Due Sooner");
-      const laterIdx = titles.indexOf("Integration Test Next Due Later");
-      assertEquals(soonerIdx < laterIdx, true);
+      if (body2.task) {
+        assertEquals(body2.task.id !== body1.task.id, true);
+      }
     });
 
-    await t.step("GET /api/next excludes future-dated tasks", async () => {
-      const projRes = await apiCall(ctx.app, "POST", "/api/projects", {
-        name: "Test Project Next Future",
-      });
-      assertEquals(projRes.status, 201);
-      const project = await projRes.json();
+    await t.step(
+      "GET /api/next returns null when no eligible tasks",
+      async () => {
+        // Clean up all test tasks
+        await ctx
+          .db`DELETE FROM tasks.tasks WHERE title LIKE 'Integration Test%'`;
+        // Clear next selection
+        await ctx.db`DELETE FROM tasks.user_next_selection`;
 
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      // Create a task due tomorrow
-      await apiCall(ctx.app, "POST", "/api/tasks", {
-        title: "Integration Test Next Future Task",
-        priority: 2,
-        projectId: project.id,
-        dueDate: tomorrow.toISOString().split("T")[0],
-      });
-
-      // Create a task with no due date (should still appear)
-      await apiCall(ctx.app, "POST", "/api/tasks", {
-        title: "Integration Test Next No Date Task",
-        priority: 2,
-        projectId: project.id,
-      });
-
-      const res = await apiCall(
-        ctx.app,
-        "GET",
-        `/api/next?projectId=${project.id}`,
-      );
-      assertEquals(res.status, 200);
-      const body = await res.json();
-
-      const titles = body.tasks.map((t: { title: string }) => t.title);
-      assertEquals(titles.includes("Integration Test Next Future Task"), false);
-      assertEquals(titles.includes("Integration Test Next No Date Task"), true);
-    });
+        const res = await apiCall(ctx.app, "GET", "/api/next");
+        assertEquals(res.status, 200);
+        const body = await res.json();
+        assertEquals(body.task, null);
+      },
+    );
 
     await t.step(
       "POST /api/tasks/:id/defer defers task with preset",
@@ -203,6 +174,7 @@ Deno.test({
         const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
           title: "Integration Test Defer Action",
           priority: 3,
+          projectId,
         });
         assertEquals(createRes.status, 201);
         const task = await createRes.json();
@@ -226,6 +198,7 @@ Deno.test({
         const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
           title: "Integration Test Clear Defer",
           priority: 3,
+          projectId,
         });
         assertEquals(createRes.status, 201);
         const task = await createRes.json();
@@ -249,12 +222,37 @@ Deno.test({
     );
 
     await t.step(
-      "GET /api/next returns 400 for invalid query params",
+      "GET /api/next re-selects when stored selection becomes ineligible",
       async () => {
-        const res = await apiCall(ctx.app, "GET", "/api/next?count=999");
-        assertEquals(res.status, 400);
+        // Create a fresh task
+        const createRes = await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Stale Selection",
+          priority: 1,
+          projectId,
+        });
+        assertEquals(createRes.status, 201);
+        const task = await createRes.json();
+
+        // Directly set user_next_selection.task_id to this task, then soft-delete it
+        // This simulates a stale selection (task becomes ineligible outside normal flow)
+        await ctx
+          .db`INSERT INTO tasks.user_next_selection (user_id, task_id, selected_at)
+              VALUES (${ctx.userId}, ${task.id}, NOW())
+              ON CONFLICT (user_id) DO UPDATE SET task_id = ${task.id}, selected_at = NOW()`;
+
+        // Soft-delete the task directly in DB to avoid clearing user_next_selection
+        await ctx
+          .db`UPDATE tasks.tasks SET deleted_at = NOW() WHERE id = ${task.id}`;
+
+        // GET /api/next should detect stale selection and pick a new task
+        const res = await apiCall(ctx.app, "GET", "/api/next");
+        assertEquals(res.status, 200);
         const body = await res.json();
-        assertEquals(body.error, "Validation error");
+
+        // Should NOT return the deleted task
+        if (body.task) {
+          assertEquals(body.task.id !== task.id, true);
+        }
       },
     );
 

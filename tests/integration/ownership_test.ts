@@ -75,7 +75,7 @@ Deno.test({
       async () => {
         const res = await apiCall(ctx.app, "POST", "/api/projects", {
           name: "Integration Test Ownership Project",
-          contextId: otherContextId,
+          contextIds: [otherContextId],
         });
 
         assertEquals(res.status, 404);
@@ -96,7 +96,7 @@ Deno.test({
           ctx.app,
           "PATCH",
           `/api/projects/${project.id}`,
-          { contextId: otherContextId },
+          { contextIds: [otherContextId] },
         );
 
         assertEquals(res.status, 404);

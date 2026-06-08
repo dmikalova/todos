@@ -426,6 +426,39 @@ export class TodoSidebar extends StoreElement {
       flex: 1;
     }
 
+    .rank-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .item-row:hover .rank-controls {
+      opacity: 1;
+    }
+
+    .rank-btn {
+      background: none;
+      border: none;
+      padding: 0 4px;
+      font-size: 10px;
+      line-height: 1;
+      cursor: pointer;
+      color: var(--md-sys-color-outline);
+      border-radius: 4px;
+    }
+
+    .rank-btn:hover:not(:disabled) {
+      color: var(--md-sys-color-on-surface);
+      background: var(--md-sys-color-surface-container-high);
+    }
+
+    .rank-btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
     .color-dot {
       width: 20px;
       height: 20px;
@@ -779,7 +812,7 @@ export class TodoSidebar extends StoreElement {
           ${!store.collapsedSections.has("contexts")
             ? html`
               ${store.contexts.map(
-                (context) =>
+                (context, index) =>
                   html`
                     <div class="item-row">
                       <button
@@ -795,6 +828,38 @@ export class TodoSidebar extends StoreElement {
                         ></span>
                         <span class="nav-button-label">${context.name}</span>
                       </button>
+                      <span class="rank-controls">
+                        <button
+                          class="rank-btn"
+                          ?disabled="${index === 0}"
+                          @click="${(e: Event) => {
+                            e.stopPropagation();
+                            const ids = store.contexts.map((c) => c.id);
+                            [ids[index - 1], ids[index]] = [
+                              ids[index],
+                              ids[index - 1],
+                            ];
+                            store.reorderContexts(ids);
+                          }}"
+                        >
+                          ▲
+                        </button>
+                        <button
+                          class="rank-btn"
+                          ?disabled="${index === store.contexts.length - 1}"
+                          @click="${(e: Event) => {
+                            e.stopPropagation();
+                            const ids = store.contexts.map((c) => c.id);
+                            [ids[index], ids[index + 1]] = [
+                              ids[index + 1],
+                              ids[index],
+                            ];
+                            store.reorderContexts(ids);
+                          }}"
+                        >
+                          ▼
+                        </button>
+                      </span>
                     </div>
                   `,
               )}

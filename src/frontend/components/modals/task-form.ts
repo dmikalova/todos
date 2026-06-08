@@ -19,6 +19,7 @@ interface TaskFormData {
   priority: number;
   due_date: string;
   project_id: string | null;
+  context_ids: string[];
   recurrence_type: string | null;
   recurrence_interval: number;
   recurrence_days: number[];
@@ -201,6 +202,7 @@ export class TaskForm extends LitElement {
     priority: 3,
     due_date: "",
     project_id: null,
+    context_ids: [],
     recurrence_type: null,
     recurrence_interval: 1,
     recurrence_days: [],
@@ -248,6 +250,7 @@ export class TaskForm extends LitElement {
         priority: t.priority,
         due_date: t.due_date ? t.due_date.split("T")[0] : "",
         project_id: t.project_id || null,
+        context_ids: t.context_ids || [],
         recurrence_type: t.recurrence_type || null,
         recurrence_interval: t.recurrence_interval || 1,
         recurrence_days: t.recurrence_days || [],
@@ -343,6 +346,7 @@ export class TaskForm extends LitElement {
         priority: this.form.priority,
         dueDate: this.form.due_date || null,
         projectId: this.form.project_id || null,
+        contextIds: this.form.context_ids,
       },
       this.form.recurrence_type
         ? {
@@ -469,6 +473,59 @@ export class TaskForm extends LitElement {
               </m3e-select>
             </m3e-form-field>
           </div>
+
+          ${store.contexts.length > 0
+            ? html`
+              <div class="form-group">
+                <label
+                  style="display: block; font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px;"
+                >contexts</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                  ${store.contexts.map(
+                    (c) =>
+                      html`
+                        <button
+                          type="button"
+                          style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 9999px; font-size: 13px; border: 1px solid ${this
+                              .form.context_ids.includes(c.id)
+                            ? "var(--md-sys-color-secondary)"
+                            : "var(--md-sys-color-outline-variant)"}; background: ${this
+                              .form.context_ids.includes(c.id)
+                            ? "var(--md-sys-color-secondary-container)"
+                            : "var(--md-sys-color-surface-container)"}; color: ${this
+                              .form.context_ids.includes(c.id)
+                            ? "var(--md-sys-color-on-secondary-container)"
+                            : "var(--md-sys-color-on-surface)"}; cursor: pointer;"
+                          @click="${() => {
+                            const ids = this.form.context_ids.includes(c.id)
+                              ? this.form.context_ids.filter((id) =>
+                                id !== c.id
+                              )
+                              : [...this.form.context_ids, c.id];
+                            this.form = { ...this.form, context_ids: ids };
+                          }}"
+                        >
+                          <span
+                            style="width: 8px; height: 8px; border-radius: 50%; background: ${c
+                              .color || "#F48FB1"}"
+                          ></span>
+                          ${c.name}
+                        </button>
+                      `,
+                  )}
+                </div>
+                ${this.form.project_id && this.form.context_ids.length === 0
+                  ? html`
+                    <div
+                      style="font-size: 12px; color: var(--md-sys-color-outline); margin-top: 4px;"
+                    >
+                      inherits from project
+                    </div>
+                  `
+                  : null}
+              </div>
+            `
+            : null}
 
           <div class="form-group">
             <m3e-form-field

@@ -95,9 +95,11 @@ contexts.post("/", async (c) => {
 
   const context = await withTransaction(async (tx) => {
     const [created] = await tx<Context[]>`
-      INSERT INTO contexts (user_id, name, color) VALUES (${session.userId}, ${name}, ${
-      color ?? null
-    }) RETURNING *
+      INSERT INTO contexts (user_id, name, color, sort_order)
+      VALUES (${session.userId}, ${name}, ${color ?? null}, (
+        SELECT COALESCE(MAX(sort_order), 0) + 1 FROM contexts WHERE user_id = ${session.userId}
+      ))
+      RETURNING *
     `;
 
     // Add time windows
@@ -146,6 +148,40 @@ contexts.get("/", async (c) => {
   }, { userId: session.userId });
 
   return c.json(contextList);
+});
+
+// PATCH /api/contexts/reorder - Reorder contexts by rank
+const reorderSchema = z.object({
+  contextIds: z.array(z.string().uuid()).min(1),
+});
+
+contexts.patch("/reorder", async (c) => {
+  const session = c.get("session") as SessionData;
+  const body = await c.req.json();
+  const result = reorderSchema.safeParse(body);
+
+  if (!result.success) {
+    return c.json(
+      { error: "Validation error", details: result.error.issues },
+      400,
+    );
+  }
+
+  const { contextIds } = result.data;
+
+  await withTransaction(
+    async (tx) => {
+      for (let i = 0; i < contextIds.length; i++) {
+        await tx`
+          UPDATE contexts SET sort_order = ${i + 1}
+          WHERE id = ${contextIds[i]}
+        `;
+      }
+    },
+    { userId: session.userId },
+  );
+
+  return c.json({ message: "Contexts reordered" });
 });
 
 // GET /api/contexts/:id - Get single context
@@ -243,9 +279,7 @@ contexts.delete("/:id", async (c) => {
     >`SELECT * FROM contexts WHERE id = ${id}`;
     if (!existing) return null;
 
-    // Cascade delete removes time windows automatically
-    // Also clear context_id from projects that reference this context
-    await tx`UPDATE projects SET context_id = NULL WHERE context_id = ${id}`;
+    // Cascade delete removes time windows, project_contexts, and task_contexts
     await tx`DELETE FROM contexts WHERE id = ${id}`;
     return existing;
   }, { userId: session.userId });
@@ -255,4 +289,91 @@ contexts.delete("/:id", async (c) => {
   }
 
   return c.json({ message: "Context deleted", context: deleted });
+});
+
+// GET /api/contexts/:id/tasks - Get tasks with effective context
+const contextTasksSchema = z.object({
+  completed: z.enum(["true", "false"]).optional(),
+});
+
+contexts.get("/:id/tasks", async (c) => {
+  const session = c.get("session") as SessionData;
+  const id = c.req.param("id");
+  const query = Object.fromEntries(new URL(c.req.url).searchParams);
+  const params = contextTasksSchema.safeParse(query);
+
+  if (!params.success) {
+    return c.json(
+      { error: "Validation error", details: params.error.issues },
+      400,
+    );
+  }
+
+  const { completed } = params.data;
+
+  // Verify context belongs to user
+  const contextExists = await withDb(
+    async (sql: SqlQuery) => {
+      const [ctx] = await sql<
+        Context[]
+      >`SELECT id FROM contexts WHERE id = ${id}`;
+      return !!ctx;
+    },
+    { userId: session.userId },
+  );
+
+  if (!contextExists) {
+    return c.json({ error: "Context not found" }, 404);
+  }
+
+  const tasks = await withDb(
+    async (sql: SqlQuery) => {
+      // Recursive CTE: find all projects that effectively have this context
+      const result = await sql`
+        WITH RECURSIVE ctx_projects AS (
+          SELECT p.id FROM projects p
+          JOIN project_contexts pc ON pc.project_id = p.id
+          WHERE pc.context_id = ${id}
+          UNION
+          SELECT child.id FROM projects child
+          JOIN ctx_projects parent ON child.parent_project_id = parent.id
+          WHERE NOT EXISTS (
+            SELECT 1 FROM project_contexts pc WHERE pc.project_id = child.id
+          )
+        )
+        SELECT t.*,
+          COALESCE(array_agg(tc2.context_id) FILTER (WHERE tc2.context_id IS NOT NULL), '{}') as context_ids
+        FROM (
+          -- Tasks with direct context assignment
+          SELECT t.* FROM tasks t
+          JOIN task_contexts tc ON tc.task_id = t.id
+          WHERE tc.context_id = ${id}
+            AND t.deleted_at IS NULL
+            ${
+        completed === "true" ? sql`AND t.completed_at IS NOT NULL` : sql``
+      }
+            ${completed === "false" ? sql`AND t.completed_at IS NULL` : sql``}
+          UNION
+          -- Tasks inheriting from project (no direct task contexts)
+          SELECT t.* FROM tasks t
+          WHERE t.project_id IN (SELECT id FROM ctx_projects)
+            AND NOT EXISTS (SELECT 1 FROM task_contexts tc WHERE tc.task_id = t.id)
+            AND t.deleted_at IS NULL
+            ${
+        completed === "true" ? sql`AND t.completed_at IS NOT NULL` : sql``
+      }
+            ${completed === "false" ? sql`AND t.completed_at IS NULL` : sql``}
+        ) t
+        LEFT JOIN task_contexts tc2 ON t.id = tc2.task_id
+        GROUP BY t.id, t.user_id, t.title, t.project_id, t.priority,
+                 t.due_date, t.deferred_until, t.completed_at, t.deleted_at,
+                 t.created_at, t.updated_at
+        ORDER BY t.priority DESC, t.due_date ASC NULLS LAST, t.title ASC
+      `;
+      return result;
+    },
+    { userId: session.userId },
+  );
+
+  return c.json(tasks);
 });

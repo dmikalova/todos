@@ -47,7 +47,6 @@ interface Task {
   project_id: string | null;
   priority: number;
   due_date: string | null;
-  must_do: boolean;
   deferred_until: Date | null;
   completed_at: Date | null;
   deleted_at: Date | null;
@@ -317,14 +316,13 @@ recurrence.post("/:taskId/complete", async (c) => {
 
       // Create next task instance
       const [newTask] = await tx<Task[]>`
-      INSERT INTO tasks (user_id, title, project_id, priority, due_date, must_do)
+      INSERT INTO tasks (user_id, title, project_id, priority, due_date)
       VALUES (
         ${session.userId},
         ${task.title},
         ${task.project_id},
         ${task.priority},
-        ${nextDueDate},
-        ${task.must_do}
+        ${nextDueDate}
       )
       RETURNING *
     `;

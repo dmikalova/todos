@@ -7,6 +7,7 @@ import "npm:@m3e/web@2/form-field";
 import "npm:@m3e/web@2/icon";
 import "npm:@m3e/web@2/option";
 import "npm:@m3e/web@2/select";
+import "../ui/chip-picker.ts";
 import { store } from "../../store.ts";
 
 @customElement("project-form")
@@ -134,41 +135,6 @@ export class ProjectForm extends LitElement {
       gap: 8px;
     }
 
-    .context-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .context-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 6px 12px;
-      border-radius: 9999px;
-      font-size: 13px;
-      border: 1px solid var(--md-sys-color-outline-variant);
-      background: var(--md-sys-color-surface-container);
-      color: var(--md-sys-color-on-surface);
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .context-chip.selected {
-      background: var(--md-sys-color-secondary-container);
-      border-color: var(--md-sys-color-secondary);
-      color: var(--md-sys-color-on-secondary-container);
-    }
-
-    .context-chip:hover {
-      background: var(--md-sys-color-surface-container-high);
-    }
-
-    .context-chip.selected:hover {
-      background: var(--md-sys-color-secondary-container);
-      opacity: 0.85;
-    }
-
     .inherited-hint {
       font-size: 12px;
       color: var(--md-sys-color-outline);
@@ -259,13 +225,6 @@ export class ProjectForm extends LitElement {
       }
     }
     return "";
-  }
-
-  private _toggleContext(contextId: string) {
-    const ids = this.form.context_ids.includes(contextId)
-      ? this.form.context_ids.filter((id) => id !== contextId)
-      : [...this.form.context_ids, contextId];
-    this.form = { ...this.form, context_ids: ids };
   }
 
   private async handleSubmit(e: Event) {
@@ -389,26 +348,19 @@ export class ProjectForm extends LitElement {
             <label
               style="display: block; font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px;"
             >contexts</label>
-            <div class="context-chips">
-              ${store.contexts.map(
-                (c) =>
-                  html`
-                    <button
-                      type="button"
-                      class="context-chip ${this.form.context_ids.includes(c.id)
-                        ? "selected"
-                        : ""}"
-                      @click="${() => this._toggleContext(c.id)}"
-                    >
-                      <span
-                        style="width: 8px; height: 8px; border-radius: 50%; background: ${c
-                          .color || "#F48FB1"}"
-                      ></span>
-                      ${c.name}
-                    </button>
-                  `,
-              )}
-            </div>
+            <chip-picker
+              .items="${store.contexts.map((c) => ({
+                id: c.id,
+                name: c.name,
+                color: c.color || "#F48FB1",
+              }))}"
+              .selectedIds="${this.form.context_ids}"
+              placeholder="add context..."
+              defaultColor="#F48FB1"
+              @change="${(e: CustomEvent<{ selectedIds: string[] }>) => {
+                this.form = { ...this.form, context_ids: e.detail.selectedIds };
+              }}"
+            ></chip-picker>
             ${this._getInheritedContextLabel()
               ? html`
                 <div class="inherited-hint">${this

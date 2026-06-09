@@ -1,30 +1,13 @@
 // Seed test — runs last to leave the database in a usable state for manual testing.
-// Uses names that don't match cleanTestData patterns so they persist across test runs.
 
 import { assertEquals } from "@std/assert";
-import { apiCall, createTestDb, setupTestContext } from "./setup.ts";
+import { apiCall, setupTestContext } from "./setup.ts";
 import type { TestContext } from "./setup.ts";
 
 let ctx: TestContext;
 
-// Clean old seed data before inserting fresh
-async function cleanSeedData() {
-  const db = createTestDb();
-  await db`DELETE FROM tasks.recurrence_rules WHERE task_id IN (SELECT id FROM tasks.tasks WHERE title LIKE 'Seed:%')`;
-  await db`DELETE FROM tasks.task_history WHERE task_id IN (SELECT id FROM tasks.tasks WHERE title LIKE 'Seed:%')`;
-  await db`DELETE FROM tasks.task_contexts WHERE task_id IN (SELECT id FROM tasks.tasks WHERE title LIKE 'Seed:%')`;
-  await db`DELETE FROM tasks.tasks WHERE title LIKE 'Seed:%'`;
-  await db`DELETE FROM tasks.saved_filters WHERE name LIKE 'Seed:%'`;
-  await db`DELETE FROM tasks.project_contexts WHERE project_id IN (SELECT id FROM tasks.projects WHERE name LIKE 'Seed:%')`;
-  await db`DELETE FROM tasks.context_time_windows WHERE context_id IN (SELECT id FROM tasks.contexts WHERE name LIKE 'Seed:%')`;
-  await db`DELETE FROM tasks.contexts WHERE name LIKE 'Seed:%'`;
-  await db`DELETE FROM tasks.projects WHERE name LIKE 'Seed:%'`;
-  await db.end();
-}
-
 Deno.test("seed data for manual testing", async (t) => {
   ctx = await setupTestContext();
-  await cleanSeedData();
 
   let morningContextId: string;
   let eveningContextId: string;

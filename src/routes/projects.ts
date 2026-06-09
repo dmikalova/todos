@@ -104,8 +104,8 @@ projects.get("/", async (c) => {
     async (sql: SqlQuery) => {
       const result = await sql<ProjectWithCount[]>`
       SELECT p.*,
-        COUNT(t.id)::int as task_count,
-        COALESCE(array_agg(pc.context_id) FILTER (WHERE pc.context_id IS NOT NULL), '{}') as context_ids
+        COUNT(DISTINCT t.id)::int as task_count,
+        COALESCE(array_agg(DISTINCT pc.context_id) FILTER (WHERE pc.context_id IS NOT NULL), '{}') as context_ids
       FROM projects p
       LEFT JOIN tasks t ON p.id = t.project_id AND t.deleted_at IS NULL AND t.completed_at IS NULL
       LEFT JOIN project_contexts pc ON p.id = pc.project_id
@@ -153,8 +153,8 @@ projects.get("/:id", async (c) => {
     async (sql: SqlQuery) => {
       const [result] = await sql<ProjectWithCount[]>`
       SELECT p.*,
-        COUNT(t.id)::int as task_count,
-        COALESCE(array_agg(pc.context_id) FILTER (WHERE pc.context_id IS NOT NULL), '{}') as context_ids
+        COUNT(DISTINCT t.id)::int as task_count,
+        COALESCE(array_agg(DISTINCT pc.context_id) FILTER (WHERE pc.context_id IS NOT NULL), '{}') as context_ids
       FROM projects p
       LEFT JOIN tasks t ON p.id = t.project_id AND t.deleted_at IS NULL AND t.completed_at IS NULL
       LEFT JOIN project_contexts pc ON p.id = pc.project_id

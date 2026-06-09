@@ -40,8 +40,6 @@ Deno.test({
     await t.step(
       "GET /api/filters returns empty array when none exist",
       async () => {
-        // Ensure no filters exist (seed data may have created some)
-        await ctx.db`DELETE FROM tasks.saved_filters WHERE user_id = ${ctx.userId}`;
         const res = await apiCall(ctx.app, "GET", "/api/filters");
         assertEquals(res.status, 200);
         const body = await res.json();

@@ -12,6 +12,7 @@ import "npm:@m3e/web@2/option";
 import "npm:@m3e/web@2/segmented-button";
 import "npm:@m3e/web@2/select";
 import "npm:@m3e/web@2/textarea-autosize";
+import "../ui/chip-picker.ts";
 import { store } from "../../store.ts";
 
 interface TaskFormData {
@@ -482,40 +483,22 @@ export class TaskForm extends LitElement {
                 <label
                   style="display: block; font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px;"
                 >contexts</label>
-                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                  ${store.contexts.map(
-                    (c) =>
-                      html`
-                        <button
-                          type="button"
-                          style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 9999px; font-size: 13px; border: 1px solid ${this
-                              .form.context_ids.includes(c.id)
-                            ? "var(--md-sys-color-secondary)"
-                            : "var(--md-sys-color-outline-variant)"}; background: ${this
-                              .form.context_ids.includes(c.id)
-                            ? "var(--md-sys-color-secondary-container)"
-                            : "var(--md-sys-color-surface-container)"}; color: ${this
-                              .form.context_ids.includes(c.id)
-                            ? "var(--md-sys-color-on-secondary-container)"
-                            : "var(--md-sys-color-on-surface)"}; cursor: pointer;"
-                          @click="${() => {
-                            const ids = this.form.context_ids.includes(c.id)
-                              ? this.form.context_ids.filter((id) =>
-                                id !== c.id
-                              )
-                              : [...this.form.context_ids, c.id];
-                            this.form = { ...this.form, context_ids: ids };
-                          }}"
-                        >
-                          <span
-                            style="width: 8px; height: 8px; border-radius: 50%; background: ${c
-                              .color || "#F48FB1"}"
-                          ></span>
-                          ${c.name}
-                        </button>
-                      `,
-                  )}
-                </div>
+                <chip-picker
+                  .items="${store.contexts.map((c) => ({
+                    id: c.id,
+                    name: c.name,
+                    color: c.color || "#F48FB1",
+                  }))}"
+                  .selectedIds="${this.form.context_ids}"
+                  placeholder="add context..."
+                  defaultColor="#F48FB1"
+                  @change="${(e: CustomEvent<{ selectedIds: string[] }>) => {
+                    this.form = {
+                      ...this.form,
+                      context_ids: e.detail.selectedIds,
+                    };
+                  }}"
+                ></chip-picker>
                 ${this.form.project_id && this.form.context_ids.length === 0
                   ? html`
                     <div

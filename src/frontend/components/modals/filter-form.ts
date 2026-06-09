@@ -6,6 +6,7 @@ import "npm:@m3e/web@2/button";
 import "npm:@m3e/web@2/form-field";
 import "npm:@m3e/web@2/icon";
 import "npm:@m3e/web@2/segmented-button";
+import "../ui/chip-picker.ts";
 import { type FilterCriteria, store } from "../../store.ts";
 
 interface DueDateForm {
@@ -101,75 +102,6 @@ export class FilterForm extends LitElement {
       --m3e-segmented-button-selected-container-color: var(--priority-3-color);
     }
 
-    .project-chip-input {
-      position: relative;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border: 1px solid var(--md-sys-color-outline);
-      border-radius: 8px;
-      background: var(--md-sys-color-surface);
-      cursor: text;
-      min-height: 44px;
-    }
-
-    .project-chip-input:focus-within {
-      border-color: var(--md-sys-color-primary);
-      outline: 1px solid var(--md-sys-color-primary);
-    }
-
-    .project-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px 4px 12px;
-      border-radius: 16px;
-      font-size: 13px;
-      font-weight: 500;
-      color: #fff;
-      white-space: nowrap;
-      border: none;
-    }
-
-    .project-chip button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 18px;
-      height: 18px;
-      border: none;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.3);
-      color: #fff;
-      font-size: 12px;
-      cursor: pointer;
-      padding: 0;
-      line-height: 1;
-    }
-
-    .project-chip button:hover {
-      background: rgba(255, 255, 255, 0.5);
-    }
-
-    .project-chip.selected {
-      outline: 2px solid var(--md-sys-color-primary);
-      outline-offset: 1px;
-    }
-
-    .project-chip-input input {
-      flex: 1;
-      min-width: 100px;
-      border: none;
-      outline: none;
-      background: transparent;
-      color: var(--md-sys-color-on-surface);
-      font-size: 14px;
-      font-family: inherit;
-      padding: 4px 0;
-    }
-
     .confirm-dialog {
       position: fixed;
       inset: 0;
@@ -199,49 +131,6 @@ export class FilterForm extends LitElement {
       display: flex;
       justify-content: flex-end;
       gap: 8px;
-    }
-
-    .project-chip-input input[readonly] {
-      flex: 0;
-      min-width: 0;
-      width: 0;
-      padding: 0;
-    }
-
-    .project-chip-input input::placeholder {
-      color: var(--md-sys-color-outline);
-    }
-
-    .project-suggestions {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      margin-top: 4px;
-      background: var(--md-sys-color-surface-container);
-      border: 1px solid var(--md-sys-color-outline-variant);
-      border-radius: 8px;
-      box-shadow: var(--md-sys-elevation-level2);
-      max-height: 200px;
-      overflow-y: auto;
-      z-index: 10;
-    }
-
-    .project-suggestions button {
-      display: block;
-      width: 100%;
-      padding: 10px 16px;
-      border: none;
-      background: transparent;
-      color: var(--md-sys-color-on-surface);
-      font-size: 14px;
-      text-align: left;
-      cursor: pointer;
-      font-family: inherit;
-    }
-
-    .project-suggestions button.highlighted {
-      background: var(--md-sys-color-surface-container-highest);
     }
 
     .due-date-row {
@@ -332,31 +221,9 @@ export class FilterForm extends LitElement {
   };
 
   @state()
-  accessor _showProjectSuggestions = false;
-
-  @state()
-  accessor _projectQuery = "";
-
-  @state()
-  accessor _highlightedIndex = -1;
-
-  @state()
-  accessor _selectedChipIndex = -1;
-
-  @state()
   accessor _showConfirmDiscard = false;
 
-  private _blurTimeout: ReturnType<typeof setTimeout> | null = null;
   private _initialForm: string = "";
-
-  get _filteredProjects() {
-    const available = store.projects.filter(
-      (p) => !this.form.projects.includes(p.id),
-    );
-    if (!this._projectQuery) return available;
-    const q = this._projectQuery.toLowerCase();
-    return available.filter((p) => p.name.toLowerCase().includes(q));
-  }
 
   override connectedCallback() {
     super.connectedCallback();
@@ -434,160 +301,6 @@ export class FilterForm extends LitElement {
     this.form = { ...this.form, priorities };
   }
 
-  private handleProjectInput(e: Event) {
-    const input = e.target as HTMLInputElement;
-    this._projectQuery = input.value;
-    this._showProjectSuggestions = true;
-    this._highlightedIndex = 0;
-  }
-
-  private _handleBlur = () => {
-    this._blurTimeout = setTimeout(() => {
-      this._showProjectSuggestions = false;
-      this._highlightedIndex = -1;
-      this._blurTimeout = null;
-    }, 150);
-  };
-
-  private handleProjectFocus() {
-    if (this._blurTimeout) {
-      clearTimeout(this._blurTimeout);
-      this._blurTimeout = null;
-    }
-    this._showProjectSuggestions = true;
-    this._highlightedIndex = 0;
-  }
-
-  private selectProject(id: string) {
-    const newProjects = this.form.projects.includes(id)
-      ? this.form.projects
-      : [...this.form.projects, id];
-    this.form = { ...this.form, projects: newProjects };
-
-    this._projectQuery = "";
-    this._highlightedIndex = 0;
-
-    // Cancel any pending blur timeout since we're keeping focus
-    if (this._blurTimeout) {
-      clearTimeout(this._blurTimeout);
-      this._blurTimeout = null;
-    }
-
-    // Focus input after render (element may change when last project added)
-    this._showProjectSuggestions = store.projects.some(
-      (p) => !newProjects.includes(p.id),
-    );
-    this.updateComplete.then(() => {
-      const input = this.renderRoot.querySelector<HTMLInputElement>(
-        "#project-input",
-      );
-      if (input) {
-        input.value = "";
-        input.focus();
-      }
-    });
-  }
-
-  private handleProjectKeydown(e: KeyboardEvent) {
-    const input = e.target as HTMLInputElement;
-    const filtered = this._filteredProjects;
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      this._highlightedIndex = Math.min(
-        this._highlightedIndex + 1,
-        filtered.length - 1,
-      );
-      this._selectedChipIndex = -1;
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      this._highlightedIndex = Math.max(this._highlightedIndex - 1, -1);
-      this._selectedChipIndex = -1;
-    } else if (e.key === "Enter" && this._highlightedIndex >= 0) {
-      e.preventDefault();
-      e.stopPropagation();
-      const project = filtered[this._highlightedIndex];
-      if (project) this.selectProject(project.id);
-    } else if (
-      e.key === "Enter" &&
-      this._showProjectSuggestions &&
-      filtered.length > 0
-    ) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.selectProject(filtered[0].id);
-    } else if (e.key === "Tab" && this._showProjectSuggestions) {
-      // Close suggestions on tab so focus moves naturally without selecting a suggestion button
-      this._showProjectSuggestions = false;
-      this._highlightedIndex = -1;
-    } else if (
-      e.key === "ArrowLeft" &&
-      input.selectionStart === 0 &&
-      this.form.projects.length > 0
-    ) {
-      e.preventDefault();
-      if (this._selectedChipIndex === -1) {
-        this._selectedChipIndex = this.form.projects.length - 1;
-      } else if (this._selectedChipIndex > 0) {
-        this._selectedChipIndex--;
-      } else {
-        this._selectedChipIndex = -1;
-      }
-    } else if (e.key === "ArrowRight" && this._selectedChipIndex >= 0) {
-      e.preventDefault();
-      if (this._selectedChipIndex < this.form.projects.length - 1) {
-        this._selectedChipIndex++;
-      } else {
-        this._selectedChipIndex = -1;
-      }
-    } else if (
-      e.key === "Backspace" &&
-      input.value === "" &&
-      this.form.projects.length > 0
-    ) {
-      e.preventDefault();
-      const removeIndex = this._selectedChipIndex >= 0
-        ? this._selectedChipIndex
-        : this.form.projects.length - 1;
-      const newProjects = this.form.projects.filter(
-        (_, i) => i !== removeIndex,
-      );
-      this.form = { ...this.form, projects: newProjects };
-      if (this._selectedChipIndex >= 0) {
-        this._selectedChipIndex = Math.min(
-          this._selectedChipIndex,
-          newProjects.length - 1,
-        );
-        if (newProjects.length === 0) this._selectedChipIndex = -1;
-      }
-      this._showProjectSuggestions = true;
-      if (this._blurTimeout) {
-        clearTimeout(this._blurTimeout);
-        this._blurTimeout = null;
-      }
-      this.updateComplete.then(() => {
-        const newInput = this.renderRoot.querySelector<HTMLInputElement>(
-          "#project-input",
-        );
-        if (newInput) newInput.focus();
-      });
-    } else if (e.key === "Escape") {
-      this._showProjectSuggestions = false;
-      this._highlightedIndex = -1;
-      this._selectedChipIndex = -1;
-    } else {
-      // Any other key typed resets chip selection
-      this._selectedChipIndex = -1;
-    }
-  }
-
-  private removeProject(id: string) {
-    this.form = {
-      ...this.form,
-      projects: this.form.projects.filter((p) => p !== id),
-    };
-  }
-
   private handleSubmit(e: Event) {
     e.preventDefault();
     if (!this.form.name.trim()) return;
@@ -626,10 +339,6 @@ export class FilterForm extends LitElement {
       { value: 2, label: "P2" },
       { value: 3, label: "P3" },
     ];
-
-    const availableProjects = store.projects.filter(
-      (p) => !this.form.projects.includes(p.id),
-    );
 
     return html`
       <dialog
@@ -684,89 +393,19 @@ export class FilterForm extends LitElement {
 
           <div class="form-group">
             <label>projects</label>
-            <div
-              class="project-chip-input"
-              @click="${() =>
-                this.renderRoot
-                  .querySelector<HTMLInputElement>("#project-input")
-                  ?.focus()}"
-            >
-              ${this.form.projects.map((id, idx) => {
-                const project = store.projects.find((p) => p.id === id);
-                const color = project?.color || "#4caf50";
-                return project
-                  ? html`
-                    <span
-                      class="project-chip ${idx === this._selectedChipIndex
-                        ? "selected"
-                        : ""}"
-                      style="background: ${color}"
-                    >
-                      ${project.name}
-                      <button
-                        type="button"
-                        tabindex="-1"
-                        @click="${() => this.removeProject(id)}"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  `
-                  : nothing;
-              })} ${availableProjects.length > 0
-                ? html`
-                  <input
-                    id="project-input"
-                    type="text"
-                    autocomplete="off"
-                    placeholder="add project..."
-                    @input="${this.handleProjectInput}"
-                    @focus="${this.handleProjectFocus}"
-                    @keydown="${this.handleProjectKeydown}"
-                    @blur="${this._handleBlur}"
-                  />
-                `
-                : html`
-                  <input
-                    id="project-input"
-                    type="text"
-                    autocomplete="off"
-                    readonly
-                    @focus="${this.handleProjectFocus}"
-                    @keydown="${this.handleProjectKeydown}"
-                    @blur="${this._handleBlur}"
-                  />
-                `} ${this._showProjectSuggestions &&
-                  this._filteredProjects.length > 0
-                ? html`
-                  <div class="project-suggestions">
-                    ${this._filteredProjects.map(
-                      (p, i) =>
-                        html`
-                          <button
-                            type="button"
-                            class="${i === this._highlightedIndex
-                              ? "highlighted"
-                              : ""}"
-                            @mouseenter="${() => {
-                              this._highlightedIndex = i;
-                            }}"
-                            @mouseleave="${() => {
-                              this._highlightedIndex = -1;
-                            }}"
-                            @mousedown="${(e: MouseEvent) => {
-                              e.preventDefault();
-                              this.selectProject(p.id);
-                            }}"
-                          >
-                            ${p.name}
-                          </button>
-                        `,
-                    )}
-                  </div>
-                `
-                : nothing}
-            </div>
+            <chip-picker
+              .items="${store.projects.map((p) => ({
+                id: p.id,
+                name: p.name,
+                color: p.color || "#4caf50",
+              }))}"
+              .selectedIds="${this.form.projects}"
+              placeholder="add project..."
+              defaultColor="#4caf50"
+              @change="${(e: CustomEvent<{ selectedIds: string[] }>) => {
+                this.form = { ...this.form, projects: e.detail.selectedIds };
+              }}"
+            ></chip-picker>
           </div>
 
           <div class="form-group">

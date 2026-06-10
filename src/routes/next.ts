@@ -30,6 +30,17 @@ interface ActiveContext {
 next.get("/", async (c) => {
   const session = c.get("session") as SessionData;
 
+  // Get user timezone for date/time comparisons
+  const [userSettings] = await withDb(
+    async (sql: SqlQuery) => {
+      return await sql<{ timezone: string }[]>`
+        SELECT timezone FROM user_settings WHERE user_id = ${session.userId}
+      `;
+    },
+    { userId: session.userId },
+  );
+  const tz = userSettings?.timezone || "UTC";
+
   // Check if we have a current stable selection that's still eligible
   const currentSelection = await withDb(
     async (sql: SqlQuery) => {
@@ -48,6 +59,7 @@ next.get("/", async (c) => {
           AND t.completed_at IS NULL
           AND t.deleted_at IS NULL
           AND (t.deferred_until IS NULL OR t.deferred_until <= NOW())
+          AND (t.due_date IS NULL OR t.due_date <= (NOW() AT TIME ZONE ${tz})::date)
         GROUP BY t.id
       `;
       return task || null;
@@ -61,17 +73,6 @@ next.get("/", async (c) => {
 
   // No valid current selection — pick a new one
   // Step 1: Find active contexts (no time windows = always active, or time window matches now)
-  // Get user timezone for time window comparison
-  const [userSettings] = await withDb(
-    async (sql: SqlQuery) => {
-      return await sql<{ timezone: string }[]>`
-        SELECT timezone FROM user_settings WHERE user_id = ${session.userId}
-      `;
-    },
-    { userId: session.userId },
-  );
-  const tz = userSettings?.timezone || "UTC";
-
   const activeContexts = await withDb(
     async (sql: SqlQuery) => {
       const result = await sql<ActiveContext[]>`
@@ -126,6 +127,7 @@ next.get("/", async (c) => {
               AND t.completed_at IS NULL
               AND t.deleted_at IS NULL
               AND (t.deferred_until IS NULL OR t.deferred_until <= NOW())
+              AND (t.due_date IS NULL OR t.due_date <= (NOW() AT TIME ZONE ${tz})::date)
             UNION
             SELECT t.* FROM tasks t
             WHERE t.project_id IN (SELECT id FROM ctx_projects)
@@ -133,6 +135,7 @@ next.get("/", async (c) => {
               AND t.completed_at IS NULL
               AND t.deleted_at IS NULL
               AND (t.deferred_until IS NULL OR t.deferred_until <= NOW())
+              AND (t.due_date IS NULL OR t.due_date <= (NOW() AT TIME ZONE ${tz})::date)
           ) t
           LEFT JOIN task_contexts tc2 ON t.id = tc2.task_id
           GROUP BY t.id, t.user_id, t.title, t.project_id, t.priority,

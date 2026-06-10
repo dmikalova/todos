@@ -767,7 +767,7 @@ export class TaskForm extends LitElement {
               }
             }}"
           >
-            <h3>delete this task?</h3>
+            <h3>Delete task ${this.form.title}?</h3>
             <div class="confirm-actions">
               <m3e-button
                 variant="text"

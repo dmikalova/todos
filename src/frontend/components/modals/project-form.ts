@@ -408,8 +408,8 @@ export class ProjectForm extends LitElement {
               }
             }}"
           >
-            <h3>delete this project?</h3>
-            <p>tasks will be moved to inbox.</p>
+            <h3>Delete project ${this.form.name}?</h3>
+            <p>All tasks in this project will be moved to inbox.</p>
             <div class="confirm-actions">
               <m3e-button
                 variant="text"

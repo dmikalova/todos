@@ -114,6 +114,7 @@ class Store {
   private _nextTask: Task | null = null;
   private _loading = true;
   private _user: UserProfile | null = null;
+  private _timezone = "UTC";
 
   // UI State
   private _currentTab = "next";
@@ -165,6 +166,9 @@ class Store {
   }
   get user() {
     return this._user;
+  }
+  get timezone() {
+    return this._timezone;
   }
   get currentTab() {
     return this._currentTab;
@@ -694,6 +698,7 @@ class Store {
       this.notify();
     }
     this.fetchUser();
+    this.fetchSettings();
   }
 
   async fetchUser() {
@@ -702,6 +707,31 @@ class Store {
       this.notify();
     } catch (_e) {
       // non-critical
+    }
+  }
+
+  async fetchSettings() {
+    try {
+      const result = await this.api<{ timezone: string }>("/settings");
+      this._timezone = result.timezone;
+      this.notify();
+    } catch (_e) {
+      // non-critical - use default
+    }
+  }
+
+  async updateTimezone(timezone: string) {
+    try {
+      await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timezone }),
+      });
+      this._timezone = timezone;
+      this.notify();
+      this.showToast("timezone updated");
+    } catch (_e) {
+      this.showToast("failed to update timezone", "error");
     }
   }
 

@@ -625,3 +625,28 @@ table "user_next_selection" {
   }
 
 }
+
+table "user_settings" {
+  schema = schema.tasks
+
+  column "user_id" {
+    type = uuid
+    null = false
+  }
+
+  column "timezone" {
+    type    = text
+    null    = false
+    default = "UTC"
+  }
+
+  column "updated_at" {
+    type    = timestamptz
+    null    = false
+    default = sql("now()")
+  }
+
+  primary_key {
+    columns = [column.user_id]
+  }
+}

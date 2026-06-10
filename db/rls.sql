@@ -170,6 +170,29 @@ CREATE POLICY task_history_user_delete ON tasks.task_history FOR DELETE
   USING (user_id = current_setting('app.user_id')::uuid);
 
 -- ============================================================================
+-- user_settings
+-- ============================================================================
+ALTER TABLE tasks.user_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks.user_settings FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS user_settings_user_select ON tasks.user_settings;
+CREATE POLICY user_settings_user_select ON tasks.user_settings FOR SELECT
+  USING (user_id = current_setting('app.user_id')::uuid);
+
+DROP POLICY IF EXISTS user_settings_user_insert ON tasks.user_settings;
+CREATE POLICY user_settings_user_insert ON tasks.user_settings FOR INSERT
+  WITH CHECK (user_id = current_setting('app.user_id')::uuid);
+
+DROP POLICY IF EXISTS user_settings_user_update ON tasks.user_settings;
+CREATE POLICY user_settings_user_update ON tasks.user_settings FOR UPDATE
+  USING (user_id = current_setting('app.user_id')::uuid)
+  WITH CHECK (user_id = current_setting('app.user_id')::uuid);
+
+DROP POLICY IF EXISTS user_settings_user_delete ON tasks.user_settings;
+CREATE POLICY user_settings_user_delete ON tasks.user_settings FOR DELETE
+  USING (user_id = current_setting('app.user_id')::uuid);
+
+-- ============================================================================
 -- Grants for non-superuser app role (superusers bypass RLS)
 -- ============================================================================
 DO $$

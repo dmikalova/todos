@@ -1,7 +1,7 @@
 // Settings view
 
 import { css, html, LitElement } from "lit";
-import { customElement, query } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
 import { store } from "../../store.ts";
 
 @customElement("settings-view")
@@ -80,10 +80,36 @@ export class SettingsView extends LitElement {
     input[type="file"] {
       display: none;
     }
+
+    select {
+      padding: 8px 12px;
+      border-radius: var(--md-sys-shape-corner-medium);
+      border: 1px solid var(--md-sys-color-outline);
+      background: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-on-surface);
+      font-size: 14px;
+    }
   `;
 
   @query("#import-file")
   accessor fileInput!: HTMLInputElement;
+
+  @state()
+  accessor timezone = store.timezone;
+
+  private unsubscribe?: () => void;
+
+  override connectedCallback() {
+    super.connectedCallback();
+    this.unsubscribe = store.subscribe(() => {
+      this.timezone = store.timezone;
+    });
+  }
+
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    this.unsubscribe?.();
+  }
 
   private handleExport() {
     store.exportData();
@@ -102,9 +128,35 @@ export class SettingsView extends LitElement {
     }
   }
 
+  private handleTimezoneChange(e: Event) {
+    const select = e.target as HTMLSelectElement;
+    store.updateTimezone(select.value);
+  }
+
   override render() {
     return html`
       <div class="settings-card">
+        <h2>preferences</h2>
+
+        <div class="section">
+          <h3>timezone</h3>
+          <select @change="${this.handleTimezoneChange}">
+            ${TIMEZONES.map(
+              (tz) =>
+                html`
+                  <option value="${tz}" ?selected="${this.timezone === tz}">
+                    ${tz}
+                  </option>
+                `,
+            )}
+          </select>
+          <p class="description">
+            used for context time window scheduling
+          </p>
+        </div>
+      </div>
+
+      <div class="settings-card" style="margin-top: 16px;">
         <h2>data management</h2>
 
         <div class="section">
@@ -136,3 +188,34 @@ export class SettingsView extends LitElement {
     `;
   }
 }
+
+const TIMEZONES = [
+  "Pacific/Midway",
+  "Pacific/Honolulu",
+  "America/Anchorage",
+  "America/Los_Angeles",
+  "America/Denver",
+  "America/Chicago",
+  "America/New_York",
+  "America/Halifax",
+  "America/Sao_Paulo",
+  "America/Argentina/Buenos_Aires",
+  "Atlantic/South_Georgia",
+  "Atlantic/Azores",
+  "UTC",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Helsinki",
+  "Europe/Moscow",
+  "Asia/Dubai",
+  "Asia/Karachi",
+  "Asia/Kolkata",
+  "Asia/Dhaka",
+  "Asia/Bangkok",
+  "Asia/Shanghai",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+  "Pacific/Noumea",
+  "Pacific/Auckland",
+  "Pacific/Tongatapu",
+];

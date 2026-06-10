@@ -17,6 +17,7 @@ import { importRoutes } from "./routes/import.ts";
 import { next } from "./routes/next.ts";
 import { projects } from "./routes/projects.ts";
 import { recurrence } from "./routes/recurrence.ts";
+import { settings } from "./routes/settings.ts";
 import { tasks } from "./routes/tasks.ts";
 import type { AppEnv } from "./types.ts";
 
@@ -127,6 +128,7 @@ app.route("/api/history", history);
 app.route("/api/next", next);
 app.route("/api/export", exportRoutes);
 app.route("/api/import", importRoutes);
+app.route("/api/settings", settings);
 
 // Current user profile
 app.get("/api/me", (c) => {

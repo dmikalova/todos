@@ -61,6 +61,17 @@ next.get("/", async (c) => {
 
   // No valid current selection — pick a new one
   // Step 1: Find active contexts (no time windows = always active, or time window matches now)
+  // Get user timezone for time window comparison
+  const [userSettings] = await withDb(
+    async (sql: SqlQuery) => {
+      return await sql<{ timezone: string }[]>`
+        SELECT timezone FROM user_settings WHERE user_id = ${session.userId}
+      `;
+    },
+    { userId: session.userId },
+  );
+  const tz = userSettings?.timezone || "UTC";
+
   const activeContexts = await withDb(
     async (sql: SqlQuery) => {
       const result = await sql<ActiveContext[]>`
@@ -73,9 +84,9 @@ next.get("/", async (c) => {
         SELECT DISTINCT c.id, c.name, c.sort_order
         FROM contexts c
         JOIN context_time_windows tw ON tw.context_id = c.id
-        WHERE tw.day_of_week = EXTRACT(DOW FROM NOW())::int
-          AND tw.start_time <= LOCALTIME
-          AND tw.end_time > LOCALTIME
+        WHERE tw.day_of_week = EXTRACT(DOW FROM NOW() AT TIME ZONE ${tz})::int
+          AND tw.start_time <= (NOW() AT TIME ZONE ${tz})::time
+          AND tw.end_time > (NOW() AT TIME ZONE ${tz})::time
         ORDER BY sort_order ASC
       `;
       return result;

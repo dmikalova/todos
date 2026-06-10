@@ -6,6 +6,8 @@
   cache them
 - task markdown support
 - labels
+- duplicate time window in context
+- auto sort time windows after save
 - context
 - next
 - sort orders - created, updated, alphabetical, manual drag n drop

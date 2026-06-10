@@ -25,6 +25,7 @@ interface Task {
   due_date_original: Date | null;
   deferred_until: Date | null;
   project_id: string | null;
+  context_ids: string[];
   completed_at: Date | null;
   deleted_at: Date | null;
   created_at: Date;
@@ -35,6 +36,7 @@ interface Project {
   id: string;
   name: string;
   description: string | null;
+  context_ids: string[];
   created_at: Date;
 }
 
@@ -89,10 +91,15 @@ exportRoutes.get("/", async (c) => {
 
   const data = await withDb(
     async (sql: SqlQuery) => {
-      // Export projects
-      const projects = await sql<
-        Project[]
-      >`SELECT * FROM projects ORDER BY name`;
+      // Export projects with context associations
+      const projects = await sql<Project[]>`
+        SELECT p.*,
+          COALESCE(array_agg(pc.context_id) FILTER (WHERE pc.context_id IS NOT NULL), '{}') as context_ids
+        FROM projects p
+        LEFT JOIN project_contexts pc ON p.id = pc.project_id
+        GROUP BY p.id
+        ORDER BY p.name
+      `;
 
       // Export contexts with time windows
       const contexts = await sql<(Context & { time_windows: TimeWindow[] })[]>`
@@ -117,21 +124,44 @@ exportRoutes.get("/", async (c) => {
       let tasks: Task[];
 
       if (includeDeleted && includeCompleted) {
-        tasks = await sql<Task[]>`SELECT * FROM tasks ORDER BY created_at`;
+        tasks = await sql<Task[]>`
+          SELECT t.*,
+            COALESCE(array_agg(tc.context_id) FILTER (WHERE tc.context_id IS NOT NULL), '{}') as context_ids
+          FROM tasks t
+          LEFT JOIN task_contexts tc ON t.id = tc.task_id
+          GROUP BY t.id
+          ORDER BY t.created_at
+        `;
       } else if (includeCompleted) {
-        tasks = await sql<
-          Task[]
-        >`SELECT * FROM tasks WHERE deleted_at IS NULL ORDER BY created_at`;
+        tasks = await sql<Task[]>`
+          SELECT t.*,
+            COALESCE(array_agg(tc.context_id) FILTER (WHERE tc.context_id IS NOT NULL), '{}') as context_ids
+          FROM tasks t
+          LEFT JOIN task_contexts tc ON t.id = tc.task_id
+          WHERE t.deleted_at IS NULL
+          GROUP BY t.id
+          ORDER BY t.created_at
+        `;
       } else if (includeDeleted) {
-        tasks = await sql<
-          Task[]
-        >`SELECT * FROM tasks WHERE completed_at IS NULL ORDER BY created_at`;
+        tasks = await sql<Task[]>`
+          SELECT t.*,
+            COALESCE(array_agg(tc.context_id) FILTER (WHERE tc.context_id IS NOT NULL), '{}') as context_ids
+          FROM tasks t
+          LEFT JOIN task_contexts tc ON t.id = tc.task_id
+          WHERE t.completed_at IS NULL
+          GROUP BY t.id
+          ORDER BY t.created_at
+        `;
       } else {
         tasks = await sql<Task[]>`
-        SELECT * FROM tasks
-        WHERE deleted_at IS NULL AND completed_at IS NULL
-        ORDER BY created_at
-      `;
+          SELECT t.*,
+            COALESCE(array_agg(tc.context_id) FILTER (WHERE tc.context_id IS NOT NULL), '{}') as context_ids
+          FROM tasks t
+          LEFT JOIN task_contexts tc ON t.id = tc.task_id
+          WHERE t.deleted_at IS NULL AND t.completed_at IS NULL
+          GROUP BY t.id
+          ORDER BY t.created_at
+        `;
       }
 
       // Apply optional filters

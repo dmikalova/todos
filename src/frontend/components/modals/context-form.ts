@@ -469,8 +469,8 @@ export class ContextForm extends LitElement {
               }
             }}"
           >
-            <h3>delete this context?</h3>
-            <p>tasks will have their context removed.</p>
+            <h3>Delete context ${this.form.name}?</h3>
+            <p>This context will be removed from all tasks and projects.</p>
             <div class="confirm-actions">
               <m3e-button
                 variant="text"

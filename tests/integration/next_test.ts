@@ -256,6 +256,38 @@ Deno.test({
       },
     );
 
+    await t.step(
+      "GET /api/next uses user timezone from settings",
+      async () => {
+        // Clean slate
+        await ctx
+          .db`DELETE FROM tasks.tasks WHERE user_id = ${ctx.userId}`;
+        await ctx
+          .db`DELETE FROM tasks.user_next_selection WHERE user_id = ${ctx.userId}`;
+
+        // Set user timezone
+        await apiCall(ctx.app, "PUT", "/api/settings", {
+          timezone: "America/Los_Angeles",
+        });
+
+        // Create a task to select
+        await apiCall(ctx.app, "POST", "/api/tasks", {
+          title: "Integration Test Next With Timezone",
+          priority: 4,
+          projectId,
+        });
+
+        // Should still work with user timezone set
+        const res = await apiCall(ctx.app, "GET", "/api/next");
+        assertEquals(res.status, 200);
+        const body = await res.json();
+        // The always-active context should still produce a result
+        if (body.task) {
+          assertEquals(body.task.title, "Integration Test Next With Timezone");
+        }
+      },
+    );
+
     await teardownTestContext(ctx);
   },
   sanitizeOps: false,

@@ -53,6 +53,7 @@ export async function teardownTestContext(ctx: TestContext): Promise<void> {
 // Clean test data from database
 async function cleanTestData(db: ReturnType<typeof postgres>): Promise<void> {
   // Delete all data for the test user in reverse dependency order
+  await db`DELETE FROM tasks.user_settings WHERE user_id = ${TEST_USER_ID}`;
   await db`DELETE FROM tasks.user_next_selection WHERE user_id = ${TEST_USER_ID}`;
   await db`DELETE FROM tasks.recurrence_rules WHERE task_id IN (SELECT id FROM tasks.tasks WHERE user_id = ${TEST_USER_ID})`;
   await db`DELETE FROM tasks.task_history WHERE task_id IN (SELECT id FROM tasks.tasks WHERE user_id = ${TEST_USER_ID})`;
